@@ -182,6 +182,30 @@ class FaceEngine:
             )
         return known
 
+    def known_login_faces(self, db: Session) -> list[KnownFace]:
+        """Encoding wajah khusus login Face ID anggota dewan."""
+        from ..models import Member, MemberFaceLogin
+
+        rows = (
+            db.query(MemberFaceLogin, Member)
+            .join(Member, MemberFaceLogin.member_id == Member.id)
+            .filter(Member.is_active.is_(True), MemberFaceLogin.is_active.is_(True))
+            .all()
+        )
+        known: list[KnownFace] = []
+        for face, member in rows:
+            if not face.encoding:
+                continue
+            known.append(
+                KnownFace(
+                    member_id=member.id,
+                    member_name=member.full_name,
+                    encoding=np.asarray(face.encoding, dtype=np.float64),
+                    face_id=face.id,
+                )
+            )
+        return known
+
     def match(self, encoding: list[float] | np.ndarray, known: list[KnownFace]) -> list[FaceMatch]:
         if not known:
             return []

@@ -7,7 +7,11 @@ ROLE_ADMIN = "admin"
 ROLE_HUMAS = "humas"
 ROLE_STAF = "staf_komisi"
 ROLE_PIMPINAN = "pimpinan"
+ROLE_ANGGOTA = "anggota_dewan"
 
+# Akun anggota dewan dibuat otomatis saat pendaftaran Face ID di halaman login.
+# Peran ini sengaja tidak dimasukkan ke ROLES agar tidak bisa dibuat manual
+# tanpa terhubung ke data anggota.
 ROLES = [
     ROLE_SUPERADMIN,
     ROLE_ADMIN,
@@ -22,20 +26,23 @@ ROLE_LABELS = {
     ROLE_HUMAS: "Tim Humas",
     ROLE_STAF: "Staf Komisi",
     ROLE_PIMPINAN: "Pimpinan",
+    ROLE_ANGGOTA: "Anggota Dewan",
 }
 
 ROLE_DESCRIPTIONS = {
     ROLE_SUPERADMIN: "Akses penuh termasuk konfigurasi sistem dan pengguna.",
     ROLE_ADMIN: "Mengelola konten, anggota, pengguna, dan audit.",
     ROLE_HUMAS: "Mengunggah, menyunting, dan menerbitkan dokumentasi kegiatan.",
-    ROLE_STAF: "Mencari dan membaca dokumentasi yang telah terbit.",
+    ROLE_STAF: "Mencari, membaca dokumentasi, dan menjalankan pemindaian sentimen komisi.",
     ROLE_PIMPINAN: "Melihat seluruh dokumentasi, statistik, dan laporan.",
+    ROLE_ANGGOTA: "Dashboard pribadi anggota dewan, dokumentasi Humas, dan sentimen publik.",
 }
 
 CONTENT_MANAGER_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_HUMAS}
 ADMIN_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN}
 AUDIT_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN}
-ALL_ROLES = set(ROLES)
+SENTIMENT_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_STAF}
+ALL_ROLES = set(ROLES) | {ROLE_ANGGOTA}
 
 STATUS_DRAFT = "draft"
 STATUS_PUBLISHED = "published"
@@ -94,6 +101,12 @@ AUDIT_ACTIONS = {
     "LOGIN": "Masuk",
     "LOGIN_FAILED": "Gagal masuk",
     "LOGOUT": "Keluar",
+    "FACE_LOGIN": "Masuk dengan Face ID",
+    "FACE_LOGIN_FAILED": "Gagal Face ID",
+    "FACE_LOGIN_ENROLL": "Daftarkan Face ID",
+    "FACE_LOGIN_DELETE": "Hapus Face ID",
+    "SENTIMENT_SEARCH": "Pindai sentimen",
+    "SENTIMENT_SEARCH_FAILED": "Pindai sentimen gagal",
     "ACTIVITY_CREATE": "Buat kegiatan",
     "ACTIVITY_UPDATE": "Ubah kegiatan",
     "ACTIVITY_PUBLISH": "Terbitkan kegiatan",

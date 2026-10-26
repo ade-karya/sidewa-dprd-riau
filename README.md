@@ -5,7 +5,10 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 
 ## Fitur utama
 
-- Autentikasi berbasis sesi (Argon2), CSRF, RBAC (Super Admin, Administrator, Tim Humas, Staf Komisi, Pimpinan).
+- Autentikasi berbasis sesi (Argon2), CSRF, RBAC (Super Admin, Administrator, Tim Humas, Staf Komisi, Pimpinan, Anggota Dewan).
+- Login **Face ID** untuk anggota dewan: daftarkan wajah sekali di halaman login, lalu masuk cukup dengan pemindaian wajah.
+- **Dashboard pribadi per anggota dewan** berisi dokumentasi Humas, penampilan terverifikasi, tren kegiatan, serta sentimen pemberitaan media online.
+- Pemantauan sentimen media online melalui **Tavily** oleh staf komisi/admin, dianalisis dengan leksikon sentimen Bahasa Indonesia.
 - Unggah dokumentasi kegiatan: metadata, komisi terkait, lokasi, tanggal, foto; deteksi wajah otomatis.
 - Pencarian berdasarkan wajah (unggah foto), nama/jabatan, kategori, komisi, lokasi, dan rentang tanggal.
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
@@ -70,7 +73,31 @@ Akun demo (mode demo aktif):
 | komisi1 … komisi5 | `KomisiN#Riau2026` | Staf Komisi |
 | pimpinan | `Pimpinan#Riau2026` | Pimpinan |
 
+Akun **Anggota Dewan** tidak dibuat manual. Akun ini terbentuk otomatis saat anggota
+mendaftarkan Face ID di halaman login, lalu terhubung ke dashboard pribadinya.
+
 Nonaktifkan demo di produksi: `SIDEWA_DEMO_MODE=false`.
+
+## Dashboard anggota & sentimen media online
+
+Setiap anggota dewan memiliki dashboard di `/dashboard-anggota/{id}` yang
+menggabungkan dua sumber data:
+
+1. **Publikasi & dokumentasi Humas** — kegiatan terbit yang tertaut pada anggota,
+   jumlah foto, penampilan terverifikasi, tren enam bulan, dan kategori kegiatan.
+2. **Sentimen pemberitaan media online** — hasil pencarian **Tavily** yang disimpan
+   sebagai `media_mentions` dan dianalisis secara lokal (positif/netral/negatif).
+
+Alur pemindaian sentimen:
+
+1. Isi `SIDEWA_TAVILY_API_KEY` pada `.env` (buat key di <https://app.tavily.com>).
+2. Masuk sebagai staf komisi (hanya anggota di komisinya) atau admin/superadmin.
+3. Buka menu **Sentimen**, pilih anggota, lalu tekan tombol pindai.
+4. Hasil tersimpan dan tampil pada dashboard anggota serta halaman
+   `/anggota/{id}/sentimen`.
+
+Tanpa API key, aplikasi tetap berjalan dan menampilkan pesan bahwa Tavily belum
+dikonfigurasi.
 
 ## Konfigurasi
 
@@ -86,6 +113,11 @@ Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Var
 - `SIDEWA_MEDIA_SYNC_ENABLED` — aktifkan unggah media ke HF S3.
 - `SIDEWA_FACE_DETECTOR` — `hog` (CPU) atau `cnn` (GPU, lebih akurat).
 - `SIDEWA_FACE_TOLERANCE`, `SIDEWA_FACE_AUTO_TAG`, `SIDEWA_FACE_REVIEW` — ambang pencocokan.
+- `SIDEWA_FACE_LOGIN_TOLERANCE` (default `0.50`) dan `SIDEWA_FACE_LOGIN_MARGIN`
+  (default `0.03`) — ambang khusus login Face ID; lebih ketat daripada pencarian wajah.
+- `SIDEWA_TAVILY_API_KEY` — API key Tavily untuk pemindaian sentimen.
+- `SIDEWA_TAVILY_SEARCH_DEPTH` (`basic`/`advanced`), `SIDEWA_TAVILY_MAX_RESULTS`,
+  `SIDEWA_TAVILY_DAYS` — parameter pencarian berita Tavily.
 - `SIDEWA_BOOTSTRAP_ADMIN_*` — membuat superadmin saat database kosong.
 
 ## Perintah CLI
@@ -110,7 +142,7 @@ Status sinkronisasi juga tersedia di `GET /readyz` (field `sync` dan
 ## Pengujian
 
 ```bash
-make test          # 14 pengujian
+make test          # 27 pengujian
 make cov           # dengan cakupan
 make lint          # ruff
 ```

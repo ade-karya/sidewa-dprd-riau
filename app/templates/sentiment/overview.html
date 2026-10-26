@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar, empty_state, pagination %}
+
+{% block title %}Sentimen media online{% endblock %}
+{% block page_title %}Pemantauan sentimen{% endblock %}
+{% block page_subtitle %}Pemberitaan media online tentang anggota dewan · sumber Tavily{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/anggota">{{ icon('users') }}<span>Direktori</span></a>
+{% endblock %}
+
+{% block content %}
+{% if not tavily_configured %}
+<div class="failed-banner mb-2">
+  {{ icon('alert') }} Tavily belum dikonfigurasi. Isi <code>SIDEWA_TAVILY_API_KEY</code> pada berkas <code>.env</code> agar pemindaian pemberitaan dapat dijalankan.
+</div>
+{% endif %}
+
+<div class="card filter-card">
+  <form class="filter-form" method="get" action="/sentimen">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input" type="search" name="q" value="{{ q }}"
+               placeholder="Cari nama, jabatan, partai, atau dapil…" aria-label="Cari anggota">
+      </div>
+      {% if commissions %}
+      <select class="select" name="commission" aria-label="Komisi">
+        <option value="">Semua komisi</option>
+        {% for c in commissions %}
+        <option value="{{ c.code }}" {{ 'selected' if commission == c.code }}>{{ c.short_name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      <button class="btn btn-primary" type="submit">{{ icon('search') }} Cari</button>
+      {% if q or commission %}<a class="btn btn-ghost" href="/sentimen">Reset</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count">
+    {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> anggota{% else %}Tidak ada anggota{% endif %}
+  </span>
+  <span class="muted-small">{{ icon('info') }} Sentimen dihitung dari judul dan kutipan pemberitaan, bukan penilaian resmi lembaga.</span>
+</div>
+
+{% if result.items %}
+<div class="table-card">
+  <div class="table-wrap">
+    <table class="data sentiment-table">
+      <thead>
+        <tr>
+          <th>Anggota</th>
+          <th>Sentimen</th>
+          <th>Sebaran</th>
+          <th>Pemindaian terakhir</th>
+          <th style="text-align: right;">Tindakan</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>
+            <a class="cell-main" href="/anggota/{{ row.member.id }}">
+              {{ avatar(row.member.full_name, row.member.portrait_path, 'sm') }}
+              <span>
+                <strong>{{ row.member.full_name }}</strong>
+                <span>{{ row.member.position }}{% if row.member.commission %} · {{ row.member.commission.short_name }}{% endif %}</span>
+              </span>
+            </a>
+          </td>
+          <td>
+            {% if row.summary.total %}
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="sentiment-mini-gauge tone-{{ sentiment_tones.get(row.summary.tone, 'green') }}" style="--score: {{ row.summary.gauge }};">
+                <span>{{ row.summary.gauge }}</span>
+              </span>
+              <div>
+                <strong style="display: block; font-size: 11.5px;">{{ sentiment_labels.get(row.summary.tone, row.summary.tone) }}</strong>
+                <span class="muted-small">{{ '%+.2f'|format(row.summary.average_score) }} · {{ row.summary.total }} berita</span>
+              </div>
+            </div>
+            {% else %}
+            <span class="badge badge-gray">Belum dipindai</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.summary.total %}
+            <div class="sentiment-counts">
+              <span class="badge badge-green">{{ row.summary.positive }} positif</span>
+              <span class="badge badge-gold">{{ row.summary.neutral }} netral</span>
+              <span class="badge badge-red">{{ row.summary.negative }} negatif</span>
+            </div>
+            {% else %}
+            <span class="muted-small">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if row.latest_run %}
+            <span class="badge badge-{{ 'green' if row.latest_run.status == 'success' else 'red' }}">
+              {{ 'Berhasil' if row.latest_run.status == 'success' else 'Gagal' }}
+            </span>
+            <span class="muted-small" style="display: block; margin-top: 4px;">{{ row.latest_run.created_at|time_ago }}</span>
+            {% else %}
+            <span class="muted-small">Belum pernah</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="actions">
+              <a class="icon-btn" href="/anggota/{{ row.member.id }}/sentimen" title="Lihat pemberitaan" aria-label="Lihat pemberitaan {{ row.member.full_name }}">{{ icon('list') }}</a>
+              <a class="icon-btn" href="/dashboard-anggota/{{ row.member.id }}#sentimen" title="Buka dashboard anggota" aria-label="Buka dashboard {{ row.member.full_name }}">{{ icon('chart') }}</a>
+              <form method="post" action="/sentimen/{{ row.member.id }}/cari" data-loading>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="icon-btn" type="submit" title="Pindai sentimen" aria-label="Pindai sentimen {{ row.member.full_name }}" {{ 'disabled' if not tavily_configured else '' }}>{{ icon('refresh') }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ pagination(result, request) }}
+{% else %}
+{{ empty_state('chart', 'Anggota tidak ditemukan', 'Ubah kata kunci atau filter komisi untuk menampilkan anggota dewan.') }}
+{% endif %}
+{% endblock %}

@@ -27,6 +27,7 @@
       <span class="chip chip-gold">Pimpinan DPRD</span>
       {% endif %}
       {% if member.faces %}<span class="chip chip-green">{{ icon('scan') }} Wajah terdaftar</span>{% else %}<span class="chip chip-gray">Belum ada wajah</span>{% endif %}
+      {% if face_login %}<span class="chip chip-purple">{{ icon('fingerprint') }} Face ID login aktif</span>{% endif %}
       {% if member.consent_granted_at %}<span class="chip chip-purple">{{ icon('shield') }} Persetujuan tercatat</span>{% endif %}
     </div>
     <h1>{{ member.full_name }}</h1>
@@ -43,7 +44,8 @@
       <div class="member-stat"><b>{{ member.activity_links|length }}</b><span>Tautan dokumentasi</span></div>
     </div>
     <div class="member-actions">
-      <a class="btn btn-primary btn-sm" href="/cari?q={{ member.full_name|urlencode }}">{{ icon('search') }} Cari dokumentasi</a>
+      <a class="btn btn-primary btn-sm" href="/dashboard-anggota/{{ member.id }}">{{ icon('chart') }} Dashboard anggota</a>
+      <a class="btn btn-outline btn-sm" href="/cari?q={{ member.full_name|urlencode }}">{{ icon('search') }} Cari dokumentasi</a>
       {% if member.commission %}
       <a class="btn btn-outline btn-sm" href="/komisi/{{ member.commission.id }}">{{ icon('layers') }} {{ member.commission.short_name }}</a>
       {% endif %}
@@ -100,6 +102,83 @@
       </div>
       {% else %}
       {{ empty_state('calendar', 'Belum ada dokumentasi', 'Anggota ini belum tertaut pada dokumentasi kegiatan yang dapat Anda akses.') }}
+      {% endif %}
+    </section>
+
+    <section class="section-card" id="sentimen">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('chart') }} Sentimen pemberitaan media online</h2>
+        <a class="section-link" href="/anggota/{{ member.id }}/sentimen">Semua pemberitaan {{ icon('arrow-right') }}</a>
+      </div>
+
+      {% if not tavily_configured %}
+      <div class="failed-banner mb-2">{{ icon('alert') }} Tavily belum dikonfigurasi. Pemindaian pemberitaan belum dapat dijalankan.</div>
+      {% endif %}
+
+      {% if sentiment.has_data %}
+      <div class="sentiment-summary">
+        <div class="sentiment-gauge tone-{{ sentiment_tones.get(sentiment.tone, 'green') }}" style="--score: {{ sentiment.gauge }};">
+          <div class="sentiment-gauge-inner">
+            <b>{{ sentiment.score_display }}</b>
+            <span>{{ sentiment.tone_label }}</span>
+          </div>
+        </div>
+        <div>
+          <div class="chip-row mb-2">
+            <span class="badge badge-gray">{{ sentiment.total }} pemberitaan</span>
+            {% if sentiment.last_updated %}<span class="badge badge-gray">{{ icon('clock') }} {{ sentiment.last_updated|time_ago }}</span>{% endif %}
+          </div>
+          <div class="sentiment-bars">
+            <div class="sentiment-bar-row">
+              <span>Positif</span>
+              <div class="sentiment-track"><span class="positive" style="width: {{ sentiment.positive_pct }}%;"></span></div>
+              <b>{{ sentiment.positive_pct }}%</b>
+            </div>
+            <div class="sentiment-bar-row">
+              <span>Netral</span>
+              <div class="sentiment-track"><span class="neutral" style="width: {{ sentiment.neutral_pct }}%;"></span></div>
+              <b>{{ sentiment.neutral_pct }}%</b>
+            </div>
+            <div class="sentiment-bar-row">
+              <span>Negatif</span>
+              <div class="sentiment-track"><span class="negative" style="width: {{ sentiment.negative_pct }}%;"></span></div>
+              <b>{{ sentiment.negative_pct }}%</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mention-list">
+        {% for mention in sentiment.mentions %}
+        <div class="mention-item">
+          <span class="mention-source">{{ (mention.source or 'Media')[:8] }}</span>
+          <div class="mention-copy">
+            {% if mention.url %}
+            <a class="mention-title" href="{{ mention.url }}" target="_blank" rel="noopener noreferrer">{{ mention.title or mention.url }}</a>
+            {% else %}
+            <span class="mention-title">{{ mention.title }}</span>
+            {% endif %}
+            {% if mention.snippet %}<p class="mention-snippet">{{ mention.snippet }}</p>{% endif %}
+            <div class="mention-meta">
+              <span class="badge badge-{{ sentiment_tones.get(mention.sentiment, 'gray') }}">{{ sentiment_labels.get(mention.sentiment, mention.sentiment) }}</span>
+              <span>{{ mention.source or 'Media online' }}</span>
+              {% if mention.published_at %}<span>· {{ mention.published_at|date_id }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada pemberitaan media online yang tersimpan untuk anggota ini.</p>
+      {% endif %}
+
+      {% if can_search_sentiment %}
+      <form class="mt-2" method="post" action="/anggota/{{ member.id }}/sentimen/cari" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-soft btn-sm" type="submit" {{ 'disabled' if not tavily_configured else '' }}>
+          {{ icon('search') }} {{ 'Pindai ulang pemberitaan' if sentiment.has_data else 'Pindai pemberitaan' }}
+        </button>
+      </form>
       {% endif %}
     </section>
   </div>
@@ -159,6 +238,48 @@
       <div class="failed-banner mt-2">{{ icon('alert') }} Mesin wajah tidak tersedia.</div>
       {% endif %}
       {% endif %}
+    </div>
+
+    <div class="section-card face-id-card">
+      <div class="flex-between mb-1">
+        <h2 style="margin-bottom: 0;">{{ icon('fingerprint') }} Face ID login</h2>
+        {% if face_login %}
+        <span class="badge badge-green"><span class="dot"></span>Aktif</span>
+        {% else %}
+        <span class="badge badge-gray">Belum aktif</span>
+        {% endif %}
+      </div>
+      {% if face_login %}
+      <div class="face-id-status">{{ icon('check') }} Wajah terdaftar untuk masuk tanpa kata sandi</div>
+      <div class="face-id-meta">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('calendar') }}</span>
+          <div class="side-copy"><span>Terdaftar</span><strong>{{ face_login.created_at|datetime_id }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('clock') }}</span>
+          <div class="side-copy"><span>Terakhir dipakai</span><strong>{{ face_login.last_used_at|datetime_id if face_login.last_used_at else 'Belum pernah' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('user') }}</span>
+          <div class="side-copy"><span>Akun login</span><strong>{{ member.account.user.username if member.account and member.account.user else '—' }}</strong></div>
+        </div>
+      </div>
+      {% if can_manage_users %}
+      <form class="mt-2" method="post" action="/anggota/{{ member.id }}/face-login/hapus"
+            data-confirm="Hapus Face ID login anggota ini? Anggota harus mendaftar ulang dari halaman login.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-danger btn-sm btn-block" type="submit">{{ icon('trash') }} Hapus Face ID</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <div class="face-id-status off">{{ icon('scan') }} Belum ada Face ID terdaftar</div>
+      <p class="muted-small mt-2">Anggota dapat mendaftarkan wajah sendiri melalui tab <b>Face ID → Daftarkan Face ID</b> pada halaman login.</p>
+      {% endif %}
+      <div class="face-note mt-2">
+        {{ icon('shield') }}
+        <span>Face ID login terpisah dari data wajah pencarian dokumentasi. Penghapusan dapat dilakukan administrator.</span>
+      </div>
     </div>
 
     <div class="section-card">

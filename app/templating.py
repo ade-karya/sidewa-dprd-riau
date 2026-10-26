@@ -17,9 +17,11 @@ from .constants import (
     CATEGORY_TONES,
     CONTENT_MANAGER_ROLES,
     PHOTO_STATUS_LABELS,
+    ROLE_ANGGOTA,
     ROLE_DESCRIPTIONS,
     ROLE_LABELS,
     ROLES,
+    SENTIMENT_ROLES,
     STATUS_LABELS,
     STATUSES,
 )
@@ -80,6 +82,13 @@ templates.env.globals.update(
 NAV_ITEMS = [
     {"key": "dashboard", "label": "Beranda", "icon": "home", "href": "/", "roles": None},
     {
+        "key": "member_dashboard",
+        "label": "Dashboard Saya",
+        "icon": "user",
+        "href": "/dashboard-anggota",
+        "roles": {ROLE_ANGGOTA},
+    },
+    {
         "key": "activities",
         "label": "Kegiatan",
         "icon": "calendar",
@@ -89,6 +98,13 @@ NAV_ITEMS = [
     {"key": "search", "label": "Cari Wajah", "icon": "scan", "href": "/cari", "roles": None},
     {"key": "members", "label": "Anggota", "icon": "users", "href": "/anggota", "roles": None},
     {"key": "commissions", "label": "Komisi", "icon": "layers", "href": "/komisi", "roles": None},
+    {
+        "key": "sentiment",
+        "label": "Sentimen",
+        "icon": "chart",
+        "href": "/sentimen",
+        "roles": SENTIMENT_ROLES,
+    },
     {
         "key": "users",
         "label": "Pengguna",
@@ -114,10 +130,12 @@ def _active_key(path: str) -> str:
     if path == "/":
         return "dashboard"
     for key, prefix in (
+        ("member_dashboard", "/dashboard-anggota"),
         ("activities", "/kegiatan"),
         ("search", "/cari"),
         ("members", "/anggota"),
         ("commissions", "/komisi"),
+        ("sentiment", "/sentimen"),
         ("users", "/pengguna"),
         ("audit", "/audit"),
     ):

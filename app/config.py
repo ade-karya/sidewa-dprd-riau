@@ -104,6 +104,31 @@ class Settings:
     face_sync: bool = field(default_factory=lambda: _bool("SIDEWA_FACE_SYNC", False))
     face_workers: int = field(default_factory=lambda: _int("SIDEWA_FACE_WORKERS", 2))
     face_max_dimension: int = field(default_factory=lambda: _int("SIDEWA_FACE_MAX_DIM", 1400))
+    face_login_tolerance: float = field(
+        default_factory=lambda: _float("SIDEWA_FACE_LOGIN_TOLERANCE", 0.50)
+    )
+    face_login_margin: float = field(
+        default_factory=lambda: _float("SIDEWA_FACE_LOGIN_MARGIN", 0.03)
+    )
+
+    # ── Tavily: pemindaian pemberitaan media online ─────────────────────────
+    tavily_api_key: str = field(
+        default_factory=lambda: (
+            os.getenv("SIDEWA_TAVILY_API_KEY") or os.getenv("TAVILY_API_KEY", "")
+        ).strip()
+    )
+    tavily_api_url: str = field(
+        default_factory=lambda: os.getenv(
+            "SIDEWA_TAVILY_API_URL", "https://api.tavily.com/search"
+        )
+    )
+    tavily_search_depth: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_TAVILY_SEARCH_DEPTH", "advanced")
+    )
+    tavily_max_results: int = field(
+        default_factory=lambda: _int("SIDEWA_TAVILY_MAX_RESULTS", 10)
+    )
+    tavily_days: int = field(default_factory=lambda: _int("SIDEWA_TAVILY_DAYS", 180))
 
     demo_mode: bool = field(default_factory=lambda: _bool("SIDEWA_DEMO_MODE", True))
     bootstrap_admin_username: str = field(
@@ -174,6 +199,10 @@ class Settings:
     @property
     def supabase_configured(self) -> bool:
         return bool(self.supabase_database_url or self.supabase_admin_database_url)
+
+    @property
+    def tavily_configured(self) -> bool:
+        return bool(self.tavily_api_key)
 
     @property
     def hf_s3_configured(self) -> bool:

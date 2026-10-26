@@ -55,36 +55,129 @@
         <div class="global-error" role="alert">{{ icon('alert') }}<span>{{ error }}</span></div>
         {% endif %}
 
-        <form class="login-form" id="login-form" method="post" action="/login" data-loading>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="next" value="{{ next_path }}">
-
-          <div class="form-group">
-            <label class="form-label" for="username">Nama pengguna</label>
-            <div class="input-icon-wrap">
-              {{ icon('user') }}
-              <input class="input" id="username" name="username" type="text" required
-                     value="{{ username|default('') }}" placeholder="contoh: komisi1"
-                     autocomplete="username" autocapitalize="none" spellcheck="false" autofocus>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="password">Kata sandi</label>
-            <div class="password-wrap">
-              <div class="input-icon-wrap">
-                {{ icon('lock') }}
-                <input class="input" id="password" name="password" type="password" required
-                       placeholder="Masukkan kata sandi" autocomplete="current-password">
-              </div>
-              <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kata sandi">{{ icon('eye') }}</button>
-            </div>
-          </div>
-
-          <button class="btn btn-primary btn-block btn-lg" type="submit">
-            {{ icon('logout') }} Masuk
+        <div class="login-tabs" role="tablist" aria-label="Metode masuk">
+          <button class="login-tab active" type="button" role="tab" aria-selected="true" data-login-tab="password">
+            {{ icon('lock') }} Kata sandi
           </button>
-        </form>
+          <button class="login-tab" type="button" role="tab" aria-selected="false" data-login-tab="face">
+            {{ icon('scan') }} Face ID
+          </button>
+        </div>
+
+        <div data-login-panel="password">
+          <form class="login-form" id="login-form" method="post" action="/login" data-loading>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="{{ next_path }}">
+
+            <div class="form-group">
+              <label class="form-label" for="username">Nama pengguna</label>
+              <div class="input-icon-wrap">
+                {{ icon('user') }}
+                <input class="input" id="username" name="username" type="text" required
+                       value="{{ username|default('') }}" placeholder="contoh: komisi1"
+                       autocomplete="username" autocapitalize="none" spellcheck="false" autofocus>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="password">Kata sandi</label>
+              <div class="password-wrap">
+                <div class="input-icon-wrap">
+                  {{ icon('lock') }}
+                  <input class="input" id="password" name="password" type="password" required
+                         placeholder="Masukkan kata sandi" autocomplete="current-password">
+                </div>
+                <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kata sandi">{{ icon('eye') }}</button>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block btn-lg" type="submit">
+              {{ icon('logout') }} Masuk
+            </button>
+          </form>
+        </div>
+
+        <div data-login-panel="face" data-csrf="{{ csrf_token }}" hidden>
+          <div class="face-login-intro">
+            <span class="face-login-badge">{{ icon('fingerprint') }} Face ID anggota dewan</span>
+            <p>Daftarkan wajah sekali, lalu masuk cukup dengan memindai wajah. Data wajah disimpan sebagai encoding biometrik, bukan foto mentah.</p>
+          </div>
+
+          {% if not face_available %}
+          <div class="failed-banner">{{ icon('alert') }} Mesin pengenalan wajah tidak tersedia. Gunakan kata sandi atau hubungi administrator.</div>
+          {% endif %}
+
+          <div class="login-tabs login-tabs-sub" role="tablist" aria-label="Menu Face ID">
+            <button class="login-tab active" type="button" role="tab" aria-selected="true" data-face-tab="login">Masuk dengan wajah</button>
+            <button class="login-tab" type="button" role="tab" aria-selected="false" data-face-tab="enroll">Daftarkan Face ID</button>
+          </div>
+
+          <section data-face-panel="login">
+            <div class="face-camera" data-face-camera="login">
+              <video data-face-video="login" playsinline autoplay muted aria-label="Pratinjau kamera wajah"></video>
+              <div class="face-camera-empty" data-face-empty="login">
+                {{ icon('camera') }}
+                <span>Kamera belum aktif</span>
+                <small>Tekan “Nyalakan kamera” lalu arahkan wajah ke kamera.</small>
+              </div>
+              <span class="face-guide" aria-hidden="true"></span>
+              <span class="face-scanline" aria-hidden="true"></span>
+            </div>
+            <div class="face-actions">
+              <button class="btn btn-outline btn-sm" type="button" data-face-start="login" {{ 'disabled' if not face_available }}>{{ icon('camera') }} Nyalakan kamera</button>
+              <button class="btn btn-primary btn-sm" type="button" data-face-capture="login" disabled>{{ icon('scan') }} Pindai wajah</button>
+              <label class="btn btn-ghost btn-sm face-file-btn">
+                {{ icon('upload') }} Unggah foto
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-face-file="login" hidden {{ 'disabled' if not face_available }}>
+              </label>
+            </div>
+            <div class="face-status" data-face-status="login" aria-live="polite"></div>
+          </section>
+
+          <section data-face-panel="enroll" hidden>
+            <form class="face-enroll-form" data-face-enroll-form novalidate>
+              <div class="form-group">
+                <label class="form-label" for="face-member">Pilih nama Anda</label>
+                <select class="select" id="face-member" name="member_id" required>
+                  <option value="">— Pilih anggota dewan —</option>
+                  {% for m in face_members|default([]) %}
+                  <option value="{{ m.id }}" {{ 'disabled' if m.id in face_registered_ids|default([]) }}>
+                    {{ m.full_name }}{% if m.position %} — {{ m.position }}{% endif %}{% if m.id in face_registered_ids|default([]) %} (Face ID aktif){% endif %}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="face-camera" data-face-camera="enroll">
+                <video data-face-video="enroll" playsinline autoplay muted aria-label="Pratinjau kamera pendaftaran wajah"></video>
+                <div class="face-camera-empty" data-face-empty="enroll">
+                  {{ icon('scan') }}
+                  <span>Belum ada gambar</span>
+                  <small>Ambil foto frontal dengan pencahayaan yang cukup.</small>
+                </div>
+                <span class="face-guide" aria-hidden="true"></span>
+                <span class="face-scanline" aria-hidden="true"></span>
+              </div>
+              <div class="face-actions">
+                <button class="btn btn-outline btn-sm" type="button" data-face-start="enroll" {{ 'disabled' if not face_available }}>{{ icon('camera') }} Nyalakan kamera</button>
+                <button class="btn btn-primary btn-sm" type="button" data-face-capture="enroll" disabled>{{ icon('fingerprint') }} Daftarkan Face ID</button>
+                <label class="btn btn-ghost btn-sm face-file-btn">
+                  {{ icon('upload') }} Unggah foto
+                  <input type="file" accept="image/jpeg,image/png,image/webp" data-face-file="enroll" hidden {{ 'disabled' if not face_available }}>
+                </label>
+              </div>
+              <label class="checkbox-row face-consent">
+                <input type="checkbox" data-face-consent>
+                <span>Saya menyetujui penggunaan data biometrik wajah untuk login dan telah membaca ketentuan keamanan.</span>
+              </label>
+              <div class="face-status" data-face-status="enroll" aria-live="polite"></div>
+            </form>
+          </section>
+
+          <div class="face-note">
+            {{ icon('shield') }}
+            <span>Pendaftaran hanya dapat dilakukan satu kali per anggota. Jika wajah tidak dikenali, hubungi Sekretariat DPRD untuk menghapus data Face ID.</span>
+          </div>
+        </div>
 
         {% if demo_mode and demo_accounts %}
         <div class="login-divider">AKUN DEMO</div>
@@ -120,6 +213,7 @@
   </div>
 
   <div class="toast-root" id="toast-root" aria-live="polite"></div>
+  <script src="/static/js/face-login.js?v={{ app_version }}" defer></script>
   <script src="/static/js/app.js?v={{ app_version }}" defer></script>
 </body>
 </html>

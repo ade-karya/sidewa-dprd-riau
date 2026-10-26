@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, empty_state, pagination %}
+
+{% block title %}Sentimen {{ member.full_name }}{% endblock %}
+{% block page_title %}Sentimen pemberitaan{% endblock %}
+{% block page_subtitle %}{{ member.full_name }} · {{ member.position }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/dashboard-anggota/{{ member.id }}">{{ icon('chart') }}<span>Dashboard</span></a>
+<a class="btn btn-outline btn-sm" href="/anggota/{{ member.id }}">{{ icon('user') }}<span>Profil</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="section-card mb-2">
+  <div class="flex-between mb-2">
+    <div>
+      <h2 style="margin-bottom: 4px;">{{ icon('chart') }} Ringkasan sentimen</h2>
+      <p class="muted-small">Hasil pemindaian pemberitaan media online melalui Tavily, dianalisis dengan leksikon sentimen Bahasa Indonesia.</p>
+    </div>
+    {% if summary.latest_run %}
+    <span class="badge badge-{{ 'green' if summary.latest_run.status == 'success' else 'red' }}">
+      {{ icon('refresh') }} {{ summary.latest_run.created_at|time_ago }}
+    </span>
+    {% endif %}
+  </div>
+
+  {% if summary.has_data %}
+  <div class="sentiment-summary">
+    <div class="sentiment-gauge tone-{{ sentiment_tones.get(summary.tone, 'green') }}" style="--score: {{ summary.gauge }};">
+      <div class="sentiment-gauge-inner">
+        <b>{{ summary.score_display }}</b>
+        <span>{{ summary.tone_label }}</span>
+      </div>
+    </div>
+    <div>
+      <div class="chip-row mb-2">
+        <span class="badge badge-gray">{{ summary.total }} pemberitaan</span>
+        <span class="badge badge-green">{{ summary.positive }} positif</span>
+        <span class="badge badge-gold">{{ summary.neutral }} netral</span>
+        <span class="badge badge-red">{{ summary.negative }} negatif</span>
+      </div>
+      <div class="sentiment-bars">
+        <div class="sentiment-bar-row">
+          <span>Positif</span>
+          <div class="sentiment-track"><span class="positive" style="width: {{ summary.positive_pct }}%;"></span></div>
+          <b>{{ summary.positive_pct }}%</b>
+        </div>
+        <div class="sentiment-bar-row">
+          <span>Netral</span>
+          <div class="sentiment-track"><span class="neutral" style="width: {{ summary.neutral_pct }}%;"></span></div>
+          <b>{{ summary.neutral_pct }}%</b>
+        </div>
+        <div class="sentiment-bar-row">
+          <span>Negatif</span>
+          <div class="sentiment-track"><span class="negative" style="width: {{ summary.negative_pct }}%;"></span></div>
+          <b>{{ summary.negative_pct }}%</b>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% if summary.keywords %}
+  <div class="topic-cloud" style="margin-bottom: 0;">
+    {% for keyword in summary.keywords %}
+    <span class="topic-chip">{{ keyword.name }} <b>{{ keyword.count }}</b></span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="sentiment-empty">
+    <div class="empty-icon">{{ icon('chart') }}</div>
+    <h3 style="font-size: 14px;">Belum ada pemberitaan tersimpan</h3>
+    <p class="muted-small mt-1">
+      {% if tavily_configured %}
+      Gunakan tombol pindai untuk mencari pemberitaan media online tentang anggota ini.
+      {% else %}
+      Tavily belum dikonfigurasi. Hubungi administrator untuk mengaktifkan pemindaian media online.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+  {% if can_search_sentiment %}
+  <form class="mt-2" method="post" action="/anggota/{{ member.id }}/sentimen/cari" data-loading>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn btn-primary btn-sm" type="submit" {{ 'disabled' if not tavily_configured else '' }}>
+      {{ icon('search') }} {{ 'Pindai ulang pemberitaan' if summary.has_data else 'Pindai pemberitaan' }}
+    </button>
+  </form>
+  {% if summary.latest_run and summary.latest_run.status == 'failed' and summary.latest_run.error %}
+  <div class="failed-banner mt-2">{{ icon('alert') }} Pemindaian terakhir gagal: {{ summary.latest_run.error }}</div>
+  {% endif %}
+  {% endif %}
+</div>
+
+<div class="card filter-card mb-2">
+  <form class="filter-form" method="get" action="/anggota/{{ member.id }}/sentimen">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input" type="search" name="q" value="{{ q }}"
+               placeholder="Cari judul, kutipan, atau nama media…" aria-label="Cari pemberitaan">
+      </div>
+      <select class="select" name="tone" aria-label="Sentimen">
+        <option value="">Semua sentimen</option>
+        {% for key, label in sentiment_labels.items() %}
+        <option value="{{ key }}" {{ 'selected' if tone == key }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-primary" type="submit">{{ icon('filter') }} Terapkan</button>
+      {% if q or tone %}<a class="btn btn-ghost" href="/anggota/{{ member.id }}/sentimen">Reset</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count">
+    {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> pemberitaan{% else %}Tidak ada pemberitaan{% endif %}
+  </span>
+  <div class="active-filters">
+    {% if tone %}<span class="active-filter">{{ sentiment_labels.get(tone, tone) }} <a href="/anggota/{{ member.id }}/sentimen{% if q %}?q={{ q|urlencode }}{% endif %}" aria-label="Hapus filter sentimen">{{ icon('x') }}</a></span>{% endif %}
+    {% if q %}<span class="active-filter">“{{ q }}” <a href="/anggota/{{ member.id }}/sentimen{% if tone %}?tone={{ tone }}{% endif %}" aria-label="Hapus pencarian">{{ icon('x') }}</a></span>{% endif %}
+  </div>
+</div>
+
+{% if result.items %}
+<div class="section-card">
+  <div class="mention-list">
+    {% for mention in result.items %}
+    <div class="mention-item">
+      <span class="mention-source">{{ (mention.source or 'Media')[:8] }}</span>
+      <div class="mention-copy">
+        {% if mention.url %}
+        <a class="mention-title" href="{{ mention.url }}" target="_blank" rel="noopener noreferrer">{{ mention.title or mention.url }}</a>
+        {% else %}
+        <span class="mention-title">{{ mention.title }}</span>
+        {% endif %}
+        {% if mention.snippet %}<p class="mention-snippet" style="-webkit-line-clamp: 3;">{{ mention.snippet }}</p>{% endif %}
+        <div class="mention-meta">
+          <span class="badge badge-{{ sentiment_tones.get(mention.sentiment, 'gray') }}">{{ sentiment_labels.get(mention.sentiment, mention.sentiment) }}</span>
+          <span>{{ mention.source or 'Media online' }}</span>
+          {% if mention.published_at %}<span>· {{ mention.published_at|date_id }}</span>{% else %}<span>· Diambil {{ mention.fetched_at|date_id }}</span>{% endif %}
+          <span class="sentiment-score {{ mention.sentiment }}">{{ '%+.2f'|format(mention.sentiment_score or 0) }}</span>
+          {% if mention.url %}
+          <a class="section-link" href="{{ mention.url }}" target="_blank" rel="noopener noreferrer">Buka artikel {{ icon('external') }}</a>
+          {% endif %}
+        </div>
+        {% if mention.keywords %}
+        <div class="chip-row mt-1">
+          {% for keyword in mention.keywords %}
+          <span class="chip">{{ keyword }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{{ pagination(result, request) }}
+{% else %}
+{{ empty_state('chart', 'Pemberitaan tidak ditemukan', 'Ubah kata kunci atau filter sentimen, atau jalankan pemindaian baru untuk anggota ini.') }}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar, activity_card, empty_state %}
+
+{% block title %}Dashboard {{ member.full_name }}{% endblock %}
+{% block page_title %}Dashboard anggota{% endblock %}
+{% block page_subtitle %}{{ member.position }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/anggota/{{ member.id }}">{{ icon('user') }}<span>Profil</span></a>
+<a class="btn btn-outline btn-sm" href="/anggota">{{ icon('users') }}<span>Direktori</span></a>
+{% endblock %}
+
+{% block content %}
+<section class="member-dash-hero">
+  <div class="member-dash-photo">
+    {% if member.portrait_path %}
+    <img src="/media/{{ member.portrait_path }}" alt="{{ member.full_name }}">
+    {% else %}
+    <span class="portrait-initials">{{ member.full_name|initials }}</span>
+    {% endif %}
+  </div>
+  <div class="member-dash-copy">
+    <div class="chip-row mb-1">
+      {% if member.commission %}
+      <span class="chip chip-commission" style="--chip-color: {{ member.commission.color }};"><span class="chip-dot"></span>{{ member.commission.short_name }}</span>
+      {% else %}
+      <span class="chip chip-gold">Pimpinan DPRD</span>
+      {% endif %}
+      {% if data.face_login %}
+      <span class="chip chip-green">{{ icon('scan') }} Face ID aktif</span>
+      {% else %}
+      <span class="chip chip-gray">{{ icon('scan') }} Face ID belum aktif</span>
+      {% endif %}
+      {% if data.humas_publication_count %}
+      <span class="chip chip-purple">{{ icon('sparkles') }} Terpublikasi Humas</span>
+      {% endif %}
+    </div>
+    <h1>{{ member.full_name }}</h1>
+    <p class="role-line">{{ member.position }}{% if member.commission %} · {{ member.commission.name }}{% endif %}</p>
+    <div class="member-dash-facts">
+      <span class="fact">{{ icon('users') }} {{ member.party or 'Partai belum diisi' }}</span>
+      <span class="fact">{{ icon('map-pin') }} {{ member.dapil or 'Dapil belum diisi' }}</span>
+      {% if data.last_activity_date %}
+      <span class="fact">{{ icon('calendar-check') }} Kegiatan terakhir {{ data.last_activity_date|date_id }}</span>
+      {% endif %}
+    </div>
+    <div class="member-dash-actions">
+      <a class="btn btn-primary btn-sm" href="#sentimen">{{ icon('chart') }} Sentimen publik</a>
+      <a class="btn btn-outline btn-sm" href="/kegiatan?q={{ member.full_name|urlencode }}">{{ icon('calendar') }} Dokumentasi saya</a>
+      {% if member.commission %}
+      <a class="btn btn-outline btn-sm" href="/komisi/{{ member.commission.id }}">{{ icon('layers') }} {{ member.commission.short_name }}</a>
+      {% endif %}
+      <button class="btn btn-outline btn-sm" type="button" data-print>{{ icon('printer') }} Cetak</button>
+    </div>
+    <div class="member-dash-meta">
+      <div class="side-stat"><b>{{ data.activity_count }}</b><span>Kegiatan terdokumentasi</span></div>
+      <div class="side-stat"><b>{{ data.humas_publication_count }}</b><span>Publikasi Humas</span></div>
+      <div class="side-stat"><b>{{ data.photo_count }}</b><span>Foto terdokumentasi</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="member-dash-grid">
+  <div class="member-dash-main">
+    <section class="section-card" id="sentimen">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('chart') }} Sentimen pemberitaan media online</h2>
+        <a class="section-link" href="/anggota/{{ member.id }}/sentimen">Semua pemberitaan {{ icon('arrow-right') }}</a>
+      </div>
+
+      {% if not tavily_configured %}
+      <div class="failed-banner mb-2">
+        {{ icon('alert') }} Tavily belum dikonfigurasi. Isi <code>SIDEWA_TAVILY_API_KEY</code> agar admin komisi dapat memindai pemberitaan media online.
+      </div>
+      {% endif %}
+
+      {% if sentiment.has_data %}
+      <div class="sentiment-summary">
+        <div class="sentiment-gauge tone-{{ sentiment_tones.get(sentiment.tone, 'green') }}" style="--score: {{ sentiment.gauge }};">
+          <div class="sentiment-gauge-inner">
+            <b>{{ sentiment.score_display }}</b>
+            <span>{{ sentiment.tone_label }}</span>
+          </div>
+        </div>
+        <div>
+          <div class="chip-row mb-2">
+            <span class="badge badge-gray">{{ sentiment.total }} pemberitaan</span>
+            {% if sentiment.last_updated %}
+            <span class="badge badge-gray">{{ icon('clock') }} Diperbarui {{ sentiment.last_updated|time_ago }}</span>
+            {% endif %}
+          </div>
+          <div class="sentiment-bars">
+            <div class="sentiment-bar-row">
+              <span>Positif</span>
+              <div class="sentiment-track"><span class="positive" style="width: {{ sentiment.positive_pct }}%;"></span></div>
+              <b>{{ sentiment.positive_pct }}%</b>
+            </div>
+            <div class="sentiment-bar-row">
+              <span>Netral</span>
+              <div class="sentiment-track"><span class="neutral" style="width: {{ sentiment.neutral_pct }}%;"></span></div>
+              <b>{{ sentiment.neutral_pct }}%</b>
+            </div>
+            <div class="sentiment-bar-row">
+              <span>Negatif</span>
+              <div class="sentiment-track"><span class="negative" style="width: {{ sentiment.negative_pct }}%;"></span></div>
+              <b>{{ sentiment.negative_pct }}%</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if sentiment.keywords %}
+      <div class="topic-cloud">
+        {% for keyword in sentiment.keywords %}
+        <span class="topic-chip">{{ keyword.name }} <b>{{ keyword.count }}</b></span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="sentiment-trend" role="img" aria-label="Tren jumlah pemberitaan enam bulan terakhir">
+        {% for month in sentiment.monthly %}
+        <div class="bar-item">
+          <div class="bar-wrap">
+            <div class="bar" style="height: {{ month.height }}%;">
+              <span class="bar-value">{{ month.count }}</span>
+            </div>
+          </div>
+          <span class="bar-label">{{ month.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <hr class="divider">
+      <div class="flex-between mb-1">
+        <h3 style="font-size: 13px; margin: 0;">Pemberitaan terbaru</h3>
+        <span class="muted-small">{{ sentiment.sources|length }} sumber media</span>
+      </div>
+      <div class="mention-list">
+        {% for mention in sentiment.mentions %}
+        <div class="mention-item">
+          <span class="mention-source">{{ (mention.source or 'Media')[:8] }}</span>
+          <div class="mention-copy">
+            {% if mention.url %}
+            <a class="mention-title" href="{{ mention.url }}" target="_blank" rel="noopener noreferrer">{{ mention.title or mention.url }}</a>
+            {% else %}
+            <span class="mention-title">{{ mention.title }}</span>
+            {% endif %}
+            {% if mention.snippet %}<p class="mention-snippet">{{ mention.snippet }}</p>{% endif %}
+            <div class="mention-meta">
+              <span class="badge badge-{{ sentiment_tones.get(mention.sentiment, 'gray') }}">{{ sentiment_labels.get(mention.sentiment, mention.sentiment) }}</span>
+              <span>{{ mention.source or 'Media online' }}</span>
+              {% if mention.published_at %}<span>· {{ mention.published_at|date_id }}</span>{% endif %}
+              <span class="sentiment-score {{ mention.sentiment }}">{{ '%+.2f'|format(mention.sentiment_score or 0) }}</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="sentiment-empty">
+        <div class="empty-icon">{{ icon('chart') }}</div>
+        <h3 style="font-size: 14px;">Belum ada data sentimen</h3>
+        <p class="muted-small mt-1">
+          {% if tavily_configured %}
+          Admin komisi dapat memindai pemberitaan media online tentang anggota ini melalui Tavily.
+          {% else %}
+          Pemindaian akan tersedia setelah administrator mengonfigurasi Tavily.
+          {% endif %}
+        </p>
+      </div>
+      {% endif %}
+
+      {% if can_search_sentiment %}
+      <form class="mt-2" method="post" action="/anggota/{{ member.id }}/sentimen/cari" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-soft btn-sm" type="submit" {{ 'disabled' if not tavily_configured else '' }}>
+          {{ icon('search') }} {{ 'Pindai ulang pemberitaan' if sentiment.has_data else 'Pindai pemberitaan sekarang' }}
+        </button>
+      </form>
+      {% if sentiment.latest_run and sentiment.latest_run.status == 'failed' and sentiment.latest_run.error %}
+      <div class="failed-banner mt-2">{{ icon('alert') }} Pemindaian terakhir gagal: {{ sentiment.latest_run.error }}</div>
+      {% endif %}
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('sparkles') }} Publikasi &amp; dokumentasi Humas</h2>
+        <a class="section-link" href="/kegiatan?q={{ member.full_name|urlencode }}">Semua dokumentasi {{ icon('arrow-right') }}</a>
+      </div>
+      <div class="publication-stats">
+        <div class="publication-stat"><b>{{ data.activity_count }}</b><span>Total kegiatan tertaut</span></div>
+        <div class="publication-stat"><b>{{ data.published_count }}</b><span>Sudah terbit</span></div>
+        <div class="publication-stat"><b>{{ data.humas_publication_count }}</b><span>Diunggah tim Humas</span></div>
+        <div class="publication-stat"><b>{{ data.recent_count }}</b><span>90 hari terakhir</span></div>
+      </div>
+
+      {% if data.humas_activities %}
+      <div class="humas-list">
+        {% for activity in data.humas_activities %}
+        <a class="humas-item" href="/kegiatan/{{ activity.id }}">
+          <span class="humas-thumb">
+            {% if activity.cover and activity.cover.thumb_path %}
+            <img src="/media/{{ activity.cover.thumb_path }}" alt="" loading="lazy">
+            {% endif %}
+          </span>
+          <span class="humas-copy">
+            <strong>{{ activity.title }}</strong>
+            <span>{{ activity.activity_date|date_short }} · {{ activity.category }}</span>
+          </span>
+          <span class="humas-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% elif data.recent_activities %}
+      <p class="muted-small mb-2">Belum ada publikasi khusus Humas. Berikut dokumentasi terbaru yang tertaut pada anggota ini.</p>
+      <div class="humas-list">
+        {% for activity in data.recent_activities[:4] %}
+        <a class="humas-item" href="/kegiatan/{{ activity.id }}">
+          <span class="humas-thumb">
+            {% if activity.cover and activity.cover.thumb_path %}
+            <img src="/media/{{ activity.cover.thumb_path }}" alt="" loading="lazy">
+            {% endif %}
+          </span>
+          <span class="humas-copy">
+            <strong>{{ activity.title }}</strong>
+            <span>{{ activity.activity_date|date_short }} · {{ activity.category }}</span>
+          </span>
+          <span class="humas-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada dokumentasi kegiatan yang tertaut pada anggota ini.</p>
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <div class="chart-head">
+        <h2 style="margin-bottom: 0;">{{ icon('calendar') }} Tren dokumentasi 6 bulan</h2>
+        <span class="muted-small">{{ data.today|date_id }}</span>
+      </div>
+      <div class="bar-chart" role="img" aria-label="Grafik jumlah dokumentasi kegiatan per bulan">
+        {% for month in data.monthly %}
+        <div class="bar-item">
+          <div class="bar-wrap">
+            <div class="bar" style="height: {{ month.height }}%;">
+              <span class="bar-value">{{ month.count }}</span>
+            </div>
+          </div>
+          <span class="bar-label">{{ month.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% if data.category_stats %}
+      <div class="filter-meta" style="margin-bottom: 0;">
+        <span class="result-count">Kategori terbanyak: <b>{{ data.category_stats[0].name }}</b> ({{ data.category_stats[0].count }} kegiatan)</span>
+        <a class="section-link" href="/kegiatan?q={{ member.full_name|urlencode }}">Telusuri {{ icon('arrow-right') }}</a>
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('calendar') }} Dokumentasi terbaru</h2>
+        <a class="section-link" href="/kegiatan?q={{ member.full_name|urlencode }}">Lihat semua {{ icon('arrow-right') }}</a>
+      </div>
+      {% if data.recent_activities %}
+      <div class="activity-grid cols-2">
+        {% for activity in data.recent_activities %}{{ activity_card(activity) }}{% endfor %}
+      </div>
+      {% else %}
+      {{ empty_state('calendar', 'Belum ada dokumentasi', 'Dokumentasi kegiatan yang melibatkan anggota ini akan tampil di sini setelah dipublikasikan tim Humas.') }}
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="member-dash-side">
+    <section class="section-card face-id-card">
+      <div class="flex-between mb-1">
+        <h2 style="margin-bottom: 0;">{{ icon('fingerprint') }} Face ID login</h2>
+        {% if data.face_login %}
+        <span class="badge badge-green"><span class="dot"></span>Aktif</span>
+        {% else %}
+        <span class="badge badge-gray">Belum aktif</span>
+        {% endif %}
+      </div>
+      {% if data.face_login %}
+      <div class="face-id-status">{{ icon('check') }} Wajah terdaftar untuk masuk tanpa kata sandi</div>
+      <div class="face-id-meta">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('calendar') }}</span>
+          <div class="side-copy"><span>Terdaftar</span><strong>{{ data.face_login.created_at|datetime_id }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('clock') }}</span>
+          <div class="side-copy"><span>Terakhir dipakai</span><strong>{{ data.face_login.last_used_at|datetime_id if data.face_login.last_used_at else 'Belum pernah' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('user') }}</span>
+          <div class="side-copy"><span>Akun login</span><strong>{{ data.member_account.user.username if data.member_account and data.member_account.user else '—' }}</strong></div>
+        </div>
+      </div>
+      {% if can_manage_users %}
+      <form class="mt-2" method="post" action="/anggota/{{ member.id }}/face-login/hapus"
+            data-confirm="Hapus Face ID login anggota ini? Anggota harus mendaftar ulang dari halaman login.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-danger btn-sm btn-block" type="submit">{{ icon('trash') }} Hapus Face ID</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <div class="face-id-status off">{{ icon('scan') }} Belum ada Face ID terdaftar</div>
+      <p class="muted-small mt-2">Anggota dapat mendaftarkan wajah sendiri melalui tab <b>Face ID → Daftarkan Face ID</b> pada halaman login. Setelah terdaftar, login cukup dengan memindai wajah.</p>
+      {% endif %}
+      <div class="face-note mt-2">
+        {{ icon('shield') }}
+        <span>Data wajah disimpan sebagai encoding biometrik. Penghapusan dapat dilakukan administrator kapan pun.</span>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <h2>{{ icon('layers') }} Tugas &amp; fungsi dewan</h2>
+      <div class="duty-list">
+        {% for duty in data.tugas_dewan %}
+        <div class="duty-item">
+          <span class="duty-index">{{ loop.index }}</span>
+          <div class="duty-copy">
+            <strong>{{ duty.title }}</strong>
+            <span>{{ duty.text }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="section-card">
+      <h2>{{ icon('building') }} Ringkasan kelembagaan</h2>
+      <div class="side-list">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('layers') }}</span>
+          <div class="side-copy"><span>Komisi</span><strong>{{ member.commission.name if member.commission else 'Pimpinan / non-komisi' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('users') }}</span>
+          <div class="side-copy"><span>Partai</span><strong>{{ member.party or '—' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('map-pin') }}</span>
+          <div class="side-copy"><span>Daerah pemilihan</span><strong>{{ member.dapil or '—' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('scan') }}</span>
+          <div class="side-copy"><span>Penampilan terverifikasi</span><strong>{{ data.recognized_count }} dokumentasi</strong></div>
+        </div>
+      </div>
+      <a class="btn btn-outline btn-sm btn-block mt-2" href="/anggota/{{ member.id }}">{{ icon('user') }} Buka profil lengkap</a>
+    </section>
+  </aside>
+</div>
+{% endblock %}

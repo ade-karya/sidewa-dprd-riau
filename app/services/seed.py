@@ -34,8 +34,12 @@ from ..models import (
     AuditLog,
     Commission,
     FaceDetection,
+    MediaMention,
     Member,
+    MemberAccount,
     MemberFace,
+    MemberFaceLogin,
+    SentimentRun,
     User,
     activity_commissions,
     utcnow,
@@ -915,6 +919,10 @@ USERS = [
 
 def _reset(db: Session) -> None:
     for model in (
+        MediaMention,
+        SentimentRun,
+        MemberFaceLogin,
+        MemberAccount,
         FaceDetection,
         ActivityPhoto,
         ActivityMember,
@@ -934,10 +942,13 @@ def _reset(db: Session) -> None:
 def _wipe_media(db: Session) -> None:
     photos = db.query(ActivityPhoto).all()
     faces = db.query(MemberFace).all()
+    login_faces = db.query(MemberFaceLogin).all()
     members = db.query(Member).all()
     for photo in photos:
         delete_paths(photo.file_path, photo.thumb_path)
     for face in faces:
+        delete_paths(face.image_path)
+    for face in login_faces:
         delete_paths(face.image_path)
     for member in members:
         delete_paths(member.portrait_path)

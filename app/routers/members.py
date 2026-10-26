@@ -8,10 +8,20 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..audit import audit
-from ..constants import ADMIN_ROLES, CONTENT_MANAGER_ROLES
+from ..config import settings
+from ..constants import ADMIN_ROLES, CONTENT_MANAGER_ROLES, ROLE_ADMIN, ROLE_STAF, ROLE_SUPERADMIN
 from ..database import get_db
 from ..deps import csrf_protect, flash, require_roles, require_user
-from ..models import Activity, ActivityMember, Commission, Member, MemberFace, User, utcnow
+from ..models import (
+    Activity,
+    ActivityMember,
+    Commission,
+    Member,
+    MemberFace,
+    MemberFaceLogin,
+    User,
+    utcnow,
+)
 from ..services import face_engine
 from ..services.images import (
     ImageValidationError,
@@ -19,6 +29,7 @@ from ..services.images import (
     delete_paths,
     save_image,
 )
+from ..services.member_analytics import SENTIMENT_LABELS, SENTIMENT_TONES, member_sentiment_summary
 from ..services.search import Page, paginate, visible_query
 from ..templating import render
 
@@ -48,6 +59,18 @@ def _commission_by_code(db: Session, code: str) -> Commission | None:
     if not code:
         return None
     return db.query(Commission).filter(Commission.code == code).first()
+
+
+def _can_search_sentiment(user: User, member: Member) -> bool:
+    if user.role in {ROLE_SUPERADMIN, ROLE_ADMIN}:
+        return True
+    if user.role == ROLE_STAF:
+        return bool(
+            user.commission_id
+            and member.commission_id
+            and user.commission_id == member.commission_id
+        )
+    return False
 
 
 def _form_values(member: Member | None = None) -> dict:
@@ -292,6 +315,13 @@ def member_detail(
         .filter(Activity.member_links.any(ActivityMember.member_id == member.id))
         .count()
     )
+    sentiment = member_sentiment_summary(db, member, limit=3)
+    face_login = (
+        db.query(MemberFaceLogin)
+        .filter(MemberFaceLogin.member_id == member.id, MemberFaceLogin.is_active.is_(True))
+        .order_by(MemberFaceLogin.id.desc())
+        .first()
+    )
     return render(
         request,
         "members/detail.html",
@@ -300,6 +330,12 @@ def member_detail(
         activities=activities,
         activity_count=activity_count,
         face_available=face_engine.engine.available,
+        sentiment=sentiment,
+        sentiment_labels=SENTIMENT_LABELS,
+        sentiment_tones=SENTIMENT_TONES,
+        face_login=face_login,
+        can_search_sentiment=_can_search_sentiment(user, member),
+        tavily_configured=settings.tavily_configured,
     )
 
 
@@ -422,6 +458,43 @@ def toggle_member(
     flash(
         request,
         f"Anggota {'diaktifkan' if member.is_active else 'dinonaktifkan'}.",
+        "success",
+    )
+    return RedirectResponse(f"/anggota/{member.id}", status_code=303)
+
+
+@router.post("/anggota/{member_id}/face-login/hapus")
+def delete_face_login(
+    member_id: int,
+    request: Request,
+    user: User = Depends(ADMIN),
+    db: Session = Depends(get_db),
+):
+    member = _member_or_404(db, member_id)
+    rows = (
+        db.query(MemberFaceLogin)
+        .filter(MemberFaceLogin.member_id == member.id)
+        .all()
+    )
+    if not rows:
+        flash(request, "Anggota ini belum memiliki Face ID.", "warning")
+        return RedirectResponse(f"/anggota/{member.id}", status_code=303)
+    for row in rows:
+        delete_paths(row.image_path)
+        db.delete(row)
+    audit(
+        db,
+        request,
+        "FACE_LOGIN_DELETE",
+        actor=user,
+        entity_type="member",
+        entity_id=member.id,
+        summary=f"Menghapus Face ID login {member.full_name}",
+    )
+    db.commit()
+    flash(
+        request,
+        "Face ID dihapus. Anggota dapat mendaftarkan ulang wajah pada halaman login.",
         "success",
     )
     return RedirectResponse(f"/anggota/{member.id}", status_code=303)

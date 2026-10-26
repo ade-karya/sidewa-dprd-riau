@@ -3,25 +3,43 @@
 from __future__ import annotations
 
 import re
+import uuid
 from datetime import timedelta
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from ..audit import audit
 from ..config import settings
-from ..constants import ROLE_LABELS
+from ..constants import ROLE_ANGGOTA, ROLE_LABELS
 from ..database import get_db
 from ..deps import csrf_protect, flash, get_current_user, require_user
-from ..models import ApiToken, AuditLog, User, utcnow
+from ..models import (
+    ApiToken,
+    AuditLog,
+    Member,
+    MemberAccount,
+    MemberFaceLogin,
+    User,
+    utcnow,
+)
 from ..security import (
     PasswordPolicyError,
     generate_api_token,
+    generate_password,
     hash_password,
+    new_csrf_token,
     validate_password_strength,
     verify_password,
+)
+from ..services import face_engine
+from ..services.images import (
+    ImageValidationError,
+    delete_paths,
+    normalize_upload,
+    save_image,
 )
 from ..templating import render
 
@@ -49,6 +67,75 @@ def _safe_next(value: str | None) -> str:
     return value
 
 
+def _face_members(db: Session) -> list[Member]:
+    return (
+        db.query(Member)
+        .filter(Member.is_active.is_(True))
+        .order_by(Member.commission_id.is_(None), Member.full_name)
+        .all()
+    )
+
+
+def _face_registered_ids(db: Session) -> set[int]:
+    return {
+        row[0]
+        for row in db.query(MemberFaceLogin.member_id)
+        .filter(MemberFaceLogin.is_active.is_(True))
+        .all()
+    }
+
+
+def _detect_login_face(raw: bytes):
+    """Validasi unggahan lalu deteksi satu wajah tanpa menyimpan berkas permanen."""
+    normalized = normalize_upload(raw, max_dimension=1400)
+    temp_dir = settings.media_root / "tmp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    path = temp_dir / f"face-login-{uuid.uuid4().hex}.jpg"
+    path.write_bytes(normalized.data)
+    try:
+        return face_engine.engine.detect_single(path)
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def _member_user(db: Session, member: Member) -> tuple[User, MemberAccount]:
+    account = db.query(MemberAccount).filter(MemberAccount.member_id == member.id).first()
+    if account and account.user:
+        return account.user, account
+    username = f"anggota{member.id}"
+    suffix = 1
+    while db.query(User).filter(User.username == username).first():
+        suffix += 1
+        username = f"anggota{member.id}-{suffix}"
+    user = User(
+        username=username[:64],
+        full_name=member.full_name[:160],
+        email=member.email,
+        role=ROLE_ANGGOTA,
+        commission_id=member.commission_id,
+        password_hash=hash_password(generate_password()),
+        is_active=True,
+        must_change_password=False,
+    )
+    db.add(user)
+    db.flush()
+    account = MemberAccount(user_id=user.id, member_id=member.id)
+    db.add(account)
+    db.flush()
+    return user, account
+
+
+def _start_session(request: Request, user: User, *, method: str = "password") -> None:
+    request.session.clear()
+    request.session["user_id"] = user.id
+    request.session["csrf"] = new_csrf_token()
+    request.session["auth_method"] = method
+
+
+def _face_error(message: str, status_code: int = 400) -> JSONResponse:
+    return JSONResponse({"ok": False, "error": message}, status_code=status_code)
+
+
 @router.get("/login")
 def login_page(request: Request, next: str = "", db: Session = Depends(get_db)):
     user = get_current_user(request, db)
@@ -60,6 +147,9 @@ def login_page(request: Request, next: str = "", db: Session = Depends(get_db)):
         user=None,
         next_path=_safe_next(next),
         demo_accounts=_demo_accounts(),
+        face_members=_face_members(db),
+        face_registered_ids=_face_registered_ids(db),
+        face_available=face_engine.engine.available,
     )
 
 
@@ -113,6 +203,9 @@ def login(
             username=username,
             next_path=_safe_next(next),
             demo_accounts=_demo_accounts(),
+            face_members=_face_members(db),
+            face_registered_ids=_face_registered_ids(db),
+            face_available=face_engine.engine.available,
         )
 
     user.failed_attempts = 0
@@ -129,13 +222,204 @@ def login(
     )
     db.commit()
 
-    request.session.clear()
-    request.session["user_id"] = user.id
-    from ..security import new_csrf_token
-
-    request.session["csrf"] = new_csrf_token()
+    _start_session(request, user, method="password")
     flash(request, f"Selamat datang, {user.full_name}.", "success")
     return RedirectResponse(_safe_next(next), status_code=303)
+
+
+@router.post("/login/wajah")
+async def login_with_face(
+    request: Request,
+    photo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Masuk dengan Face ID yang sudah didaftarkan pada halaman login."""
+    if not face_engine.engine.available:
+        return _face_error(
+            "Mesin pengenalan wajah tidak tersedia di server. Hubungi administrator.",
+            503,
+        )
+    if not photo or not photo.filename:
+        return _face_error("Ambil atau pilih foto wajah terlebih dahulu.")
+    raw = await photo.read(settings.max_upload_bytes + 1)
+    try:
+        detected = _detect_login_face(raw)
+    except ImageValidationError as exc:
+        return _face_error(str(exc))
+    except face_engine.FaceEngineError as exc:
+        return _face_error(str(exc))
+
+    known = face_engine.engine.known_login_faces(db)
+    if not known:
+        return _face_error(
+            "Belum ada Face ID anggota yang terdaftar. Daftarkan wajah terlebih dahulu.",
+            404,
+        )
+    matches = face_engine.engine.match(detected.encoding, known)
+    if not matches or matches[0].distance > settings.face_login_tolerance:
+        audit(
+            db,
+            request,
+            "FACE_LOGIN_FAILED",
+            summary="Percobaan masuk dengan Face ID tidak dikenali",
+            detail={"distance": matches[0].distance if matches else None},
+        )
+        db.commit()
+        return _face_error(
+            "Wajah tidak dikenali. Pastikan pencahayaan cukup dan wajah menghadap kamera.",
+            401,
+        )
+    best = matches[0]
+    if len(matches) > 1 and (matches[1].distance - best.distance) < settings.face_login_margin:
+        audit(
+            db,
+            request,
+            "FACE_LOGIN_FAILED",
+            summary="Percobaan masuk Face ID ambigu (lebih dari satu kandidat)",
+            detail={"distance": best.distance, "runner_up": matches[1].distance},
+        )
+        db.commit()
+        return _face_error(
+            "Wajah terlalu mirip dengan lebih dari satu anggota. Gunakan foto yang lebih jelas.",
+            401,
+        )
+
+    member = db.get(Member, best.member_id)
+    account = (
+        db.query(MemberAccount).filter(MemberAccount.member_id == best.member_id).first()
+    )
+    if not member or not member.is_active or not account or not account.user:
+        return _face_error("Akun anggota tidak aktif. Hubungi Sekretariat DPRD.", 403)
+    user = account.user
+    if not user.is_active:
+        return _face_error("Akun anggota dinonaktifkan. Hubungi administrator.", 403)
+
+    login_face = db.get(MemberFaceLogin, best.face_id)
+    if login_face:
+        login_face.last_used_at = utcnow()
+    account.last_face_login_at = utcnow()
+    user.failed_attempts = 0
+    user.locked_until = None
+    user.last_login_at = utcnow()
+    audit(
+        db,
+        request,
+        "FACE_LOGIN",
+        actor=user,
+        entity_type="member",
+        entity_id=member.id,
+        summary=f"{member.full_name} masuk dengan Face ID",
+        detail={"confidence": best.confidence, "distance": best.distance},
+    )
+    db.commit()
+    _start_session(request, user, method="face")
+    flash(request, f"Selamat datang, {member.full_name}.", "success")
+    return JSONResponse(
+        {
+            "ok": True,
+            "redirect": f"/dashboard-anggota/{member.id}",
+            "name": member.full_name,
+            "confidence": best.confidence,
+        }
+    )
+
+
+@router.post("/login/wajah/daftar")
+async def enroll_face_login(
+    request: Request,
+    member_id: int = Form(...),
+    photo: UploadFile = File(...),
+    consent: bool = Form(False),
+    db: Session = Depends(get_db),
+):
+    """Pendaftaran Face ID mandiri dari halaman login."""
+    if not face_engine.engine.available:
+        return _face_error(
+            "Mesin pengenalan wajah tidak tersedia di server. Hubungi administrator.",
+            503,
+        )
+    if not consent:
+        return _face_error(
+            "Centang persetujuan penggunaan data biometrik untuk melanjutkan."
+        )
+    member = db.get(Member, member_id)
+    if not member or not member.is_active:
+        return _face_error("Anggota tidak ditemukan atau sudah tidak aktif.", 404)
+    if not photo or not photo.filename:
+        return _face_error("Ambil atau pilih foto wajah terlebih dahulu.")
+
+    existing = (
+        db.query(MemberFaceLogin)
+        .filter(MemberFaceLogin.member_id == member.id, MemberFaceLogin.is_active.is_(True))
+        .first()
+    )
+    if existing:
+        return _face_error(
+            "Face ID untuk anggota ini sudah terdaftar. Gunakan menu masuk dengan wajah.",
+            409,
+        )
+
+    raw = await photo.read(settings.max_upload_bytes + 1)
+    try:
+        detected = _detect_login_face(raw)
+    except ImageValidationError as exc:
+        return _face_error(str(exc))
+    except face_engine.FaceEngineError as exc:
+        return _face_error(str(exc))
+
+    known = face_engine.engine.known_login_faces(db)
+    if known:
+        matches = face_engine.engine.match(detected.encoding, known)
+        if matches and matches[0].distance <= settings.face_login_tolerance:
+            return _face_error(
+                "Wajah ini sudah terdaftar untuk anggota lain. Hubungi Sekretariat jika keliru.",
+                409,
+            )
+
+    saved: list[str] = []
+    try:
+        rel_main, rel_thumb, _, _ = save_image(raw, "members", max_dimension=1400)
+        saved.extend([rel_main, rel_thumb])
+        login_face = MemberFaceLogin(
+            member_id=member.id,
+            image_path=rel_main,
+            encoding=detected.encoding,
+            quality=detected.quality,
+        )
+        db.add(login_face)
+        user, account = _member_user(db, member)
+        if not user.is_active:
+            raise ValueError("Akun anggota dinonaktifkan.")
+        account.last_face_login_at = utcnow()
+        if not member.consent_granted_at:
+            member.consent_granted_at = utcnow()
+            member.consent_note = "Persetujuan Face ID tercatat pada halaman login."
+        audit(
+            db,
+            request,
+            "FACE_LOGIN_ENROLL",
+            actor=user,
+            entity_type="member",
+            entity_id=member.id,
+            summary=f"Mendaftarkan Face ID untuk {member.full_name} melalui halaman login",
+            detail={"quality": detected.quality},
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        for path in saved:
+            delete_paths(path)
+        return _face_error(f"Pendaftaran Face ID gagal: {exc}", 400)
+
+    _start_session(request, user, method="face")
+    flash(request, f"Face ID {member.full_name} berhasil didaftarkan.", "success")
+    return JSONResponse(
+        {
+            "ok": True,
+            "redirect": f"/dashboard-anggota/{member.id}",
+            "name": member.full_name,
+        }
+    )
 
 
 @router.post("/logout")

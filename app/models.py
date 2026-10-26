@@ -93,6 +93,9 @@ class User(Base, TimestampMixin):
     avatar_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     commission: Mapped[Commission | None] = relationship()
+    member_account: Mapped[MemberAccount | None] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
     tokens: Mapped[list[ApiToken]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
@@ -130,6 +133,15 @@ class Member(Base, TimestampMixin):
     faces: Mapped[list[MemberFace]] = relationship(
         back_populates="member", cascade="all, delete-orphan", order_by="MemberFace.id"
     )
+    face_logins: Mapped[list[MemberFaceLogin]] = relationship(
+        back_populates="member", cascade="all, delete-orphan", order_by="MemberFaceLogin.id"
+    )
+    media_mentions: Mapped[list[MediaMention]] = relationship(
+        back_populates="member", cascade="all, delete-orphan"
+    )
+    account: Mapped[MemberAccount | None] = relationship(
+        back_populates="member", uselist=False, cascade="all, delete-orphan"
+    )
     activity_links: Mapped[list[ActivityMember]] = relationship(
         back_populates="member", cascade="all, delete-orphan"
     )
@@ -142,6 +154,112 @@ class Member(Base, TimestampMixin):
         if len(parts) == 1:
             return parts[0][:2].upper()
         return (parts[0][0] + parts[-1][0]).upper()
+
+
+class MemberAccount(Base):
+    """Penghubung akun login Face ID dengan data anggota dewan."""
+
+    __tablename__ = "member_accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    last_face_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="member_account")
+    member: Mapped[Member] = relationship(back_populates="account")
+
+
+class MemberFaceLogin(Base):
+    """Encoding wajah yang dipakai khusus untuk login Face ID anggota."""
+
+    __tablename__ = "member_face_logins"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    image_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    encoding: Mapped[list[float]] = mapped_column(JSON, nullable=False)
+    quality: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    member: Mapped[Member] = relationship(back_populates="face_logins")
+
+
+class SentimentRun(Base):
+    """Riwayat pemindaian sentimen media online melalui Tavily."""
+
+    __tablename__ = "sentiment_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    query: Mapped[str] = mapped_column(String(400), default="", nullable=False)
+    requested_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(20), default="success", nullable=False)
+    error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    result_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    positive_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    neutral_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    negative_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    average_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utcnow, index=True, nullable=False
+    )
+
+    member: Mapped[Member] = relationship()
+    requested_by: Mapped[User | None] = relationship()
+
+
+class MediaMention(Base):
+    """Satu pemberitaan media online tentang anggota dewan."""
+
+    __tablename__ = "media_mentions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("sentiment_runs.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    title: Mapped[str] = mapped_column(String(400), default="", nullable=False)
+    url: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    url_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    source: Mapped[str] = mapped_column(String(160), default="", nullable=False)
+    snippet: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sentiment: Mapped[str] = mapped_column(
+        String(20), default="netral", index=True, nullable=False
+    )
+    sentiment_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    keywords: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    provider: Mapped[str] = mapped_column(String(30), default="tavily", nullable=False)
+    fetched_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utcnow, index=True, nullable=False
+    )
+
+    member: Mapped[Member] = relationship(back_populates="media_mentions")
+    run: Mapped[SentimentRun | None] = relationship()
+    fetched_by: Mapped[User | None] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("member_id", "url_hash", name="uq_media_mention_member_url"),
+    )
 
 
 class MemberFace(Base):
