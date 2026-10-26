@@ -121,9 +121,68 @@ class Settings:
     log_level: str = field(default_factory=lambda: os.getenv("SIDEWA_LOG_LEVEL", "INFO"))
     metrics_token: str = field(default_factory=lambda: os.getenv("SIDEWA_METRICS_TOKEN", ""))
 
+    # ── Supabase: database utama (source of truth) ──────────────────────────
+    # Runtime memakai transaction pooler (port 6543); operasi skema/resync
+    # memakai session pooler (port 5432).
+    supabase_database_url: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_SUPABASE_DATABASE_URL", "")
+    )
+    supabase_admin_database_url: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_SUPABASE_ADMIN_DATABASE_URL", "")
+    )
+
+    # ── Sinkronisasi lokal → Supabase ───────────────────────────────────────
+    sync_enabled: bool = field(default_factory=lambda: _bool("SIDEWA_SYNC_ENABLED", False))
+    sync_interval: int = field(default_factory=lambda: _int("SIDEWA_SYNC_INTERVAL", 5))
+    sync_batch: int = field(default_factory=lambda: _int("SIDEWA_SYNC_BATCH", 200))
+    sync_hydrate_on_empty: bool = field(
+        default_factory=lambda: _bool("SIDEWA_SYNC_HYDRATE_ON_EMPTY", True)
+    )
+    sync_pull_on_start: bool = field(
+        default_factory=lambda: _bool("SIDEWA_SYNC_PULL_ON_START", False)
+    )
+
+    # ── Media: Hugging Face S3 (S3-compatible) ──────────────────────────────
+    hf_s3_bucket: str = field(default_factory=lambda: os.getenv("SIDEWA_HF_S3_BUCKET", ""))
+    hf_s3_endpoint: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_HF_S3_ENDPOINT", "").rstrip("/")
+    )
+    hf_s3_region: str = field(default_factory=lambda: os.getenv("SIDEWA_HF_S3_REGION", "us-east-1"))
+    hf_s3_access_key_id: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_HF_S3_ACCESS_KEY_ID", "")
+    )
+    hf_s3_secret_access_key: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_HF_S3_SECRET_ACCESS_KEY", "")
+    )
+    hf_s3_prefix: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_HF_S3_PREFIX", "sidewa/media").strip("/")
+    )
+    media_sync_enabled: bool = field(
+        default_factory=lambda: _bool("SIDEWA_MEDIA_SYNC_ENABLED", True)
+    )
+    media_sync_interval: int = field(
+        default_factory=lambda: _int("SIDEWA_MEDIA_SYNC_INTERVAL", 30)
+    )
+    media_cache_on_demand: bool = field(
+        default_factory=lambda: _bool("SIDEWA_MEDIA_CACHE_ON_DEMAND", True)
+    )
+
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() in {"production", "prod"}
+
+    @property
+    def supabase_configured(self) -> bool:
+        return bool(self.supabase_database_url or self.supabase_admin_database_url)
+
+    @property
+    def hf_s3_configured(self) -> bool:
+        return bool(
+            self.hf_s3_bucket
+            and self.hf_s3_endpoint
+            and self.hf_s3_access_key_id
+            and self.hf_s3_secret_access_key
+        )
 
     @property
     def max_upload_bytes(self) -> int:

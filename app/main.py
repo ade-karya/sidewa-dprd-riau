@@ -37,7 +37,7 @@ from .routers import (
     users,
 )
 from .security import PasswordPolicyError, hash_password, validate_password_strength
-from .services import face_engine, jobs
+from .services import face_engine, jobs, supabase_sync
 from .templating import render
 
 logging.basicConfig(
@@ -149,6 +149,7 @@ async def lifespan(app: FastAPI):
     queued = jobs.requeue_pending()
     if queued:
         logger.info("%s foto dimasukkan kembali ke antrean pemrosesan wajah.", queued)
+    supabase_sync.bootstrap()
     logger.info(
         "SIDEWA %s siap — env=%s database=%s",
         __version__,
@@ -157,6 +158,7 @@ async def lifespan(app: FastAPI):
     )
     yield
     jobs.shutdown()
+    supabase_sync.flush_and_shutdown()
 
 
 def create_app() -> FastAPI:

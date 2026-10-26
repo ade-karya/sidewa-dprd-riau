@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
+
+logger = logging.getLogger("sidewa.database")
 
 
 class Base(DeclarativeBase):
@@ -54,6 +57,14 @@ def init_db() -> None:
 
     settings.ensure_dirs()
     Base.metadata.create_all(bind=engine)
+
+    # Tabel outbox, trigger perubahan, dan antrean media (khusus PostgreSQL).
+    try:
+        from .services import supabase_sync
+
+        supabase_sync.install_local_schema()
+    except Exception:
+        logger.exception("Gagal menyiapkan skema sinkronisasi lokal")
 
 
 def db_health() -> bool:

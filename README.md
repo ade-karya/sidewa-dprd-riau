@@ -18,6 +18,36 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 - Database: SQLite (pengembangan) / PostgreSQL (produksi).
 - Frontend: HTML + CSS + JavaScript vanilla (tanpa build step).
 
+## Arsitektur produksi: Supabase + cache lokal + HF S3
+
+Pada mode produksi, SIDEWA memakai tiga lapisan:
+
+| Lapisan | Peran | Teknologi |
+|---|---|---|
+| **Database utama** | Sumber kebenaran (source of truth) | Supabase PostgreSQL |
+| **Cache lokal** | Buffer operasional + antrean outbox | PostgreSQL lokal |
+| **Object storage** | Penyimpanan foto & thumbnail | Hugging Face S3 (`bucket=kelaska`) |
+
+Alur tulis bersifat **local-first write-behind**:
+
+1. Aplikasi membaca/menulis ke PostgreSQL lokal sehingga latensi rendah dan
+   koneksi Supabase tetap sedikit.
+2. Trigger PostgreSQL mencatat setiap perubahan ke tabel `sync_outbox`.
+3. Worker latar belakang mengirim outbox ke Supabase secara batch (default
+   tiap 5 detik, 200 baris per batch).
+4. Media ditulis ke disk lokal lalu diunggah ke HF S3 oleh worker media.
+   Jika cache lokal hilang, berkas diunduh kembali saat pertama kali diminta
+   (*on-demand cache*).
+5. Saat cache lokal kosong, data dipulihkan otomatis dari Supabase
+   (`hydrate`).
+
+Supabase tetap menjadi sumber kebenaran: semua data akhirnya tersimpan di
+Supabase, sedangkan PostgreSQL lokal hanya cache yang boleh hilang.
+
+> **Keamanan:** tabel aplikasi di Supabase memakai RLS dan akses `anon` /
+> `authenticated` dicabut. Aplikasi terhubung memakai kredensial database
+> (bukan service-role key). Jangan commit `.env`.
+
 ## Memulai
 
 ```bash
@@ -47,7 +77,13 @@ Nonaktifkan demo di produksi: `SIDEWA_DEMO_MODE=false`.
 Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Variabel penting:
 
 - `SIDEWA_SECRET_KEY` — wajib diganti di produksi.
-- `SIDEWA_DATABASE_URL` — `sqlite:///data/sidewa.db` atau `postgresql+psycopg://...`.
+- `SIDEWA_DATABASE_URL` — cache lokal: `sqlite:///data/sidewa.db` atau
+  `postgresql+psycopg://...`. Pada arsitektur Supabase, ini **bukan** database utama.
+- `SIDEWA_SUPABASE_DATABASE_URL` — koneksi runtime Supabase (transaction pooler, port 6543).
+- `SIDEWA_SUPABASE_ADMIN_DATABASE_URL` — koneksi skema/resync Supabase (session pooler, port 5432).
+- `SIDEWA_SYNC_ENABLED` — aktifkan outbox worker ke Supabase.
+- `SIDEWA_HF_S3_*` — bucket, endpoint, dan kredensial Hugging Face S3.
+- `SIDEWA_MEDIA_SYNC_ENABLED` — aktifkan unggah media ke HF S3.
 - `SIDEWA_FACE_DETECTOR` — `hog` (CPU) atau `cnn` (GPU, lebih akurat).
 - `SIDEWA_FACE_TOLERANCE`, `SIDEWA_FACE_AUTO_TAG`, `SIDEWA_FACE_REVIEW` — ambang pencocokan.
 - `SIDEWA_BOOTSTRAP_ADMIN_*` — membuat superadmin saat database kosong.
@@ -60,7 +96,16 @@ python -m app.cli seed --force
 python -m app.cli create-user --username nama --name "Nama" --role humas
 python -m app.cli reindex [--activity ID]
 python -m app.cli stats
+
+# Sinkronisasi Supabase
+python -m app.cli resync [--truncate]   # salin seluruh data lokal → Supabase
+python -m app.cli hydrate [--force]     # pulihkan cache lokal dari Supabase
+python -m app.cli sync [--limit N]      # kirim outbox sekarang
+python -m app.cli sync-status           # status database & media sync
 ```
+
+Status sinkronisasi juga tersedia di `GET /readyz` (field `sync` dan
+`media_sync`).
 
 ## Pengujian
 

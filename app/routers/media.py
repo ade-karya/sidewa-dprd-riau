@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..constants import CONTENT_MANAGER_ROLES, STATUS_PUBLISHED
 from ..database import get_db
 from ..deps import require_user
@@ -31,8 +32,6 @@ def serve_media(
         file_path = absolute_path(path)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Media tidak ditemukan.") from exc
-    if not file_path.is_file():
-        raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
 
     photo = (
         db.query(ActivityPhoto)
@@ -50,6 +49,14 @@ def serve_media(
             or db.query(Member).filter(Member.portrait_path == path).first()
         )
         if not member_media:
+            raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
+
+    if not file_path.is_file():
+        from ..services import media_sync
+
+        if not (
+            settings.media_cache_on_demand and media_sync.download_to_cache(path)
+        ):
             raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
 
     media_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"

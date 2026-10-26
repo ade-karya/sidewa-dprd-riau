@@ -10,7 +10,7 @@ from ..config import settings
 from ..database import SessionLocal, db_health
 from ..metrics import render as render_metrics
 from ..models import ActivityPhoto
-from ..services import face_engine
+from ..services import face_engine, media_sync, supabase_sync
 
 router = APIRouter(include_in_schema=False)
 
@@ -39,6 +39,8 @@ def readyz():
         "database": "ok" if db_ok else "error",
         "face_engine": "ok" if face_engine.engine.available else "unavailable",
         "pending_photos": pending,
+        "sync": supabase_sync.status(),
+        "media_sync": media_sync.status(),
         "version": __version__,
     }
     return JSONResponse(payload, status_code=200 if db_ok else 503)

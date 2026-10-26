@@ -6,12 +6,16 @@ Contoh:
     python -m app.cli create-user --username humas2 --name "Humas Baru" --role humas
     python -m app.cli reindex
     python -m app.cli stats
+    python -m app.cli resync --truncate
+    python -m app.cli hydrate --force
+    python -m app.cli sync-status
 """
 
 from __future__ import annotations
 
 import argparse
 import getpass
+import json
 import sys
 
 from sqlalchemy import func
@@ -154,6 +158,9 @@ def cmd_reindex(args) -> int:
 
 def cmd_stats(_args) -> int:
     init_db()
+    from .services import media_sync, supabase_sync
+
+    supabase_sync._adopt_existing_schema()
     db = _db()
     try:
         print(f"Aplikasi      : {settings.app_name} — {settings.organization}")
@@ -177,9 +184,102 @@ def cmd_stats(_args) -> int:
             print(f"  - {status:10s}: {count}")
         print(f"Pengguna      : {db.query(User).count()}")
         print(f"Log audit     : {db.query(AuditLog).count()}")
+        print(f"Sinkronisasi  : {supabase_sync.status()}")
+        print(f"Media sync    : {media_sync.status()}")
         return 0
     finally:
         db.close()
+
+
+def cmd_resync(args) -> int:
+    init_db()
+    from .services import media_sync, supabase_sync
+
+    if not supabase_sync.enabled():
+        print(
+            "Supabase belum dikonfigurasi. Isi SIDEWA_SUPABASE_DATABASE_URL dan "
+            "SIDEWA_SUPABASE_ADMIN_DATABASE_URL di .env.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print("Menyiapkan skema Supabase…")
+    try:
+        supabase_sync.init_supabase_schema()
+    except Exception as exc:
+        print(f"Gagal menyiapkan skema Supabase: {exc}", file=sys.stderr)
+        return 1
+
+    print("Menyalin data lokal → Supabase…")
+    try:
+        counts = supabase_sync.copy_local_to_supabase(truncate=args.truncate)
+    except Exception as exc:
+        print(f"Resync gagal: {exc}", file=sys.stderr)
+        return 1
+    for name, count in counts.items():
+        print(f"  {name:20s}: {count}")
+
+    if settings.media_sync_enabled:
+        if not settings.hf_s3_configured:
+            print("HF S3 belum dikonfigurasi; media tidak diunggah.", file=sys.stderr)
+        else:
+            print("Mengunggah media ke HF S3…")
+            try:
+                total = media_sync.sync_all()
+            except Exception as exc:
+                print(f"Sinkronisasi media gagal: {exc}", file=sys.stderr)
+                return 1
+            print(f"  media terunggah     : {total}")
+
+    print("Resync selesai.")
+    return 0
+
+
+def cmd_hydrate(args) -> int:
+    init_db()
+    from .services import supabase_sync
+
+    if not supabase_sync.enabled():
+        print("Supabase belum dikonfigurasi.", file=sys.stderr)
+        return 1
+    try:
+        counts = supabase_sync.hydrate_from_supabase(force=args.force)
+    except Exception as exc:
+        print(f"Hydrate gagal: {exc}", file=sys.stderr)
+        return 1
+    if counts.get("skipped"):
+        print("Database lokal tidak kosong. Gunakan --force untuk menimpa dari Supabase.")
+        return 0
+    print("Hydrate Supabase → lokal selesai:")
+    for name, count in counts.items():
+        print(f"  {name:20s}: {count}")
+    return 0
+
+
+def cmd_sync(args) -> int:
+    init_db()
+    from .services import supabase_sync
+
+    if not supabase_sync.enabled():
+        print("Supabase belum dikonfigurasi.", file=sys.stderr)
+        return 1
+    applied = supabase_sync.process_outbox(limit=args.limit or None)
+    print(f"{applied} perubahan dikirim ke Supabase.")
+    print(json.dumps(supabase_sync.status(), indent=2, default=str))
+    return 0
+
+
+def cmd_sync_status(_args) -> int:
+    init_db()
+    from .services import media_sync, supabase_sync
+
+    supabase_sync._adopt_existing_schema()
+    payload = {
+        "database": supabase_sync.status(),
+        "media": media_sync.status(),
+    }
+    print(json.dumps(payload, indent=2, default=str))
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -211,6 +311,25 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("stats", help="Tampilkan ringkasan data")
     p.set_defaults(func=cmd_stats)
+
+    p = sub.add_parser("resync", help="Salin seluruh data lokal ke Supabase")
+    p.add_argument(
+        "--truncate",
+        action="store_true",
+        help="Kosongkan tabel Supabase terlebih dahulu (hati-hati)",
+    )
+    p.set_defaults(func=cmd_resync)
+
+    p = sub.add_parser("hydrate", help="Pulihkan cache lokal dari Supabase")
+    p.add_argument("--force", action="store_true", help="Timpa data lokal yang ada")
+    p.set_defaults(func=cmd_hydrate)
+
+    p = sub.add_parser("sync", help="Kirim outbox lokal ke Supabase sekarang")
+    p.add_argument("--limit", type=int, default=0, help="Batas jumlah baris (0 = default)")
+    p.set_defaults(func=cmd_sync)
+
+    p = sub.add_parser("sync-status", help="Tampilkan status sinkronisasi database & media")
+    p.set_defaults(func=cmd_sync_status)
 
     return parser
 

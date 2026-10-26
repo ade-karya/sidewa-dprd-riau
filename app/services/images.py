@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import secrets
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,6 +13,8 @@ from uuid import uuid4
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from ..config import settings
+
+logger = logging.getLogger("sidewa.images")
 
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -107,6 +110,13 @@ def save_image(raw: bytes, kind: str, *, max_dimension: int = 2560) -> tuple[str
     (directory / thumb_name).write_bytes(normalized.thumbnail)
     rel_main = (directory / main_name).relative_to(settings.media_root).as_posix()
     rel_thumb = (directory / thumb_name).relative_to(settings.media_root).as_posix()
+    try:
+        from . import media_sync
+
+        media_sync.enqueue_upload(rel_main)
+        media_sync.enqueue_upload(rel_thumb)
+    except Exception:
+        logger.exception("Gagal memasukkan media baru ke antrean HF S3")
     return rel_main, rel_thumb, normalized.width, normalized.height
 
 
@@ -126,6 +136,12 @@ def delete_paths(*relative_paths: str | None) -> None:
             absolute_path(rel).unlink(missing_ok=True)
         except (ValueError, OSError):
             continue
+        try:
+            from . import media_sync
+
+            media_sync.enqueue_delete(rel)
+        except Exception:
+            logger.exception("Gagal memasukkan media ke antrean hapus HF S3: %s", rel)
 
 
 def copy_seed_image(source: Path, kind: str) -> tuple[str, str, int, int]:
@@ -156,5 +172,9 @@ def cached_thumb(relative_path: str | None) -> str | None:
         return None
     candidate = absolute_path(relative_path)
     if not candidate.exists():
+        # Cache lokal bersifat sementara. Jika media sync + on-demand aktif,
+        # tetap kembalikan path agar browser meminta dan router mengunduhnya.
+        if settings.media_sync_enabled and settings.media_cache_on_demand:
+            return relative_path
         return None
     return relative_path
