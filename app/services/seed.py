@@ -910,7 +910,25 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
 
     members: list[Member] = []
     members_by_name: dict[str, Member] = {}
-    for item in MEMBERS:
+    portrait_files = [
+        "p10.jpg",
+        "p3.jpg",
+        "x15.jpg",
+        "p4.jpg",
+        "p6.jpg",
+        "p5.jpg",
+        "p2.jpg",
+        "p14.jpg",
+        "p8.jpg",
+        "p11.jpg",
+        "x14.jpg",
+        "p16.jpg",
+        "x13.jpg",
+        "p7.jpg",
+        "extra04.jpg",
+        "x16.jpg",
+    ]
+    for index, item in enumerate(MEMBERS):
         full_name = item["name"]
         position = item["position"]
         commission_code = item["commission"]
@@ -927,11 +945,17 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
             is_active=True,
             consent_granted_at=None,
             consent_note=(
-                "Data publik DPRD Provinsi Riau 2024–2029; tidak ada data biometrik yang disertakan."
+                "Foto ilustrasi AI (bukan wajah anggota). Data publik DPRD Provinsi Riau 2024–2029."
             ),
         )
         db.add(member)
         db.flush()
+
+        source = ASSETS / "portraits" / portrait_files[index % len(portrait_files)]
+        if source.exists():
+            rel_main, rel_thumb, _, _ = copy_seed_image(source, "members")
+            member.portrait_path = rel_thumb
+            db.flush()
         members.append(member)
         members_by_name[full_name] = member
     db.flush()
