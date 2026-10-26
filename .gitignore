@@ -29,3 +29,6 @@ coverage.xml
 .idea/
 .vscode/
 *.swp
+
+# Notebook produksi (lokal)
+run_production.ipynb
