@@ -1,7 +1,10 @@
 """Data demo SIDEWA untuk DPRD Provinsi Riau.
 
-Seluruh foto potret pada data demo dibuat dengan AI (this-person-does-not-exist.com)
-dan bukan wajah orang sungguhan.
+Susunan komisi dan daftar anggota mengikuti DPRD Provinsi Riau masa jabatan
+2024--2029 (sumber: laman resmi DPRD Provinsi Riau dan pemberitaan terkait).
+Data biometrik tidak disertakan untuk anggota asli; foto potret pada aset demo
+dibuat dengan AI (this-person-does-not-exist.com) dan tidak dipakai untuk
+mewakili wajah orang sungguhan.
 """
 
 from __future__ import annotations
@@ -38,7 +41,7 @@ from ..models import (
     utcnow,
 )
 from ..security import hash_password
-from . import face_engine, jobs
+from . import jobs
 from .images import copy_seed_image, delete_paths
 
 logger = logging.getLogger("sidewa.seed")
@@ -49,63 +52,525 @@ COMMISSIONS = [
     {
         "code": "I",
         "name": "Komisi I",
-        "bidang": "Pemerintahan, Hukum dan HAM, Keamanan",
-        "description": "Membidangi pemerintahan, otonomi daerah, hukum, HAM, keamanan, dan hubungan antarlembaga.",
+        "bidang": "Pemerintahan dan Hukum",
+        "description": (
+            "Membidangi pemerintahan umum, ketertiban dan keamanan, kependudukan, komunikasi/pers, "
+            "hukum dan HAM, kepegawaian dan aparatur, sosial politik, pertanahan, perlindungan "
+            "konsumen, serta perjanjian internasional di daerah."
+        ),
         "color": "#7E4890",
         "sort_order": 1,
     },
     {
         "code": "II",
         "name": "Komisi II",
-        "bidang": "Ekonomi, Keuangan, Pertanian dan Perkebunan",
-        "description": "Membidangi perekonomian, keuangan daerah, perpajakan, pertanian, perkebunan, dan koperasi.",
+        "bidang": "Perekonomian",
+        "description": (
+            "Membidangi perekonomian, perindustrian dan perdagangan, pertanian, perikanan, "
+            "peternakan, perkebunan, kehutanan, pengadaan pangan dan logistik, koperasi dan UKM, "
+            "potensi wilayah laut daerah, serta pariwisata."
+        ),
         "color": "#3C8DAD",
         "sort_order": 2,
     },
     {
         "code": "III",
         "name": "Komisi III",
-        "bidang": "Pembangunan, Infrastruktur dan Perhubungan",
-        "description": "Membidangi pekerjaan umum, tata ruang, perumahan, perhubungan, dan infrastruktur daerah.",
+        "bidang": "Keuangan",
+        "description": (
+            "Membidangi keuangan daerah, aset daerah, perpajakan dan retribusi, serta pengelolaan "
+            "kas daerah dan perusahaan daerah."
+        ),
         "color": "#C08A2E",
         "sort_order": 3,
     },
     {
         "code": "IV",
         "name": "Komisi IV",
-        "bidang": "Pendidikan, Kesehatan, Sosial dan Budaya",
-        "description": "Membidangi pendidikan, kesehatan, sosial, agama, kebudayaan, dan pemberdayaan perempuan.",
+        "bidang": "Pembangunan",
+        "description": (
+            "Membidangi pekerjaan umum, perhubungan, pertambangan dan energi, serta lingkungan hidup."
+        ),
         "color": "#5B8C5A",
         "sort_order": 4,
     },
     {
         "code": "V",
         "name": "Komisi V",
-        "bidang": "Lingkungan Hidup, Kehutanan dan Pariwisata",
-        "description": "Membidangi lingkungan hidup, kehutanan, pertambangan, energi, pariwisata, dan perikanan.",
+        "bidang": "Kesejahteraan Rakyat",
+        "description": (
+            "Membidangi ketenagakerjaan dan transmigrasi, pendidikan dan kebudayaan, ilmu pengetahuan "
+            "dan teknologi, kepemudaan dan olahraga, agama, sosial, kesehatan, keluarga berencana, "
+            "pengembangan peranan wanita, museum dan cagar budaya, penanggulangan bencana, serta "
+            "pemberdayaan masyarakat desa."
+        ),
         "color": "#B85C7A",
         "sort_order": 5,
     },
 ]
 
 MEMBERS = [
-    # (portrait, nama, jabatan, komisi, partai, dapil)
-    ("p10.jpg", "H. Ahmad Fauzan, S.H., M.H.", "Ketua DPRD", None, "Golkar", "Riau I"),
-    ("p3.jpg", "Hj. Siti Rahmawati, S.E.", "Wakil Ketua DPRD", None, "Gerindra", "Riau II"),
-    ("x15.jpg", "Ir. Budi Santoso, M.M.", "Wakil Ketua DPRD", None, "PDI Perjuangan", "Riau III"),
-    ("p4.jpg", "H. Muhammad Iqbal, S.Ag.", "Wakil Ketua DPRD", None, "PKS", "Riau IV"),
-    ("p6.jpg", "Drs. Hendra Wijaya, M.Si.", "Ketua Komisi I", "I", "Golkar", "Riau I"),
-    ("p5.jpg", "Rina Kartika, S.H., M.H.", "Sekretaris Komisi I", "I", "PDI Perjuangan", "Riau II"),
-    ("p2.jpg", "Fajar Nugroho, S.IP.", "Anggota Komisi I", "I", "NasDem", "Riau III"),
-    ("p14.jpg", "Hj. Nurmala Sari, S.E., M.M.", "Ketua Komisi II", "II", "Gerindra", "Riau IV"),
-    ("p8.jpg", "Andi Pratama, S.Kom.", "Wakil Ketua Komisi II", "II", "Demokrat", "Riau V"),
-    ("p11.jpg", "Dewi Anggraini, S.E.", "Anggota Komisi II", "II", "PAN", "Riau VI"),
-    ("x14.jpg", "Ir. Rizal Kurniawan, M.T.", "Ketua Komisi III", "III", "Golkar", "Riau I"),
-    ("p16.jpg", "Maya Lestari, S.T.", "Sekretaris Komisi III", "III", "PDI Perjuangan", "Riau II"),
-    ("x13.jpg", "dr. Rudi Hartono, M.Kes.", "Ketua Komisi IV", "IV", "NasDem", "Riau III"),
-    ("p7.jpg", "Fitri Handayani, S.Pd.", "Anggota Komisi IV", "IV", "PKB", "Riau IV"),
-    ("extra04.jpg", "H. Syafril, S.Hut.", "Ketua Komisi V", "V", "Gerindra", "Riau V"),
-    ("x16.jpg", "Lina Marlina, S.Sos.", "Anggota Komisi V", "V", "PAN", "Riau VI"),
+    # Pimpinan DPRD (tidak tergabung dalam komisi)
+    {
+        "name": "Kaderismanto",
+        "position": "Ketua DPRD",
+        "commission": None,
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "H. Parisman Ihwan, S.E., M.M.",
+        "position": "Wakil Ketua DPRD",
+        "commission": None,
+        "party": "Golkar",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "H. Ahmad Tarmizi, Lc., M.A.",
+        "position": "Wakil Ketua DPRD",
+        "commission": None,
+        "party": "PKS",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "H. Budiman Lubis",
+        "position": "Wakil Ketua DPRD",
+        "commission": None,
+        "party": "Gerindra",
+        "dapil": "Riau 3",
+    },
+    # Komisi I — Pemerintahan dan Hukum
+    {
+        "name": "Nur Azmi Hasyim, S.T., M.M.",
+        "position": "Ketua Komisi I",
+        "commission": "I",
+        "party": "Demokrat",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "H. Ali Rahmat Harahap, S.E.",
+        "position": "Wakil Ketua Komisi I",
+        "commission": "I",
+        "party": "NasDem",
+        "dapil": "Riau 4",
+    },
+    {
+        "name": "H. M. Amal Fathullah A., Lc., M.A.",
+        "position": "Sekretaris Komisi I",
+        "commission": "I",
+        "party": "PKS",
+        "dapil": "Riau 2",
+    },
+    {
+        "name": "Andi Darma Taufik, S.Kep.",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 7",
+    },
+    {
+        "name": "Nalladia Ayu Rokan",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "Golkar",
+        "dapil": "Riau 4",
+    },
+    {
+        "name": "Hj. Zulaikhah, S.Sos., M.E.",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "Golkar",
+        "dapil": "Riau 7",
+    },
+    {
+        "name": "H. Ayat Cahyadi, S.Si.",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "PKS",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "H. Hardianto, S.E., M.M.",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "Gerindra",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "H. M. Sumardany Zirnata, S.T., M.Sc.",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "Demokrat",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "Ade Firmansyah, S.Sos.",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "PKB",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "dr. H. Sunaryo",
+        "position": "Anggota Komisi I",
+        "commission": "I",
+        "party": "PAN",
+        "dapil": "Riau 5",
+    },
+    # Komisi II — Perekonomian
+    {
+        "name": "H. Adam Syafa'at, M.A.",
+        "position": "Ketua Komisi II",
+        "commission": "II",
+        "party": "PKS",
+        "dapil": "Riau 3",
+    },
+    {
+        "name": "Hardi Chandra",
+        "position": "Wakil Ketua Komisi II",
+        "commission": "II",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 3",
+    },
+    {
+        "name": "Androy Aderianda, S.H., M.H.",
+        "position": "Sekretaris Komisi II",
+        "commission": "II",
+        "party": "Gerindra",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "Soniwati, S.H.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "Dodi Nefeldi SPBU, S.H.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "Evi Juliana, S.E., M.M.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "Golkar",
+        "dapil": "Riau 3",
+    },
+    {
+        "name": "Raja Jaya Dinata, S.E.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "Golkar",
+        "dapil": "Riau 2",
+    },
+    {
+        "name": "H. Sutan Sari Gunung",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "PKS",
+        "dapil": "Riau 4",
+    },
+    {
+        "name": "Ginda Burnama, S.T., M.T.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "Gerindra",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "Monang Eliezer Pasaribu, S.Sos., M.Si.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "Demokrat",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "Siti Aisyah, S.Kom.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "PKB",
+        "dapil": "Riau 7",
+    },
+    {
+        "name": "M. Hasby Assodiqi, S.Sos.",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "NasDem",
+        "dapil": "Riau 3",
+    },
+    {
+        "name": "H. Ikbal Sayuti",
+        "position": "Anggota Komisi II",
+        "commission": "II",
+        "party": "PPP",
+        "dapil": "Riau 7",
+    },
+    # Komisi III — Keuangan
+    {
+        "name": "H. Edi Basri, S.H., M.Si.",
+        "position": "Ketua Komisi III",
+        "commission": "III",
+        "party": "Gerindra",
+        "dapil": "Riau 2",
+    },
+    {
+        "name": "Misliadi, S.H.I., M.M.",
+        "position": "Wakil Ketua Komisi III",
+        "commission": "III",
+        "party": "PKB",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "Eva Yuliana, S.E.",
+        "position": "Sekretaris Komisi III",
+        "commission": "III",
+        "party": "Demokrat",
+        "dapil": "Riau 2",
+    },
+    {
+        "name": "Sofyan, S.Pd.I., M.Si.",
+        "position": "Anggota Komisi III",
+        "commission": "III",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "Diski",
+        "position": "Anggota Komisi III",
+        "commission": "III",
+        "party": "PAN",
+        "dapil": "Riau 2",
+    },
+    {
+        "name": "H. Abdullah, S.Pd.",
+        "position": "Anggota Komisi III",
+        "commission": "III",
+        "party": "PKS",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "Imustiar, S.IP.",
+        "position": "Anggota Komisi III",
+        "commission": "III",
+        "party": "Golkar",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "Efrinaldi, S.H.",
+        "position": "Anggota Komisi III",
+        "commission": "III",
+        "party": "NasDem",
+        "dapil": "Riau 2",
+    },
+    # Komisi IV — Pembangunan
+    {
+        "name": "Ma'mun Solikhin, S.Ag.",
+        "position": "Ketua Komisi IV",
+        "commission": "IV",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 2",
+    },
+    {
+        "name": "Darmalis, S.E.",
+        "position": "Wakil Ketua Komisi IV",
+        "commission": "IV",
+        "party": "Golkar",
+        "dapil": "Riau 4",
+    },
+    {
+        "name": "Zulfadhli Alhamdi, A.Md.",
+        "position": "Sekretaris Komisi IV",
+        "commission": "IV",
+        "party": "Gerindra",
+        "dapil": "Riau 7",
+    },
+    {
+        "name": "Suyadi, S.P.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 4",
+    },
+    {
+        "name": "Jons Ade Nopendra",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "Golkar",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "H. Khairul Umam, Lc., M.E.Sy.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "PKS",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "Samsuri Daris, S.T., M.T.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "PKS",
+        "dapil": "Riau 7",
+    },
+    {
+        "name": "H. Zulhendri, S.P.W.K., M.Si.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "Gerindra",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "Dodi Saputra, S.H.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "Demokrat",
+        "dapil": "Riau 4",
+    },
+    {
+        "name": "Manahara Napitupulu, S.H., M.H.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "Demokrat",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "Kasir, S.T.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "PKB",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "Muhtarom, S.Ag.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "PKB",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "Hj. Farida H. Saad, S.E.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "NasDem",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "Munawar Syahputra, S.H.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "NasDem",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "Dodi Irawan, S.H.I.",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "PAN",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "Mohammad Fadel Variza",
+        "position": "Anggota Komisi IV",
+        "commission": "IV",
+        "party": "PAN",
+        "dapil": "Riau 1",
+    },
+    # Komisi V — Kesejahteraan Rakyat
+    {
+        "name": "H. Indra Gunawan Eet, Ph.D.",
+        "position": "Ketua Komisi V",
+        "commission": "V",
+        "party": "Golkar",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "H. Abdul Kasim, S.H.",
+        "position": "Wakil Ketua Komisi V",
+        "commission": "V",
+        "party": "PKS",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "Robin P. Hutagalung, S.H.",
+        "position": "Sekretaris Komisi V",
+        "commission": "V",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 1",
+    },
+    {
+        "name": "Sella Pitaloka, S.A.P., M.Si.",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "M. Alga Viqky Azmi",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "PDI Perjuangan",
+        "dapil": "Riau 5",
+    },
+    {
+        "name": "Dra. Hj. Septina Primawati, M.M.",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "Golkar",
+        "dapil": "Riau 7",
+    },
+    {
+        "name": "Rizal Zamzami, S.H.",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "PKS",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "Syafrudin Iput",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "Gerindra",
+        "dapil": "Riau 4",
+    },
+    {
+        "name": "H. Agus Triansyah",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "Demokrat",
+        "dapil": "Riau 7",
+    },
+    {
+        "name": "Dra. Hj. Adrias",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "PKB",
+        "dapil": "Riau 2",
+    },
+    {
+        "name": "Daniel Eka Perdana, S.H.",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "NasDem",
+        "dapil": "Riau 8",
+    },
+    {
+        "name": "Fairus, S.Ag.",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "PAN",
+        "dapil": "Riau 6",
+    },
+    {
+        "name": "Hj. Magdalisni",
+        "position": "Anggota Komisi V",
+        "commission": "V",
+        "party": "Demokrat",
+        "dapil": "Riau 3",
+    },
 ]
 
 ACTIVITIES = [
@@ -118,7 +583,14 @@ ACTIVITIES = [
         "location": "Ruang Rapat Paripurna, Gedung DPRD Provinsi Riau",
         "address": "Jl. Jenderal Sudirman No. 1, Pekanbaru, Riau",
         "commissions": ["I", "II", "III", "IV", "V"],
-        "members": [1, 2, 3, 4, 5, 8],
+        "members": [
+            "Kaderismanto",
+            "H. Parisman Ihwan, S.E., M.M.",
+            "H. Ahmad Tarmizi, Lc., M.A.",
+            "H. Budiman Lubis",
+            "Nur Azmi Hasyim, S.T., M.M.",
+            "H. Adam Syafa'at, M.A.",
+        ],
         "status": STATUS_PUBLISHED,
         "description": (
             "DPRD Provinsi Riau menggelar Rapat Paripurna dalam rangka pengesahan Rancangan Anggaran "
@@ -141,7 +613,11 @@ ACTIVITIES = [
         "location": "Ruang Rapat Komisi II, Gedung DPRD Provinsi Riau",
         "address": "Jl. Jenderal Sudirman No. 1, Pekanbaru, Riau",
         "commissions": ["II"],
-        "members": [8, 9, 10],
+        "members": [
+            "H. Adam Syafa'at, M.A.",
+            "Hardi Chandra",
+            "Androy Aderianda, S.H., M.H.",
+        ],
         "status": STATUS_PUBLISHED,
         "description": (
             "Komisi II DPRD Provinsi Riau menggelar rapat kerja bersama Organisasi Perangkat Daerah "
@@ -161,7 +637,7 @@ ACTIVITIES = [
         "location": "Kantor Bupati Kampar",
         "address": "Bangkinang, Kabupaten Kampar, Riau",
         "commissions": ["III"],
-        "members": [11, 12],
+        "members": ["H. Edi Basri, S.H., M.Si.", "Misliadi, S.H.I., M.M."],
         "status": STATUS_PUBLISHED,
         "description": (
             "Komisi III melakukan kunjungan kerja ke Kabupaten Kampar untuk meninjau progres pembangunan "
@@ -181,7 +657,7 @@ ACTIVITIES = [
         "location": "Ruang Rapat Komisi IV, Gedung DPRD Provinsi Riau",
         "address": "Jl. Jenderal Sudirman No. 1, Pekanbaru, Riau",
         "commissions": ["IV"],
-        "members": [13, 14],
+        "members": ["Ma'mun Solikhin, S.Ag.", "Darmalis, S.E."],
         "status": STATUS_PUBLISHED,
         "description": (
             "Komisi IV menerima aspirasi organisasi profesi tenaga kesehatan terkait pemerataan tenaga "
@@ -200,7 +676,12 @@ ACTIVITIES = [
         "location": "Balai Desa Kubang Jaya, Kecamatan Siak Hulu",
         "address": "Kabupaten Kampar, Riau",
         "commissions": ["I"],
-        "members": [5, 6, 7, 1],
+        "members": [
+            "Nur Azmi Hasyim, S.T., M.M.",
+            "H. Ali Rahmat Harahap, S.E.",
+            "H. M. Amal Fathullah A., Lc., M.A.",
+            "Kaderismanto",
+        ],
         "status": STATUS_PUBLISHED,
         "description": (
             "Anggota DPRD Provinsi Riau melaksanakan reses di Daerah Pemilihan Riau I untuk menyerap "
@@ -220,7 +701,11 @@ ACTIVITIES = [
         "location": "SD Negeri 12 Pekanbaru",
         "address": "Kecamatan Sukajadi, Pekanbaru, Riau",
         "commissions": ["IV"],
-        "members": [13, 14, 2],
+        "members": [
+            "Ma'mun Solikhin, S.Ag.",
+            "Darmalis, S.E.",
+            "H. Parisman Ihwan, S.E., M.M.",
+        ],
         "status": STATUS_PUBLISHED,
         "description": (
             "Komisi IV bersama Dinas Pendidikan menggelar sosialisasi Peraturan Daerah tentang "
@@ -239,7 +724,11 @@ ACTIVITIES = [
         "location": "Jalan Provinsi Siak–Pekanbaru",
         "address": "Kabupaten Siak, Riau",
         "commissions": ["III"],
-        "members": [11, 12, 3],
+        "members": [
+            "H. Edi Basri, S.H., M.Si.",
+            "Misliadi, S.H.I., M.M.",
+            "Eva Yuliana, S.E.",
+        ],
         "status": STATUS_PUBLISHED,
         "description": (
             "Komisi III meninjau kondisi ruas jalan provinsi di Kabupaten Siak yang menjadi jalur utama "
@@ -258,7 +747,11 @@ ACTIVITIES = [
         "location": "Ruang Rapat Komisi V, Gedung DPRD Provinsi Riau",
         "address": "Jl. Jenderal Sudirman No. 1, Pekanbaru, Riau",
         "commissions": ["V"],
-        "members": [15, 16, 4],
+        "members": [
+            "H. Indra Gunawan Eet, Ph.D.",
+            "H. Abdul Kasim, S.H.",
+            "H. Budiman Lubis",
+        ],
         "status": STATUS_PUBLISHED,
         "description": (
             "Komisi V membahas kesiapsiagaan daerah dalam menghadapi kebakaran hutan dan lahan, termasuk "
@@ -277,7 +770,12 @@ ACTIVITIES = [
         "location": "Ruang Rapat Utama, Gedung DPRD Provinsi Riau",
         "address": "Jl. Jenderal Sudirman No. 1, Pekanbaru, Riau",
         "commissions": ["II", "V"],
-        "members": [8, 10, 15, 16],
+        "members": [
+            "H. Adam Syafa'at, M.A.",
+            "Dodi Nefeldi SPBU, S.H.",
+            "H. Indra Gunawan Eet, Ph.D.",
+            "H. Abdul Kasim, S.H.",
+        ],
         "status": STATUS_PUBLISHED,
         "description": (
             "Perwakilan masyarakat pesisir menyampaikan aspirasi mengenai akses permodalan usaha, "
@@ -296,7 +794,13 @@ ACTIVITIES = [
         "location": "Ruang Rapat Paripurna, Gedung DPRD Provinsi Riau",
         "address": "Jl. Jenderal Sudirman No. 1, Pekanbaru, Riau",
         "commissions": ["I", "II", "III", "IV", "V"],
-        "members": [1, 2, 3, 4, 5],
+        "members": [
+            "Kaderismanto",
+            "H. Parisman Ihwan, S.E., M.M.",
+            "H. Ahmad Tarmizi, Lc., M.A.",
+            "H. Budiman Lubis",
+            "Nur Azmi Hasyim, S.T., M.M.",
+        ],
         "status": STATUS_DRAFT,
         "description": (
             "Rapat Paripurna Khusus pelantikan dan pengambilan sumpah anggota Pengganti Antar Waktu "
@@ -313,7 +817,11 @@ ACTIVITIES = [
         "location": "Ruang Rapat Utama, Gedung DPRD Provinsi Riau",
         "address": "Jl. Jenderal Sudirman No. 1, Pekanbaru, Riau",
         "commissions": ["I", "II"],
-        "members": [1, 2, 3],
+        "members": [
+            "Kaderismanto",
+            "H. Parisman Ihwan, S.E., M.M.",
+            "H. Ahmad Tarmizi, Lc., M.A.",
+        ],
         "status": STATUS_ARCHIVED,
         "description": (
             "Rapat koordinasi evaluasi kinerja akhir tahun 2025 yang membahas capaian program, "
@@ -401,42 +909,31 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
     db.flush()
 
     members: list[Member] = []
-    for portrait, full_name, position, commission_code, party, dapil in MEMBERS:
+    members_by_name: dict[str, Member] = {}
+    for item in MEMBERS:
+        full_name = item["name"]
+        position = item["position"]
+        commission_code = item["commission"]
         member = Member(
             full_name=full_name,
             position=position,
             commission_id=commissions[commission_code].id if commission_code else None,
-            party=party,
-            dapil=dapil,
-            bio=f"{full_name} merupakan anggota DPRD Provinsi Riau yang menjabat sebagai {position}.",
+            party=item["party"],
+            dapil=item["dapil"],
+            bio=(
+                f"{full_name} merupakan anggota DPRD Provinsi Riau masa jabatan 2024–2029 "
+                f"yang menjabat sebagai {position}."
+            ),
             is_active=True,
-            consent_granted_at=utcnow(),
-            consent_note="Persetujuan penggunaan data biometrik untuk dokumentasi resmi (data demo AI).",
+            consent_granted_at=None,
+            consent_note=(
+                "Data publik DPRD Provinsi Riau 2024–2029; tidak ada data biometrik yang disertakan."
+            ),
         )
         db.add(member)
         db.flush()
-
-        source = ASSETS / "portraits" / portrait
-        if source.exists():
-            rel_main, rel_thumb, _, _ = copy_seed_image(source, "members")
-            member.portrait_path = rel_thumb
-            db.flush()
-            try:
-                detected = face_engine.engine.detect_single(ASSETS / "portraits" / portrait)
-                db.add(
-                    MemberFace(
-                        member_id=member.id,
-                        image_path=rel_main,
-                        encoding=detected.encoding,
-                        quality=detected.quality,
-                        is_primary=True,
-                        source="seed",
-                        created_by_id=users["admin"].id,
-                    )
-                )
-            except face_engine.FaceEngineError as exc:
-                logger.warning("Wajah %s tidak dapat didaftarkan: %s", full_name, exc)
         members.append(member)
+        members_by_name[full_name] = member
     db.flush()
 
     created_activities = 0
@@ -467,11 +964,11 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
         db.add(activity)
         db.flush()
 
-        for member_index in item["members"]:
+        for member_name in item["members"]:
             db.add(
                 ActivityMember(
                     activity_id=activity.id,
-                    member_id=members[member_index - 1].id,
+                    member_id=members_by_name[member_name].id,
                     source="manual",
                     confirmed=True,
                     added_by_id=users["humas"].id,

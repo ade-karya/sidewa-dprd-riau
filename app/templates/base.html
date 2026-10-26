@@ -65,7 +65,7 @@
           {% block topbar_actions %}{% endblock %}
           <a class="icon-btn topbar-search" href="/cari" title="Cari dokumentasi" aria-label="Cari dokumentasi">{{ icon('search') }}</a>
           {% if can_manage_content and active_nav in ['dashboard', 'activities', 'search', 'members', 'commissions'] and current_path not in ['/kegiatan/baru', '/anggota/baru'] %}
-          <a class="btn btn-primary btn-sm topbar-upload" href="/kegiatan/baru">{{ icon('plus') }}<span>Unggah</span></a>
+          <a class="btn btn-primary btn-sm topbar-upload" href="/kegiatan/baru" aria-label="Unggah kegiatan">{{ icon('plus') }}<span>Unggah</span></a>
           {% endif %}
           <span class="role-chip" title="{{ role_labels.get(user.role, user.role) }}">
             {{ icon('shield') }}<span>{{ role_labels.get(user.role, user.role) }}</span>

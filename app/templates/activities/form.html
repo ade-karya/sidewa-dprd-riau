@@ -100,7 +100,7 @@
   <div class="card card-pad mt-3">
     <div class="form-section-title">Komisi terkait <span class="required" style="color: var(--red);">*</span></div>
     <p class="muted-small mb-2">Pilih satu atau lebih komisi yang terlibat dalam kegiatan ini.</p>
-    <div class="role-option-grid" style="grid-template-columns: repeat(3, minmax(0,1fr));">
+    <div class="role-option-grid cols-3">
       {% for c in commissions %}
       <label class="role-option" style="align-items: center;">
         <input type="checkbox" name="commissions" value="{{ c.code }}" {{ 'checked' if c.code in form.commission_codes }}>

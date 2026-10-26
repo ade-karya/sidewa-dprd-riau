@@ -252,7 +252,7 @@
         </div>
         <a class="section-link" href="/kegiatan?commission={{ activity.commissions[0].code if activity.commissions else '' }}">Lihat semua {{ icon('arrow-right') }}</a>
       </div>
-      <div class="activity-grid" style="grid-template-columns: repeat(3, minmax(0,1fr));">
+      <div class="activity-grid">
         {% for item in related %}{{ activity_card(item) }}{% endfor %}
       </div>
     </section>
