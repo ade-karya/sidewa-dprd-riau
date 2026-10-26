@@ -41,7 +41,7 @@ from ..models import (
     utcnow,
 )
 from ..security import hash_password
-from . import jobs
+from . import face_engine, jobs
 from .images import copy_seed_image, delete_paths
 
 logger = logging.getLogger("sidewa.seed")
@@ -573,6 +573,74 @@ MEMBERS = [
     },
 ]
 
+MEMBER_PORTRAITS = {
+    "Kaderismanto": "portraits_real/33.webp",
+    "H. Parisman Ihwan, S.E., M.M.": "portraits_real/4.webp",
+    "H. Ahmad Tarmizi, Lc., M.A.": "portraits_real/6.webp",
+    "H. Budiman Lubis": "portraits_real/18.webp",
+    "Nur Azmi Hasyim, S.T., M.M.": "portraits_real/41.webp",
+    "H. Ali Rahmat Harahap, S.E.": "portraits_real/28.webp",
+    "H. M. Amal Fathullah A., Lc., M.A.": "portraits_real/15.webp",
+    "Andi Darma Taufik, S.Kep.": "portraits_real/52.webp",
+    "Nalladia Ayu Rokan": "portraits_real/27.webp",
+    "Hj. Zulaikhah, S.Sos., M.E.": "portraits_real/54.webp",
+    "H. Ayat Cahyadi, S.Si.": "portraits_real/7.webp",
+    "H. Hardianto, S.E., M.M.": "portraits_real/32.webp",
+    "H. M. Sumardany Zirnata, S.T., M.Sc.": "portraits_real/9.webp",
+    "Ade Firmansyah, S.Sos.": "portraits_real/58.webp",
+    "dr. H. Sunaryo": "portraits_real/40.webp",
+    "H. Adam Syafa'at, M.A.": "portraits_real/22.webp",
+    "Hardi Chandra": "portraits_real/19.webp",
+    "Androy Aderianda, S.H., M.H.": "portraits_real/43.webp",
+    "Soniwati, S.H.": "portraits_real/45.webp",
+    "Dodi Nefeldi SPBU, S.H.": "portraits_real/60.webp",
+    "Evi Juliana, S.E., M.M.": "portraits_real/20.webp",
+    "Raja Jaya Dinata, S.E.": "portraits_real/13.webp",
+    "H. Sutan Sari Gunung": "portraits_real/29.webp",
+    "Ginda Burnama, S.T., M.T.": "portraits_real/2.webp",
+    "Monang Eliezer Pasaribu, S.Sos., M.Si.": "portraits_real/49.webp",
+    "Siti Aisyah, S.Kom.": "portraits_real/50.webp",
+    "M. Hasby Assodiqi, S.Sos.": "portraits_real/21.webp",
+    "H. Ikbal Sayuti": "portraits_real/57.webp",
+    "H. Edi Basri, S.H., M.Si.": "portraits_real/11.webp",
+    "Misliadi, S.H.I., M.M.": "portraits_real/31.webp",
+    "Eva Yuliana, S.E.": "portraits_real/17.webp",
+    "Sofyan, S.Pd.I., M.Si.": "portraits_real/35.webp",
+    "Diski": "portraits_real/16.webp",
+    "H. Abdullah, S.Pd.": "portraits_real/47.webp",
+    "Imustiar, S.IP.": "portraits_real/46.webp",
+    "Efrinaldi, S.H.": "portraits_real/14.webp",
+    "Ma'mun Solikhin, S.Ag.": "portraits_real/12.webp",
+    "Darmalis, S.E.": "portraits_real/26.webp",
+    "Zulfadhli Alhamdi, A.Md.": "portraits_real/51.webp",
+    "Suyadi, S.P.": "portraits_real/25.webp",
+    "Jons Ade Nopendra": "portraits_real/61.webp",
+    "H. Khairul Umam, Lc., M.E.Sy.": "portraits_real/39.webp",
+    "Samsuri Daris, S.T., M.T.": "portraits_real/55.webp",
+    "H. Zulhendri, S.P.W.K., M.Si.": "portraits_real/59.webp",
+    "Dodi Saputra, S.H.": "portraits_real/30.webp",
+    "Manahara Napitupulu, S.H., M.H.": "portraits_real/65.webp",
+    "Kasir, S.T.": "portraits_real/1.webp",
+    "Muhtarom, S.Ag.": "portraits_real/42.webp",
+    "Hj. Farida H. Saad, S.E.": "portraits_real/37.webp",
+    "Munawar Syahputra, S.H.": "portraits_real/5.webp",
+    "Dodi Irawan, S.H.I.": "portraits_real/64.webp",
+    "Mohammad Fadel Variza": "portraits_real/8.webp",
+    "H. Indra Gunawan Eet, Ph.D.": "portraits_real/36.webp",
+    "H. Abdul Kasim, S.H.": "portraits_real/38.webp",
+    "Robin P. Hutagalung, S.H.": "portraits_real/3.webp",
+    "Sella Pitaloka, S.A.P., M.Si.": "portraits_real/44.webp",
+    "M. Alga Viqky Azmi": "portraits_real/34.webp",
+    "Dra. Hj. Septina Primawati, M.M.": "portraits_real/53.webp",
+    "Rizal Zamzami, S.H.": "portraits_real/63.webp",
+    "Syafrudin Iput": "portraits_real/24.webp",
+    "H. Agus Triansyah": "portraits_real/56.webp",
+    "Dra. Hj. Adrias": "portraits_real/10.webp",
+    "Daniel Eka Perdana, S.H.": "portraits_real/62.webp",
+    "Fairus, S.Ag.": "portraits_real/48.webp",
+    "Hj. Magdalisni": "portraits_real/23.webp",
+}
+
 ACTIVITIES = [
     {
         "slug": "paripurna-apbd",
@@ -910,25 +978,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
 
     members: list[Member] = []
     members_by_name: dict[str, Member] = {}
-    portrait_files = [
-        "p10.jpg",
-        "p3.jpg",
-        "x15.jpg",
-        "p4.jpg",
-        "p6.jpg",
-        "p5.jpg",
-        "p2.jpg",
-        "p14.jpg",
-        "p8.jpg",
-        "p11.jpg",
-        "x14.jpg",
-        "p16.jpg",
-        "x13.jpg",
-        "p7.jpg",
-        "extra04.jpg",
-        "x16.jpg",
-    ]
-    for index, item in enumerate(MEMBERS):
+    for item in MEMBERS:
         full_name = item["name"]
         position = item["position"]
         commission_code = item["commission"]
@@ -943,19 +993,33 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
                 f"yang menjabat sebagai {position}."
             ),
             is_active=True,
-            consent_granted_at=None,
-            consent_note=(
-                "Foto ilustrasi AI (bukan wajah anggota). Data publik DPRD Provinsi Riau 2024–2029."
-            ),
+            consent_granted_at=utcnow(),
+            consent_note="Potret resmi DPRD Provinsi Riau 2024–2029; persetujuan penggunaan data biometrik.",
         )
         db.add(member)
         db.flush()
 
-        source = ASSETS / "portraits" / portrait_files[index % len(portrait_files)]
-        if source.exists():
+        portrait_rel = MEMBER_PORTRAITS.get(full_name)
+        source = ASSETS / portrait_rel if portrait_rel else None
+        if source and source.exists():
             rel_main, rel_thumb, _, _ = copy_seed_image(source, "members")
             member.portrait_path = rel_thumb
             db.flush()
+            try:
+                detected = face_engine.engine.detect_single(source)
+                db.add(
+                    MemberFace(
+                        member_id=member.id,
+                        image_path=rel_main,
+                        encoding=detected.encoding,
+                        quality=detected.quality,
+                        is_primary=True,
+                        source="seed",
+                        created_by_id=users["admin"].id,
+                    )
+                )
+            except face_engine.FaceEngineError as exc:
+                logger.warning("Wajah %s tidak dapat didaftarkan: %s", full_name, exc)
         members.append(member)
         members_by_name[full_name] = member
     db.flush()
