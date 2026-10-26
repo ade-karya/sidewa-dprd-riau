@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar, pagination %}
+
+{% block title %}Pengguna{% endblock %}
+{% block page_title %}Manajemen pengguna{% endblock %}
+{% block page_subtitle %}{{ active_count }} pengguna aktif dari {{ total_count }} akun{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-primary btn-sm" href="/pengguna/baru">{{ icon('plus') }}<span>Tambah pengguna</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="card filter-card">
+  <form class="filter-form" method="get" action="/pengguna">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input search-pill" type="search" name="q" value="{{ q }}"
+               placeholder="Cari nama, username, atau email…" aria-label="Cari pengguna">
+      </div>
+      <select class="select" name="role" aria-label="Peran">
+        <option value="">Semua peran</option>
+        {% for value, label in role_labels.items() %}
+        <option value="{{ value }}" {{ 'selected' if role == value }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select class="select" name="status" aria-label="Status">
+        <option value="active" {{ 'selected' if status == 'active' }}>Aktif</option>
+        <option value="inactive" {{ 'selected' if status == 'inactive' }}>Nonaktif</option>
+        <option value="all" {{ 'selected' if status == 'all' }}>Semua status</option>
+      </select>
+      <button class="btn btn-primary" type="submit">{{ icon('search') }} Filter</button>
+      {% if q or role %}<a class="btn btn-ghost" href="/pengguna">Reset</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count">
+    {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> pengguna{% else %}Tidak ada pengguna{% endif %}
+  </span>
+  <span class="muted-small">{{ icon('shield') }} Peran menentukan akses konten dan administrasi</span>
+</div>
+
+<div class="table-card">
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Pengguna</th>
+          <th>Peran</th>
+          <th>Komisi</th>
+          <th>Status</th>
+          <th>Terakhir masuk</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for person in result.items %}
+        <tr>
+          <td>
+            <div class="cell-main">
+              {{ avatar(person.full_name, person.avatar_path, 'sm') }}
+              <div>
+                <strong>{{ person.full_name }}</strong>
+                <span>@{{ person.username }}{% if person.email %} · {{ person.email }}{% endif %}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-{{ {'superadmin': 'purple', 'admin': 'blue', 'humas': 'cyan', 'staf_komisi': 'gold', 'pimpinan': 'green'}.get(person.role, 'gray') }}">
+              {{ role_labels.get(person.role, person.role) }}
+            </span>
+          </td>
+          <td>{{ person.commission.short_name if person.commission else '—' }}</td>
+          <td>
+            {% if person.is_active %}
+            <span class="badge badge-green"><span class="dot"></span>Aktif</span>
+            {% else %}
+            <span class="badge badge-gray"><span class="dot"></span>Nonaktif</span>
+            {% endif %}
+            {% if person.must_change_password %}<span class="badge badge-gold" title="Wajib ganti kata sandi">Ganti sandi</span>{% endif %}
+          </td>
+          <td>{{ person.last_login_at|time_ago }}</td>
+          <td>
+            <div class="actions">
+              <a class="icon-btn" href="/pengguna/{{ person.id }}/edit" title="Sunting pengguna" aria-label="Sunting {{ person.username }}">{{ icon('edit') }}</a>
+              <form method="post" action="/pengguna/{{ person.id }}/reset-password"
+                    data-confirm="Reset kata sandi {{ person.username }}? Kata sandi baru akan ditampilkan sekali.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="icon-btn" type="submit" title="Reset kata sandi" aria-label="Reset kata sandi {{ person.username }}">{{ icon('key') }}</button>
+              </form>
+              {% if person.id != user.id %}
+              <form method="post" action="/pengguna/{{ person.id }}/status"
+                    data-confirm="{{ 'Aktifkan' if not person.is_active else 'Nonaktifkan' }} akun {{ person.username }}?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="icon-btn" type="submit" title="{{ 'Aktifkan' if not person.is_active else 'Nonaktifkan' }}"
+                        aria-label="{{ 'Aktifkan' if not person.is_active else 'Nonaktifkan' }} {{ person.username }}">
+                  {{ icon('check' if not person.is_active else 'x') }}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-row">Belum ada pengguna yang cocok dengan filter.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if result.pages > 1 %}
+  <div class="table-foot">
+    <span class="muted-small">Halaman {{ result.page }} dari {{ result.pages }}</span>
+    {{ pagination(result, request) }}
+  </div>
+  {% endif %}
+</div>
+
+<div class="card card-pad mt-3">
+  <div class="flex-between">
+    <div class="flex" style="align-items: flex-start; gap: 10px;">
+      <span class="meta-icon">{{ icon('info') }}</span>
+      <div>
+        <div class="form-section-title">Kebijakan akun</div>
+        <p class="muted-small">Akun baru wajib mengganti kata sandi saat pertama masuk. Akun nonaktif tidak dapat login dan sesi aktifnya akan berakhir.</p>
+      </div>
+    </div>
+    <a class="section-link" href="/audit">Lihat log audit {{ icon('arrow-right') }}</a>
+  </div>
+</div>
+{% endblock %}

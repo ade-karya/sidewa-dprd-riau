@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar, activity_card, empty_state %}
+
+{% block title %}{{ member.full_name }}{% endblock %}
+{% block page_title %}Profil anggota{% endblock %}
+{% block page_subtitle %}{{ member.position }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/anggota">{{ icon('arrow-left') }}<span>Direktori</span></a>
+{% endblock %}
+
+{% block content %}
+<section class="member-detail-hero">
+  <div class="member-photo-large">
+    {% if member.portrait_path %}
+    <img src="/media/{{ member.portrait_path }}" alt="{{ member.full_name }}">
+    {% else %}
+    <span class="portrait-initials">{{ member.full_name|initials }}</span>
+    {% endif %}
+    {% if not member.is_active %}<span class="inactive-flag" style="top: 12px; left: 12px;">Nonaktif</span>{% endif %}
+  </div>
+  <div class="member-hero-copy">
+    <div class="chip-row mb-1">
+      {% if member.commission %}
+      <span class="chip chip-commission" style="--chip-color: {{ member.commission.color }};"><span class="chip-dot"></span>{{ member.commission.short_name }}</span>
+      {% else %}
+      <span class="chip chip-gold">Pimpinan DPRD</span>
+      {% endif %}
+      {% if member.faces %}<span class="chip chip-green">{{ icon('scan') }} Wajah terdaftar</span>{% else %}<span class="chip chip-gray">Belum ada wajah</span>{% endif %}
+      {% if member.consent_granted_at %}<span class="chip chip-purple">{{ icon('shield') }} Persetujuan tercatat</span>{% endif %}
+    </div>
+    <h1>{{ member.full_name }}</h1>
+    <p class="role-line">{{ member.position }}</p>
+    <div class="member-facts">
+      <span class="fact">{{ icon('users') }} {{ member.party or 'Partai belum diisi' }}</span>
+      <span class="fact">{{ icon('map-pin') }} {{ member.dapil or 'Dapil belum diisi' }}</span>
+      {% if member.email %}<span class="fact">{{ icon('mail') }} {{ member.email }}</span>{% endif %}
+      {% if member.phone %}<span class="fact">{{ icon('phone') }} {{ member.phone }}</span>{% endif %}
+    </div>
+    <div class="member-stat-row">
+      <div class="member-stat"><b>{{ activity_count }}</b><span>Kegiatan terdokumentasi</span></div>
+      <div class="member-stat"><b>{{ member.faces|length }}</b><span>Data wajah</span></div>
+      <div class="member-stat"><b>{{ member.activity_links|length }}</b><span>Tautan dokumentasi</span></div>
+    </div>
+    <div class="member-actions">
+      <a class="btn btn-primary btn-sm" href="/cari?q={{ member.full_name|urlencode }}">{{ icon('search') }} Cari dokumentasi</a>
+      {% if member.commission %}
+      <a class="btn btn-outline btn-sm" href="/komisi/{{ member.commission.id }}">{{ icon('layers') }} {{ member.commission.short_name }}</a>
+      {% endif %}
+      <button class="btn btn-outline btn-sm" type="button" data-print>{{ icon('printer') }} Cetak profil</button>
+      {% if can_manage_users %}
+      <a class="btn btn-outline btn-sm" href="/anggota/{{ member.id }}/edit">{{ icon('edit') }} Sunting</a>
+      <form method="post" action="/anggota/{{ member.id }}/status"
+            data-confirm="{{ 'Aktifkan' if not member.is_active else 'Nonaktifkan' }} anggota ini?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-{{ 'soft' if not member.is_active else 'danger' }} btn-sm" type="submit">
+          {{ icon('refresh') }} {{ 'Aktifkan' if not member.is_active else 'Nonaktifkan' }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="member-layout">
+  <div class="detail-main">
+    <section class="section-card">
+      <h2>{{ icon('user') }} Profil singkat</h2>
+      <div class="prose">
+        {% if member.bio %}<p>{{ member.bio }}</p>{% else %}<p class="muted">Belum ada profil singkat untuk anggota ini.</p>{% endif %}
+      </div>
+      <div class="meta-grid mt-2">
+        <div class="meta-item">
+          <span class="meta-icon">{{ icon('layers') }}</span>
+          <div class="meta-copy"><span>Komisi</span><strong>{{ member.commission.name if member.commission else 'Pimpinan / non-komisi' }}</strong></div>
+        </div>
+        <div class="meta-item">
+          <span class="meta-icon">{{ icon('users') }}</span>
+          <div class="meta-copy"><span>Partai</span><strong>{{ member.party or '—' }}</strong></div>
+        </div>
+        <div class="meta-item">
+          <span class="meta-icon">{{ icon('map-pin') }}</span>
+          <div class="meta-copy"><span>Daerah pemilihan</span><strong>{{ member.dapil or '—' }}</strong></div>
+        </div>
+        <div class="meta-item">
+          <span class="meta-icon">{{ icon('shield') }}</span>
+          <div class="meta-copy"><span>Persetujuan biometrik</span><strong>{{ member.consent_granted_at|date_id if member.consent_granted_at else 'Belum tercatat' }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('calendar') }} Dokumentasi kegiatan</h2>
+        <a class="section-link" href="/kegiatan?q={{ member.full_name|urlencode }}">Lihat semua {{ icon('arrow-right') }}</a>
+      </div>
+      {% if activities %}
+      <div class="activity-grid" style="grid-template-columns: repeat(2, minmax(0,1fr));">
+        {% for activity in activities %}{{ activity_card(activity) }}{% endfor %}
+      </div>
+      {% else %}
+      {{ empty_state('calendar', 'Belum ada dokumentasi', 'Anggota ini belum tertaut pada dokumentasi kegiatan yang dapat Anda akses.') }}
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <div class="section-card" id="wajah">
+      <div class="flex-between mb-1">
+        <h2 style="margin-bottom: 0;">{{ icon('scan') }} Data wajah</h2>
+        <span class="badge badge-gray">{{ member.faces|length }} encoding</span>
+      </div>
+      <p class="muted-small mb-2">Semakin banyak variasi foto (sudut dan pencahayaan), semakin akurat pencocokan wajah.</p>
+
+      {% if member.faces %}
+      <div class="face-gallery">
+        {% for face in member.faces %}
+        <div class="face-card">
+          <a href="/media/{{ face.image_path }}" target="_blank" rel="noopener">
+            <img src="/media/{{ face.image_path }}" alt="Data wajah {{ loop.index }} {{ member.full_name }}" loading="lazy">
+          </a>
+          <div class="face-card-foot">
+            <span>{{ 'Utama' if face.is_primary else 'Alternatif' }} · {{ (face.quality * 100)|round|int }}%</span>
+            {% if can_manage_content %}
+            <form method="post" action="/anggota/{{ member.id }}/wajah/{{ face.id }}/hapus"
+                  data-confirm="Hapus data wajah ini? Pencocokan wajah dapat menurun.">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="icon-btn" type="submit" title="Hapus data wajah" aria-label="Hapus data wajah">{{ icon('trash') }}</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada encoding wajah. Daftarkan minimal satu foto frontal.</p>
+      {% endif %}
+
+      {% if can_manage_content %}
+      <hr class="divider">
+      <form method="post" action="/anggota/{{ member.id }}/wajah" enctype="multipart/form-data" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="upload-zone" style="padding: 14px;">
+          <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required data-preview="#face-enroll-preview" data-max="1">
+          <div class="upload-icon" style="width: 36px; height: 36px; margin-bottom: 7px;">{{ icon('camera') }}</div>
+          <h4 style="font-size: 12px;">Daftarkan wajah baru</h4>
+          <p>Satu wajah per foto · wajah frontal</p>
+        </div>
+        <div class="upload-previews" id="face-enroll-preview" style="grid-template-columns: 1fr;"></div>
+        <label class="checkbox-row mt-2">
+          <input type="checkbox" name="consent" value="true" required>
+          <span>Anggota telah menyetujui pendaftaran data wajah ini.</span>
+        </label>
+        <button class="btn btn-primary btn-sm btn-block mt-2" type="submit" {{ 'disabled' if not face_available }}>
+          {{ icon('scan') }} Proses &amp; daftarkan
+        </button>
+      </form>
+      {% if not face_available %}
+      <div class="failed-banner mt-2">{{ icon('alert') }} Mesin wajah tidak tersedia.</div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    <div class="section-card">
+      <h2>{{ icon('info') }} Kontak &amp; administrasi</h2>
+      <div class="side-list">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('mail') }}</span>
+          <div class="side-copy"><span>Email</span><strong>{{ member.email or '—' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('phone') }}</span>
+          <div class="side-copy"><span>Telepon</span><strong>{{ member.phone or '—' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('clock') }}</span>
+          <div class="side-copy"><span>Terdaftar sejak</span><strong>{{ member.created_at|date_id }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('activity') }}</span>
+          <div class="side-copy"><span>Terakhir diperbarui</span><strong>{{ member.updated_at|datetime_id }}</strong></div>
+        </div>
+      </div>
+      <div class="face-note mt-2">
+        {{ icon('shield') }}
+        <span>Data biometrik disimpan sebagai encoding dan hanya dapat diakses petugas berwenang. Penghapusan data dapat dilakukan kapan pun.</span>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

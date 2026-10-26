@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar, activity_card, empty_state, status_badge, commission_chip %}
+
+{% block title %}Beranda{% endblock %}
+{% block page_title %}Beranda{% endblock %}
+{% block page_subtitle %}Ringkasan dokumentasi kegiatan DPRD Provinsi Riau{% endblock %}
+
+{% block topbar_actions %}
+{% if can_manage_content %}
+<a class="btn btn-outline btn-sm" href="/cari">{{ icon('scan') }}<span>Cari wajah</span></a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="dashboard-hero">
+  <div class="hero-copy">
+    <span class="hero-eyebrow">{{ icon('sparkles') }} Dokumentasi resmi dewan</span>
+    <h2>Selamat datang, {{ user.full_name.split()[0] if user.full_name else user.username }}.</h2>
+    <p>
+      Semua dokumentasi kegiatan DPRD Provinsi Riau dalam satu tempat. Cari berdasarkan wajah,
+      nama, jabatan, atau lokasi — lalu bagikan dokumentasi yang tepat dalam hitungan detik.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/cari">{{ icon('scan') }} Cari dokumentasi</a>
+      {% if can_manage_content %}
+      <a class="btn btn-outline" href="/kegiatan/baru">{{ icon('upload') }} Unggah kegiatan</a>
+      {% else %}
+      <a class="btn btn-outline" href="/kegiatan">{{ icon('calendar') }} Jelajahi kegiatan</a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="hero-rings" aria-hidden="true"></div>
+  <div class="hero-panel">
+    <div class="hero-panel-icon">{{ icon('fingerprint') }}</div>
+    <h3>Pencarian wajah</h3>
+    <p>Unggah satu foto, sistem mencocokkan wajah dengan direktori anggota dan dokumentasi kegiatan.</p>
+    <a class="btn btn-soft btn-sm" href="/cari">Mulai pencarian {{ icon('arrow-right') }}</a>
+  </div>
+</section>
+
+{% if demo_mode %}
+<div class="demo-banner">
+  {{ icon('sparkles') }}
+  <span><strong>Mode demo</strong> — data, akun, dan foto pada aplikasi ini merupakan simulasi untuk keperluan presentasi.</span>
+</div>
+{% endif %}
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-icon">{{ icon('calendar') }}</div>
+      {% if stats.growth is not none %}
+      <span class="stat-delta {{ 'down' if stats.growth < 0 }}">{{ '+' if stats.growth > 0 }}{{ stats.growth }}%</span>
+      {% endif %}
+    </div>
+    <div class="stat-value">{{ "{:,}".format(stats.total_activities).replace(',', '.') }}</div>
+    <div class="stat-label">Total dokumentasi kegiatan</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-icon green">{{ icon('check') }}</div>
+      <span class="stat-delta">{{ stats.published }} terbit</span>
+    </div>
+    <div class="stat-value">{{ "{:,}".format(stats.total_photos).replace(',', '.') }}</div>
+    <div class="stat-label">Foto pada kegiatan terbit</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-icon cyan">{{ icon('users') }}</div>
+      <span class="stat-delta">{{ stats.total_members }} aktif</span>
+    </div>
+    <div class="stat-value">{{ "{:,}".format(stats.recognized_faces).replace(',', '.') }}</div>
+    <div class="stat-label">Penampilan anggota terdokumentasi</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div class="stat-icon gold">{{ icon('database') }}</div>
+      <span class="stat-delta">{{ stats.recent_count }} bulan ini</span>
+    </div>
+    <div class="stat-value">{{ stats.storage_bytes|filesize }}</div>
+    <div class="stat-label">Penyimpanan media terpakai</div>
+  </div>
+</div>
+
+<div class="section-head" style="margin-top: 30px;">
+  <div>
+    <h2>Komisi DPRD</h2>
+    <p>Dokumentasi tersebar pada lima komisi dan pimpinan dewan.</p>
+  </div>
+  <a class="section-link" href="/komisi">Semua komisi {{ icon('arrow-right') }}</a>
+</div>
+<div class="commission-strip">
+  {% for item in stats.commission_stats %}
+  <a class="commission-mini" href="/komisi/{{ item.commission.id }}" style="--commission-color: {{ item.commission.color }};">
+    <span class="cm-code">Komisi {{ item.commission.code }}</span>
+    <h4>{{ item.commission.bidang.split(',')[0] }}</h4>
+    <div class="cm-meta">
+      <span><b>{{ item.activities }}</b> kegiatan</span>
+      <span><b>{{ item.members }}</b> anggota</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="dashboard-split">
+  <div class="card chart-card">
+    <div class="chart-head">
+      <h3>Tren dokumentasi 6 bulan</h3>
+      <span>{{ stats.today|date_id }}</span>
+    </div>
+    <div class="bar-chart" role="img" aria-label="Grafik jumlah kegiatan per bulan">
+      {% for month in stats.monthly %}
+      <div class="bar-item">
+        <div class="bar-wrap">
+          <div class="bar" style="height: {{ month.height }}%;">
+            <span class="bar-value">{{ month.count }}</span>
+          </div>
+        </div>
+        <span class="bar-label">{{ month.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="filter-meta" style="margin: 16px 0 0;">
+      <span class="result-count">Kategori terbanyak:
+        {% if stats.category_stats %}<b>{{ stats.category_stats[0].name }}</b> ({{ stats.category_stats[0].count }} kegiatan){% else %}—{% endif %}
+      </span>
+      <a class="section-link" href="/kegiatan">Lihat semua {{ icon('arrow-right') }}</a>
+    </div>
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-head">
+      <h3>Anggota paling terdokumentasi</h3>
+      <span>Berdasarkan jumlah kegiatan</span>
+    </div>
+    {% if stats.top_members %}
+    <div class="top-list">
+      {% for member, total in stats.top_members %}
+      <a class="top-person" href="/anggota/{{ member.id }}">
+        <span class="top-rank">{{ "%02d"|format(loop.index) }}</span>
+        {{ avatar(member.full_name, member.portrait_path, 'sm') }}
+        <span class="person-copy">
+          <strong>{{ member.full_name }}</strong>
+          <span>{{ member.position }}{% if member.commission %} · {{ member.commission.short_name }}{% endif %}</span>
+        </span>
+        <span class="top-count">{{ total }} foto</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted-small">Belum ada data partisipasi anggota.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="section-head" style="margin-top: 30px;">
+  <div>
+    <h2>Dokumentasi terbaru</h2>
+    <p>Kegiatan yang baru dipublikasikan tim Humas.</p>
+  </div>
+  <a class="section-link" href="/kegiatan">Semua kegiatan {{ icon('arrow-right') }}</a>
+</div>
+{% if stats.recent_activities %}
+<div class="activity-grid">
+  {% for activity in stats.recent_activities %}
+  {{ activity_card(activity) }}
+  {% endfor %}
+</div>
+{% else %}
+{{ empty_state('calendar', 'Belum ada dokumentasi', 'Dokumentasi kegiatan akan tampil di sini setelah tim Humas mengunggah dan menerbitkannya.', '/kegiatan/baru' if can_manage_content else None, 'Unggah kegiatan' if can_manage_content else None) }}
+{% endif %}
+
+<div class="dashboard-split">
+  <div class="card chart-card">
+    <div class="chart-head">
+      <h3>Kategori kegiatan</h3>
+      <span>Distribusi dokumentasi</span>
+    </div>
+    {% if stats.category_stats %}
+    <div class="top-list">
+      {% for item in stats.category_stats %}
+      <div class="top-person">
+        <span class="top-rank">{{ loop.index }}</span>
+        <span class="person-copy">
+          <strong>{{ item.name }}</strong>
+          <span>{{ item.count }} kegiatan · {{ item.percent }}%</span>
+        </span>
+        <span class="top-count">{{ item.percent }}%</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted-small">Belum ada data kategori.</p>
+    {% endif %}
+    {% if stats.category_stats %}
+    <div class="face-note" style="margin-top: 14px;">
+      {{ icon('info') }}
+      <span>Kategori <b>{{ stats.category_stats[0].name }}</b> mendominasi dokumentasi bulan ini.
+      Gunakan filter kategori pada halaman kegiatan untuk menelusuri lebih cepat.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-head">
+      <h3>Aktivitas sistem</h3>
+      <span>Jejak audit terbaru</span>
+    </div>
+    {% if audits %}
+    <div class="audit-feed">
+      {% for entry in audits %}
+      <div class="audit-item">
+        <span class="audit-bullet">{{ icon('activity') }}</span>
+        <div class="audit-copy">
+          <p>{{ entry.summary or entry.action }}</p>
+          <span>{{ entry.actor_name }} · {{ entry.created_at|time_ago }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <a class="section-link mt-1" href="/audit">Buka log audit {{ icon('arrow-right') }}</a>
+    {% else %}
+    <p class="muted-small">Belum ada aktivitas tercatat.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if not face_available %}
+<div class="failed-banner mt-3">{{ icon('alert') }} Mesin pengenalan wajah tidak tersedia. Pencarian wajah dinonaktifkan sementara.</div>
+{% endif %}
+{% endblock %}

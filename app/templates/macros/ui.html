@@ -1,0 +1,133 @@
+{% macro icon(name, cls='') -%}
+<svg class="icon {{ cls }}" aria-hidden="true"><use href="#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro avatar(name, path=None, size='md', cls='') -%}
+<span class="avatar avatar-{{ size }} {{ cls }}">
+  {% if path %}<img src="/media/{{ path }}" alt="{{ name }}" loading="lazy">{% else %}<span>{{ name|initials }}</span>{% endif %}
+</span>
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+<span class="badge badge-{{ {'draft': 'gray', 'published': 'green', 'archived': 'purple'}.get(status, 'gray') }}">
+  <span class="dot"></span>{{ status_labels.get(status, status) }}
+</span>
+{%- endmacro %}
+
+{% macro photo_status_badge(status) -%}
+<span class="badge badge-{{ {'pending': 'gray', 'processing': 'gold', 'ready': 'green', 'failed': 'red'}.get(status, 'gray') }}">
+  {{ photo_status_labels.get(status, status) }}
+</span>
+{%- endmacro %}
+
+{% macro commission_chip(commission) -%}
+{% if commission %}
+<span class="chip chip-commission" style="--chip-color: {{ commission.color }}">
+  <span class="chip-dot"></span>{{ commission.short_name }}
+</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro category_chip(category) -%}
+<span class="chip chip-{{ category_tones.get(category, 'gray') }}">{{ category }}</span>
+{%- endmacro %}
+
+{% macro activity_card(activity, score=None) -%}
+<a class="activity-card" href="/kegiatan/{{ activity.id }}">
+  <div class="activity-cover">
+    {% if activity.cover and activity.cover.thumb_path %}
+      <img src="/media/{{ activity.cover.thumb_path }}" alt="{{ activity.title }}" loading="lazy">
+    {% else %}
+      <div class="cover-placeholder">{{ icon('image') }}<span>Belum ada foto</span></div>
+    {% endif %}
+    <div class="cover-top">
+      {{ status_badge(activity.status) }}
+      {% if score %}
+      <span class="match-pill"><span class="pulse-dot"></span>{{ score.confidence }}% cocok</span>
+      {% endif %}
+    </div>
+    <div class="cover-bottom">
+      <span class="cover-date">{{ icon('calendar') }} {{ activity.activity_date|date_short }}</span>
+      <span class="cover-photo-count">{{ icon('camera') }} {{ activity.photos|length }}</span>
+    </div>
+  </div>
+  <div class="activity-body">
+    <div class="chip-row">
+      {% for c in activity.commissions[:2] %}{{ commission_chip(c) }}{% endfor %}
+      {{ category_chip(activity.category) }}
+    </div>
+    <h3 class="activity-title">{{ activity.title }}</h3>
+    <div class="activity-location">{{ icon('map-pin') }}<span>{{ activity.location_name }}</span></div>
+    <div class="activity-footer">
+      <div class="avatar-stack">
+        {% for m in activity.members[:3] %}{{ avatar(m.full_name, m.portrait_path, 'xs') }}{% endfor %}
+        {% if activity.members|length > 3 %}<span class="avatar avatar-xs more">+{{ activity.members|length - 3 }}</span>{% endif %}
+        {% if not activity.members %}<span class="muted-small">Belum ada peserta tertaut</span>{% endif %}
+      </div>
+      {% if activity.members %}<span class="muted-small">{{ activity.members|length }} peserta</span>{% endif %}
+    </div>
+  </div>
+</a>
+{%- endmacro %}
+
+{% macro member_card(member) -%}
+<a class="member-card" href="/anggota/{{ member.id }}">
+  <div class="member-portrait">
+    {% if member.portrait_path %}
+      <img src="/media/{{ member.portrait_path }}" alt="{{ member.full_name }}" loading="lazy">
+    {% else %}
+      <span class="portrait-initials">{{ member.full_name|initials }}</span>
+    {% endif %}
+    {% if member.faces %}
+    <span class="face-count" title="Data wajah terdaftar">{{ icon('scan') }} {{ member.faces|length }}</span>
+    {% endif %}
+    {% if not member.is_active %}<span class="inactive-flag">Nonaktif</span>{% endif %}
+  </div>
+  <div class="member-body">
+    <h3>{{ member.full_name }}</h3>
+    <p class="member-position">{{ member.position }}</p>
+    {% if member.commission %}
+    <span class="chip chip-commission" style="--chip-color: {{ member.commission.color }}"><span class="chip-dot"></span>{{ member.commission.short_name }}</span>
+    {% else %}
+    <span class="chip chip-gold">Pimpinan DPRD</span>
+    {% endif %}
+    <div class="member-meta">
+      <span>{{ member.party or '—' }}</span>
+      <span class="sep">•</span>
+      <span>{{ member.dapil or '—' }}</span>
+    </div>
+  </div>
+</a>
+{%- endmacro %}
+
+{% macro empty_state(icon_name, title, text, action_url=None, action_label=None) -%}
+<div class="empty-state">
+  <div class="empty-icon">{{ icon(icon_name) }}</div>
+  <h3>{{ title }}</h3>
+  <p>{{ text }}</p>
+  {% if action_url and action_label %}<a class="btn btn-primary" href="{{ action_url }}">{{ icon('plus') }} {{ action_label }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro pagination(result, request) -%}
+{% if result.pages > 1 %}
+<nav class="pagination" aria-label="Navigasi halaman">
+  <a class="page-btn {{ 'disabled' if not result.has_prev }}" href="{{ page_url(request, result.page - 1) if result.has_prev else '#' }}" aria-label="Sebelumnya">{{ icon('arrow-left') }}</a>
+  {% set start = [1, result.page - 2]|max %}
+  {% set end = [result.pages, result.page + 2]|min %}
+  {% if start > 1 %}
+    <a class="page-btn" href="{{ page_url(request, 1) }}">1</a>
+    {% if start > 2 %}<span class="page-gap">…</span>{% endif %}
+  {% endif %}
+  {% for p in range(start, end + 1) %}
+    <a class="page-btn {{ 'active' if p == result.page }}" href="{{ page_url(request, p) }}">{{ p }}</a>
+  {% endfor %}
+  {% if end < result.pages %}
+    {% if end < result.pages - 1 %}<span class="page-gap">…</span>{% endif %}
+    <a class="page-btn" href="{{ page_url(request, result.pages) }}">{{ result.pages }}</a>
+  {% endif %}
+  <a class="page-btn {{ 'disabled' if not result.has_next }}" href="{{ page_url(request, result.page + 1) if result.has_next else '#' }}" aria-label="Berikutnya">{{ icon('arrow-right') }}</a>
+</nav>
+<div class="pagination-info">Menampilkan {{ result.start }}–{{ result.end }} dari {{ result.total }} data</div>
+{% endif %}
+{%- endmacro %}

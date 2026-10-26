@@ -1,0 +1,34 @@
+"""Dashboard utama."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy.orm import Session
+
+from ..audit import recent_audit
+from ..database import get_db
+from ..deps import require_user
+from ..models import User
+from ..services import face_engine
+from ..services.analytics import dashboard_stats
+from ..templating import render
+
+router = APIRouter()
+
+
+@router.get("/")
+def dashboard(
+    request: Request,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    stats = dashboard_stats(db, user)
+    audits = recent_audit(db, 6) if user.role in {"superadmin", "admin"} else []
+    return render(
+        request,
+        "dashboard.html",
+        user=user,
+        stats=stats,
+        audits=audits,
+        face_available=face_engine.engine.available,
+    )

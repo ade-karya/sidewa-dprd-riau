@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon %}
+
+{% block title %}Komisi{% endblock %}
+{% block page_title %}Komisi DPRD{% endblock %}
+{% block page_subtitle %}Lima komisi dan bidang kerja DPRD Provinsi Riau{% endblock %}
+
+{% block content %}
+<div class="card card-pad mb-2" style="display: flex; align-items: center; gap: 18px; background: linear-gradient(120deg, #f6eef9, #fdfbfe 60%, #eef9fd);">
+  <span class="empty-icon" style="margin: 0; width: 52px; height: 52px;">{{ icon('layers') }}</span>
+  <div class="grow">
+    <h2 style="font-size: 17px;">Struktur komisi</h2>
+    <p class="muted-small">Setiap komisi membidangi ruang lingkup tertentu dan menjadi acuan pengelompokan dokumentasi kegiatan.</p>
+  </div>
+  <span class="badge badge-purple">{{ stats|length }} komisi aktif</span>
+</div>
+
+<div class="commission-list">
+  {% for item in stats %}
+  <a class="commission-row" href="/komisi/{{ item.commission.id }}" style="--commission-color: {{ item.commission.color }};">
+    <div class="commission-emblem">{{ icon('building') }}</div>
+    <div class="commission-main">
+      <h3>{{ item.commission.name }}</h3>
+      <p>{{ item.commission.bidang }}</p>
+    </div>
+    <div class="commission-stat">
+      <div><b>{{ item.activities }}</b><span>Kegiatan</span></div>
+      <div><b>{{ item.members }}</b><span>Anggota</span></div>
+      <div><b>{{ item.staff }}</b><span>Staf</span></div>
+    </div>
+    <span class="icon-btn">{{ icon('arrow-right') }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

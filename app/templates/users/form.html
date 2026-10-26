@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon %}
+
+{% block title %}{{ 'Sunting pengguna' if mode == 'edit' else 'Tambah pengguna' }}{% endblock %}
+{% block page_title %}{{ 'Sunting pengguna' if mode == 'edit' else 'Tambah pengguna' }}{% endblock %}
+{% block page_subtitle %}{{ '@' ~ target.username if mode == 'edit' else 'Buat akun dan tentukan hak akses' }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/pengguna">{{ icon('arrow-left') }}<span>Daftar pengguna</span></a>
+{% endblock %}
+
+{% block content %}
+{% if error %}<div class="global-error">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+
+<form method="post" action="{{ '/pengguna/' ~ target.id ~ '/edit' if mode == 'edit' else '/pengguna' }}" data-loading>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <div class="profile-grid">
+    <div class="card card-pad">
+      <div class="form-section-title">Identitas akun</div>
+      <p class="muted-small mb-2">Gunakan nama asli agar jejak audit mudah ditelusuri.</p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="username">Username <span class="required">*</span></label>
+          <input class="input" id="username" name="username" type="text" required maxlength="32"
+                 pattern="[a-z0-9._-]{3,32}" value="{{ form.username }}"
+                 {{ 'disabled' if mode == 'edit' }} autocomplete="off">
+          <span class="form-hint">{{ 'Username tidak dapat diubah.' if mode == 'edit' else 'Huruf kecil, angka, titik, garis bawah, atau strip (3–32 karakter).' }}</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="full_name">Nama lengkap <span class="required">*</span></label>
+          <input class="input" id="full_name" name="full_name" type="text" required maxlength="160" value="{{ form.full_name }}" placeholder="Nama pegawai">
+        </div>
+        <div class="form-group full">
+          <label class="form-label" for="email">Email</label>
+          <input class="input" id="email" name="email" type="email" maxlength="160" value="{{ form.email }}" placeholder="nama@dprd.riau.go.id" autocomplete="off">
+        </div>
+
+        {% if mode == 'create' %}
+        <div class="form-group full">
+          <label class="form-label" for="password">Kata sandi awal <span class="required">*</span></label>
+          <div class="password-wrap">
+            <input class="input" id="password" name="password" type="password" required minlength="10"
+                   autocomplete="new-password" placeholder="Minimal 10 karakter, kombinasi huruf, angka, dan simbol">
+            <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kata sandi">{{ icon('eye') }}</button>
+          </div>
+          <span class="form-hint">Pengguna wajib mengganti kata sandi ini saat pertama kali masuk.</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <hr class="divider">
+      <div class="form-section-title">Peran &amp; akses</div>
+      <p class="muted-small mb-2">Peran menentukan halaman dan tindakan yang dapat dilakukan pengguna.</p>
+      <div class="role-option-grid">
+        {% for value in allowed_roles %}
+        <label class="role-option">
+          <input type="radio" name="role" value="{{ value }}" {{ 'checked' if form.role == value }} required>
+          <span>
+            <strong>{{ role_labels.get(value, value) }}</strong>
+            <span>{{ role_descriptions.get(value, '') }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="form-group mt-2">
+        <label class="form-label" for="commission_code">Komisi</label>
+        <select class="select" id="commission_code" name="commission_code">
+          <option value="">Tidak terikat komisi</option>
+          {% for c in commissions %}
+          <option value="{{ c.code }}" {{ 'selected' if form.commission_code == c.code }}>{{ c.short_name }} — {{ c.bidang }}</option>
+          {% endfor %}
+        </select>
+        <span class="form-hint">Wajib dipilih untuk peran Staf Komisi.</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="card card-pad">
+        <div class="flex" style="align-items: flex-start; gap: 10px;">
+          <span class="meta-icon">{{ icon('shield') }}</span>
+          <div>
+            <div class="form-section-title">Prinsip akses minimal</div>
+            <p class="muted-small">Berikan peran sesuai kebutuhan tugas. Tinjau akses secara berkala melalui log audit.</p>
+          </div>
+        </div>
+        <div class="mt-2" style="display: flex; flex-direction: column; gap: 8px;">
+          {% for value, label in role_labels.items() %}
+          <div class="flex" style="align-items: flex-start; gap: 8px;">
+            <span class="chip-dot" style="margin-top: 6px; background: {{ {'superadmin': '#7E4890', 'admin': '#3C8DAD', 'humas': '#58CBF5', 'staf_komisi': '#C08A2E', 'pimpinan': '#5B8C5A'}.get(value, '#857A8D') }};"></span>
+            <div>
+              <strong style="font-size: 11.5px; font-weight: 500;">{{ label }}</strong>
+              <p class="muted-small">{{ role_descriptions.get(value, '') }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if mode == 'edit' %}
+      <div class="card card-pad">
+        <div class="form-section-title">Tindakan akun</div>
+        <p class="muted-small mb-2">Reset kata sandi menghasilkan kata sandi sementara acak yang ditampilkan satu kali.</p>
+        <a class="btn btn-outline btn-sm btn-block" href="/pengguna">{{ icon('users') }} Kembali ke daftar</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="form-actions" style="border-top: 0;">
+    <a class="btn btn-ghost" href="/pengguna">Batal</a>
+    <button class="btn btn-primary" type="submit">{{ icon('check') }} {{ 'Simpan perubahan' if mode == 'edit' else 'Buat pengguna' }}</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, pagination %}
+
+{% block title %}Audit{% endblock %}
+{% block page_title %}Log audit{% endblock %}
+{% block page_subtitle %}{{ "{:,}".format(total).replace(',', '.') }} peristiwa tercatat{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/audit/ekspor.csv{% if request.query_string %}?{{ request.query_string }}{% endif %}">{{ icon('download') }}<span>Ekspor CSV</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="card filter-card">
+  <form class="filter-form" method="get" action="/audit">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input search-pill" type="search" name="q" value="{{ q }}"
+               placeholder="Cari aktor, ringkasan, atau entitas…" aria-label="Cari log audit">
+      </div>
+      <select class="select" name="action" aria-label="Jenis aksi">
+        <option value="">Semua aksi</option>
+        {% for key, label in actions.items() %}
+        <option value="{{ key }}" {{ 'selected' if action == key }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input class="input" type="date" name="date_from" value="{{ date_from }}" aria-label="Dari tanggal">
+      <input class="input" type="date" name="date_to" value="{{ date_to }}" aria-label="Sampai tanggal">
+      <button class="btn btn-primary" type="submit">{{ icon('filter') }} Filter</button>
+      {% if q or action or date_from or date_to %}<a class="btn btn-ghost" href="/audit">Reset</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count">
+    {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> peristiwa{% else %}Tidak ada peristiwa{% endif %}
+  </span>
+  <span class="muted-small">{{ icon('shield') }} Log tidak dapat diubah atau dihapus</span>
+</div>
+
+<div class="table-card">
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>Aktor</th>
+          <th>Aksi</th>
+          <th>Entitas</th>
+          <th>Ringkasan</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in result.items %}
+        <tr>
+          <td class="nowrap">{{ entry.created_at|datetime_id }}</td>
+          <td>
+            <div class="cell-main">
+              <div>
+                <strong>{{ entry.actor_name }}</strong>
+                {% if entry.actor %}<span>@{{ entry.actor.username }}</span>{% else %}<span>Sistem</span>{% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge badge-{{ 'red' if 'FAIL' in entry.action or 'DELETE' in entry.action or 'REJECT' in entry.action else ('green' if 'CREATE' in entry.action or 'PUBLISH' in entry.action or 'CONFIRM' in entry.action else 'purple') }}">
+              {{ actions.get(entry.action, entry.action) }}
+            </span>
+          </td>
+          <td class="nowrap">
+            {% if entry.entity_type %}{{ entry.entity_type }}{% if entry.entity_id %} #{{ entry.entity_id }}{% endif %}{% else %}—{% endif %}
+          </td>
+          <td>{{ entry.summary or '—' }}</td>
+          <td class="nowrap muted">{{ entry.ip_address or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-row">Belum ada peristiwa audit yang cocok dengan filter.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if result.pages > 1 %}
+  <div class="table-foot">
+    <span class="muted-small">Halaman {{ result.page }} dari {{ result.pages }}</span>
+    <div class="grow">{{ pagination(result, request) }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card card-pad mt-3">
+  <div class="flex-between">
+    <div class="flex" style="align-items: flex-start; gap: 10px;">
+      <span class="meta-icon">{{ icon('info') }}</span>
+      <div>
+        <div class="form-section-title">Tentang log audit</div>
+        <p class="muted-small">Setiap tindakan penting — login, unggah, perubahan konten, konfirmasi wajah, dan administrasi pengguna — dicatat lengkap dengan waktu, aktor, dan alamat IP.</p>
+      </div>
+    </div>
+    <span class="badge badge-green">{{ icon('lock') }} Retensi permanen</span>
+  </div>
+</div>
+{% endblock %}

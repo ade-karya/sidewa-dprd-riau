@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, member_card, empty_state, pagination %}
+
+{% block title %}Anggota{% endblock %}
+{% block page_title %}Direktori anggota{% endblock %}
+{% block page_subtitle %}{{ total_active }} anggota aktif · {{ total_faces }} data wajah terdaftar{% endblock %}
+
+{% block topbar_actions %}
+{% if can_manage_users %}
+<a class="btn btn-primary btn-sm" href="/anggota/baru">{{ icon('plus') }}<span>Tambah anggota</span></a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card filter-card">
+  <form class="filter-form" method="get" action="/anggota">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input search-pill" type="search" name="q" value="{{ q }}"
+               placeholder="Cari nama, jabatan, partai, atau daerah pemilihan…" aria-label="Cari anggota">
+      </div>
+      <select class="select" name="commission" aria-label="Komisi">
+        <option value="">Semua komisi</option>
+        {% for c in commissions %}
+        <option value="{{ c.code }}" {{ 'selected' if commission == c.code }}>{{ c.short_name }}</option>
+        {% endfor %}
+      </select>
+      <select class="select" name="status" aria-label="Status">
+        <option value="active" {{ 'selected' if status == 'active' }}>Aktif</option>
+        <option value="inactive" {{ 'selected' if status == 'inactive' }}>Nonaktif</option>
+        <option value="all" {{ 'selected' if status == 'all' }}>Semua status</option>
+      </select>
+      <button class="btn btn-primary" type="submit">{{ icon('search') }} Cari</button>
+      {% if q or commission %}<a class="btn btn-ghost" href="/anggota">Reset</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count">
+    {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> anggota{% else %}Tidak ada anggota{% endif %}
+  </span>
+  <span class="muted-small">{{ icon('scan') }} Wajah terdaftar memungkinkan pencarian otomatis pada foto kegiatan</span>
+</div>
+
+{% if result.items %}
+<div class="member-grid">
+  {% for member in result.items %}{{ member_card(member) }}{% endfor %}
+</div>
+{{ pagination(result, request) }}
+{% else %}
+{{ empty_state('users', 'Anggota tidak ditemukan', 'Ubah kata kunci atau tambahkan anggota baru ke direktori.', '/anggota/baru' if can_manage_users else None, 'Tambah anggota' if can_manage_users else None) }}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar %}
+
+{% block title %}{{ 'Sunting anggota' if mode == 'edit' else 'Tambah anggota' }}{% endblock %}
+{% block page_title %}{{ 'Sunting anggota' if mode == 'edit' else 'Tambah anggota' }}{% endblock %}
+{% block page_subtitle %}{{ member.full_name if mode == 'edit' else 'Lengkapi data anggota dan potret resmi' }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="{{ '/anggota/' ~ member.id if mode == 'edit' else '/anggota' }}">
+  {{ icon('arrow-left') }}<span>Kembali</span>
+</a>
+{% endblock %}
+
+{% block content %}
+{% if error %}<div class="global-error">{{ icon('alert') }}<span>{{ error }}</span></div>{% endif %}
+
+<form method="post" enctype="multipart/form-data"
+      action="{{ '/anggota/' ~ member.id ~ '/edit' if mode == 'edit' else '/anggota' }}" data-loading>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <div class="profile-grid">
+    <div class="card card-pad">
+      <div class="form-section-title">Data anggota</div>
+      <p class="muted-small mb-2">Informasi ini tampil pada direktori dan hasil pencarian nama atau jabatan.</p>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label" for="full_name">Nama lengkap <span class="required">*</span></label>
+          <input class="input" id="full_name" name="full_name" type="text" required maxlength="160"
+                 value="{{ form.full_name }}" placeholder="Contoh: H. Ahmad Fauzan, S.H., M.H.">
+        </div>
+        <div class="form-group full">
+          <label class="form-label" for="position">Jabatan <span class="required">*</span></label>
+          <input class="input" id="position" name="position" type="text" required maxlength="160"
+                 value="{{ form.position }}" placeholder="Contoh: Ketua Komisi I / Anggota Komisi III">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="commission_code">Komisi</label>
+          <select class="select" id="commission_code" name="commission_code">
+            <option value="">Pimpinan / non-komisi</option>
+            {% for c in commissions %}
+            <option value="{{ c.code }}" {{ 'selected' if form.commission_code == c.code }}>{{ c.short_name }} — {{ c.bidang }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="party">Partai</label>
+          <input class="input" id="party" name="party" type="text" maxlength="80" value="{{ form.party }}" placeholder="Contoh: Golkar">
+        </div>
+        <div class="form-group full">
+          <label class="form-label" for="dapil">Daerah pemilihan</label>
+          <input class="input" id="dapil" name="dapil" type="text" maxlength="120" value="{{ form.dapil }}" placeholder="Contoh: Riau I">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input class="input" id="email" name="email" type="email" maxlength="160" value="{{ form.email }}" placeholder="nama@dprd.riau.go.id">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="phone">Telepon</label>
+          <input class="input" id="phone" name="phone" type="tel" maxlength="40" value="{{ form.phone }}" placeholder="0812 3456 7890">
+        </div>
+        <div class="form-group full">
+          <label class="form-label" for="bio">Profil singkat</label>
+          <textarea class="textarea" id="bio" name="bio" rows="4" placeholder="Riwayat singkat, fokus kerja, atau keterangan lain…">{{ form.bio }}</textarea>
+        </div>
+      </div>
+
+      {% if mode == 'create' %}
+      <hr class="divider">
+      <label class="checkbox-row">
+        <input type="checkbox" name="consent" value="true" required>
+        <span>
+          <strong style="font-weight: 500;">Persetujuan penggunaan data biometrik</strong><br>
+          Anggota menyetujui pemrosesan foto dan data wajah untuk keperluan dokumentasi resmi DPRD Provinsi Riau.
+          Data disimpan terbatas dan hanya digunakan untuk pencarian dokumentasi internal.
+        </span>
+      </label>
+      {% else %}
+      <hr class="divider">
+      <div class="meta-item">
+        <span class="meta-icon">{{ icon('shield') }}</span>
+        <div class="meta-copy">
+          <span>Persetujuan biometrik</span>
+          <strong>{{ ('Tercatat ' ~ (member.consent_granted_at|date_id)) if member.consent_granted_at else 'Belum tercatat' }}</strong>
+          {% if member.consent_note %}<span style="text-transform: none; letter-spacing: 0; margin-top: 2px;">{{ member.consent_note }}</span>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="card card-pad">
+        <div class="form-section-title">Potret resmi</div>
+        <p class="muted-small mb-2">Foto frontal dengan pencahayaan baik. Wajah otomatis didaftarkan bila memenuhi syarat.</p>
+        <div class="upload-zone" style="padding: 18px;">
+          <input type="file" name="portrait" accept="image/jpeg,image/png,image/webp" data-preview="#portrait-preview" data-max="1">
+          <div class="upload-icon" style="width: 42px; height: 42px;">{{ icon('camera') }}</div>
+          <h4 style="font-size: 13px;">{{ 'Ganti potret' if mode == 'edit' else 'Pilih potret' }}</h4>
+          <p>JPG, PNG, atau WEBP · maks. 15 MB</p>
+        </div>
+        <div class="upload-previews" id="portrait-preview" style="grid-template-columns: 1fr; margin-top: 12px;">
+          {% if mode == 'edit' and member.portrait_path %}
+          <div class="upload-preview" style="aspect-ratio: 4/4.6;">
+            <img src="/media/{{ member.portrait_path }}" alt="{{ member.full_name }}">
+            <span>Potret saat ini</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <div class="flex" style="align-items: flex-start; gap: 10px;">
+          <span class="meta-icon">{{ icon('fingerprint') }}</span>
+          <div>
+            <div class="form-section-title">Data wajah</div>
+            <p class="muted-small">Wajah pada potret dideteksi dan disimpan sebagai encoding matematis, bukan foto mentah tambahan.</p>
+          </div>
+        </div>
+        {% if mode == 'edit' %}
+        <div class="side-stats mt-2">
+          <div class="side-stat"><b>{{ member.faces|length }}</b><span>Encoding wajah</span></div>
+          <div class="side-stat"><b>{{ member.activity_links|length }}</b><span>Tautan kegiatan</span></div>
+        </div>
+        <a class="btn btn-outline btn-sm btn-block mt-2" href="/anggota/{{ member.id }}#wajah">{{ icon('scan') }} Kelola data wajah</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions" style="border-top: 0;">
+    <a class="btn btn-ghost" href="{{ '/anggota/' ~ member.id if mode == 'edit' else '/anggota' }}">Batal</a>
+    <button class="btn btn-primary" type="submit">{{ icon('check') }} {{ 'Simpan perubahan' if mode == 'edit' else 'Tambah anggota' }}</button>
+  </div>
+</form>
+{% endblock %}

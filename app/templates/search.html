@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar, activity_card, empty_state, pagination, member_card %}
+
+{% block title %}Pencarian{% endblock %}
+{% block page_title %}Pencarian dokumentasi{% endblock %}
+{% block page_subtitle %}Berdasarkan wajah, nama, jabatan, lokasi, atau kata kunci{% endblock %}
+
+{% block content %}
+<section class="search-hero">
+  <div class="search-tabs" role="tablist" aria-label="Metode pencarian">
+    <a class="search-tab {{ 'active' if mode != 'face' }}" href="/cari">{{ icon('search') }} Teks &amp; nama</a>
+    <a class="search-tab {{ 'active' if mode == 'face' }}" href="#wajah">{{ icon('scan') }} Wajah</a>
+  </div>
+  <h2>{% if mode == 'face' %}Hasil pencarian wajah{% else %}Temukan dokumentasi yang tepat{% endif %}</h2>
+  <p>
+    {% if mode == 'face' %}
+    Sistem mencocokkan wajah pada foto Anda dengan direktori anggota DPRD, lalu menampilkan kegiatan tempat anggota tersebut hadir.
+    {% else %}
+    Cari dengan nama anggota, jabatan, kata kunci kegiatan, atau lokasi. Gunakan pencarian wajah jika Anda hanya memiliki foto.
+    {% endif %}
+  </p>
+
+  {% if mode != 'face' %}
+  <form method="get" action="/cari" style="margin-top: 18px; position: relative; z-index: 1;">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input search-pill" type="search" name="q" value="{{ q }}"
+               placeholder="Nama anggota, jabatan, judul kegiatan, atau lokasi…"
+               aria-label="Kata kunci pencarian" autofocus>
+      </div>
+      <select class="select" name="commission" aria-label="Komisi">
+        <option value="">Semua komisi</option>
+        {% for c in commissions %}<option value="{{ c.code }}" {{ 'selected' if commission == c.code }}>{{ c.short_name }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary" type="submit">{{ icon('search') }} Cari</button>
+    </div>
+    <details class="filter-details" style="margin-top: 10px;" {{ 'open' if location or date_from or date_to or category }}>
+      <summary>{{ icon('settings') }} Filter lanjutan</summary>
+      <div class="filter-advanced mt-1">
+        <div class="form-group">
+          <label class="form-label" for="s-category">Kategori</label>
+          <select class="select" id="s-category" name="category">
+            <option value="">Semua kategori</option>
+            {% for item in categories %}<option value="{{ item }}" {{ 'selected' if category == item }}>{{ item }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="s-location">Lokasi</label>
+          <input class="input" id="s-location" name="location" type="text" value="{{ location }}" placeholder="Contoh: Kampar">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="s-from">Dari tanggal</label>
+          <input class="input" id="s-from" name="date_from" type="date" value="{{ date_from }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="s-to">Sampai tanggal</label>
+          <input class="input" id="s-to" name="date_to" type="date" value="{{ date_to }}">
+        </div>
+      </div>
+    </details>
+  </form>
+  {% endif %}
+</section>
+
+{% if error %}
+<div class="global-error mt-2">{{ icon('alert') }}<span>{{ error }}</span></div>
+{% endif %}
+
+<div class="face-search-grid mt-3" id="wajah">
+  <div class="face-upload-card">
+    <div class="flex-between mb-1">
+      <strong style="font-size: 12px;">{{ icon('camera') }} Foto pencarian wajah</strong>
+      <span class="chip chip-purple">{{ icon('shield') }} Biometrik aman</span>
+    </div>
+    {% if query_preview %}
+    <div class="face-query-preview mb-1">
+      <img src="data:image/jpeg;base64,{{ query_preview }}" alt="Foto yang dicari">
+      <span class="scan-line"></span>
+      <span class="preview-tag">{{ face_result.query_faces if face_result else 0 }} wajah terdeteksi</span>
+    </div>
+    {% else %}
+    <div class="face-query-preview mb-1" style="display: grid; place-items: center; border: 1.5px dashed #d8c6df;">
+      <div style="text-align: center; color: var(--muted); padding: 18px;">
+        {{ icon('scan', 'icon-lg') }}
+        <p style="font-size: 10.5px; margin-top: 6px;">Pratinjau foto akan tampil di sini</p>
+      </div>
+    </div>
+    {% endif %}
+    <form method="post" action="/cari/wajah" enctype="multipart/form-data" data-loading>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="commission" value="{{ commission }}">
+      <input type="hidden" name="category" value="{{ category }}">
+      <input type="hidden" name="location" value="{{ location }}">
+      <input type="hidden" name="date_from" value="{{ date_from }}">
+      <input type="hidden" name="date_to" value="{{ date_to }}">
+      <div class="upload-zone" style="padding: 16px; border-radius: 14px;">
+        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required data-preview="#face-preview" data-max="1">
+        <div class="upload-icon" style="width: 38px; height: 38px; margin-bottom: 8px;">{{ icon('upload') }}</div>
+        <h4 style="font-size: 12px;">Pilih foto wajah</h4>
+        <p>JPG, PNG, atau WEBP · maks. 25 MB</p>
+      </div>
+      <div class="upload-previews" id="face-preview" style="grid-template-columns: 1fr;"></div>
+      <div class="form-group mt-1">
+        <label class="form-label" for="tolerance">Tingkat kemiripan</label>
+        <select class="select" id="tolerance" name="tolerance" style="height: 38px; font-size: 11px;">
+          <option value="0.50">Sangat ketat — hasil paling akurat</option>
+          <option value="0.60" selected>Seimbang — disarankan</option>
+          <option value="0.68">Longgar — lebih banyak hasil</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-block mt-1" type="submit" {{ 'disabled' if not face_available }}>
+        {{ icon('scan') }} Cari berdasarkan wajah
+      </button>
+    </form>
+    <div class="face-note mt-1">
+      {{ icon('info') }}
+      <span>Foto pencarian tidak disimpan permanen. Sistem hanya menyimpan ringkasan pencarian pada log audit.</span>
+    </div>
+  </div>
+
+  <div class="card card-pad">
+    {% if face_result and face_result.matches %}
+    <div class="flex-between mb-2">
+      <div>
+        <h3 style="font-size: 15px;">{{ face_result.matches|length }} anggota cocok</h3>
+        <p class="muted-small">{{ face_result.query_faces }} wajah terdeteksi pada foto Anda{% if face_result.unknown_faces %} · {{ face_result.unknown_faces }} tidak dikenali{% endif %}.</p>
+      </div>
+      <span class="chip chip-green">{{ icon('check') }} Pencarian selesai</span>
+    </div>
+    <div class="face-match-list">
+      {% for match in face_result.matches %}
+      <div class="face-match">
+        {{ avatar(match.member.full_name, match.member.portrait_path, 'sm') }}
+        <div class="match-copy">
+          <strong>{{ match.member.full_name }}</strong>
+          <span>{{ match.member.position }}{% if match.member.commission %} · {{ match.member.commission.short_name }}{% endif %}</span>
+        </div>
+        <div class="match-score">
+          <b>{{ match.confidence }}%</b>
+          <span>kemiripan</span>
+        </div>
+        <a class="icon-btn" href="/anggota/{{ match.member.id }}" title="Buka profil anggota" aria-label="Buka profil {{ match.member.full_name }}">{{ icon('arrow-right') }}</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% elif face_result and face_result.error %}
+    <div class="empty-state" style="border: 0; padding: 26px 10px;">
+      <div class="empty-icon">{{ icon('scan') }}</div>
+      <h3>Wajah belum dapat dicocokkan</h3>
+      <p>{{ face_result.error }}</p>
+    </div>
+    {% else %}
+    <div class="flex" style="align-items: flex-start; gap: 14px;">
+      <div class="empty-icon" style="margin: 0; width: 48px; height: 48px;">{{ icon('fingerprint') }}</div>
+      <div>
+        <h3 style="font-size: 16px;">Cara kerja pencarian wajah</h3>
+        <p class="muted-small mt-1">
+          Unggah foto frontal yang jelas. Sistem mendeteksi wajah, menghasilkan representasi matematis,
+          lalu membandingkannya dengan data wajah anggota yang telah terdaftar.
+        </p>
+        <ul class="muted-small" style="margin-top: 10px; padding-left: 16px; display: flex; flex-direction: column; gap: 4px;">
+          <li>Gunakan foto dengan satu wajah utama agar hasil lebih presisi.</li>
+          <li>Pastikan wajah tidak tertutup masker atau terlalu miring.</li>
+          <li>Hasil menampilkan tingkat kemiripan, bukan identitas final.</li>
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if matched_members and mode != 'face' %}
+    <hr class="divider">
+    <div class="flex-between mb-1">
+      <h3 style="font-size: 13px;">Anggota yang cocok dengan “{{ q }}”</h3>
+      <a class="section-link" href="/anggota?q={{ q }}">Direktori {{ icon('arrow-right') }}</a>
+    </div>
+    <div class="face-match-list">
+      {% for m in matched_members %}
+      <a class="face-match" href="/anggota/{{ m.id }}" style="color: inherit;">
+        {{ avatar(m.full_name, m.portrait_path, 'sm') }}
+        <div class="match-copy">
+          <strong>{{ m.full_name }}</strong>
+          <span>{{ m.position }}{% if m.commission %} · {{ m.commission.short_name }}{% endif %}</span>
+        </div>
+        {{ icon('arrow-right') }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if mode == 'face' and face_result %}
+<div class="filter-meta">
+  <span class="result-count"><b>{{ result.total }}</b> kegiatan memuat anggota yang cocok</span>
+  <a class="section-link" href="/cari">Ulangi pencarian teks {{ icon('arrow-right') }}</a>
+</div>
+{% elif mode != 'face' and q %}
+<div class="filter-meta">
+  <span class="result-count"><b>{{ result.total }}</b> hasil untuk “{{ q }}”</span>
+</div>
+{% endif %}
+
+{% if result.items %}
+<div class="activity-grid">
+  {% for activity in result.items %}
+  {{ activity_card(activity, activity_scores.get(activity.id)) }}
+  {% endfor %}
+</div>
+{{ pagination(result, request) }}
+{% elif q or mode == 'face' or commission or category or location %}
+<div class="mt-2">
+  {{ empty_state('search', 'Belum ada hasil yang cocok', 'Coba kata kunci yang lebih umum, longgarkan filter, atau gunakan pencarian wajah dengan foto yang lebih jelas.', '/cari', 'Mulai pencarian baru') }}
+</div>
+{% else %}
+<div class="section-head" style="margin-top: 30px;">
+  <div>
+    <h2>Jelajahi dokumentasi</h2>
+    <p>Dokumentasi terbaru dari seluruh komisi.</p>
+  </div>
+  <a class="section-link" href="/kegiatan">Semua kegiatan {{ icon('arrow-right') }}</a>
+</div>
+<div class="activity-grid">
+  {% for activity in result.items %}
+  {{ activity_card(activity) }}
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, activity_card, empty_state, pagination %}
+
+{% block title %}Kegiatan{% endblock %}
+{% block page_title %}Dokumentasi kegiatan{% endblock %}
+{% block page_subtitle %}{{ result.total }} kegiatan ditemukan{% endblock %}
+
+{% block topbar_actions %}
+{% if query_string %}
+<a class="btn btn-outline btn-sm" href="/ekspor/kegiatan.csv?{{ query_string }}">{{ icon('download') }}<span>Ekspor CSV</span></a>
+{% else %}
+<a class="btn btn-outline btn-sm" href="/ekspor/kegiatan.csv">{{ icon('download') }}<span>Ekspor CSV</span></a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card filter-card">
+  <form class="filter-form" method="get" action="/kegiatan">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input search-pill" type="search" name="q" value="{{ q }}"
+               placeholder="Cari judul, nama anggota, jabatan, atau lokasi…" aria-label="Kata kunci">
+      </div>
+      <select class="select" name="commission" aria-label="Komisi">
+        <option value="">Semua komisi</option>
+        {% for c in commissions %}
+        <option value="{{ c.code }}" {{ 'selected' if commission == c.code }}>{{ c.short_name }}</option>
+        {% endfor %}
+      </select>
+      <select class="select" name="category" aria-label="Kategori">
+        <option value="">Semua kategori</option>
+        {% for item in categories %}
+        <option value="{{ item }}" {{ 'selected' if category == item }}>{{ item }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-primary" type="submit">{{ icon('filter') }} Terapkan</button>
+      {% if query_string %}<a class="btn btn-ghost" href="/kegiatan">Reset</a>{% endif %}
+    </div>
+
+    <details class="filter-details" style="margin-top: 2px;" {{ 'open' if location or date_from or date_to or status }}>
+      <summary>{{ icon('settings') }} Filter lanjutan</summary>
+      <div class="filter-advanced mt-1">
+        <div class="form-group">
+          <label class="form-label" for="f-location">Lokasi</label>
+          <input class="input" id="f-location" type="text" name="location" value="{{ location }}" placeholder="Contoh: Pekanbaru">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-from">Dari tanggal</label>
+          <input class="input" id="f-from" type="date" name="date_from" value="{{ date_from }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-to">Sampai tanggal</label>
+          <input class="input" id="f-to" type="date" name="date_to" value="{{ date_to }}">
+        </div>
+        {% if can_manage_content %}
+        <div class="form-group">
+          <label class="form-label" for="f-status">Status</label>
+          <select class="select" id="f-status" name="status">
+            <option value="">Semua status</option>
+            {% for value in statuses %}
+            <option value="{{ value }}" {{ 'selected' if status == value }}>{{ status_labels.get(value, value) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <span class="form-label">&nbsp;</span>
+          <button class="btn btn-soft" type="submit">{{ icon('search') }} Terapkan filter</button>
+        </div>
+      </div>
+    </details>
+  </form>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count">
+    {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> kegiatan{% else %}Tidak ada kegiatan{% endif %}
+  </span>
+  <div class="active-filters">
+    {% if q %}<span class="active-filter">“{{ q }}” <a href="/kegiatan" aria-label="Hapus filter kata kunci">{{ icon('x') }}</a></span>{% endif %}
+    {% if commission %}<span class="active-filter">Komisi {{ commission }}</span>{% endif %}
+    {% if category %}<span class="active-filter">{{ category }}</span>{% endif %}
+    {% if location %}<span class="active-filter">{{ location }}</span>{% endif %}
+    {% if status %}<span class="active-filter">{{ status_labels.get(status, status) }}</span>{% endif %}
+  </div>
+</div>
+
+{% if result.items %}
+<div class="activity-grid">
+  {% for activity in result.items %}
+  {{ activity_card(activity) }}
+  {% endfor %}
+</div>
+{{ pagination(result, request) }}
+{% else %}
+{{ empty_state('image', 'Dokumentasi tidak ditemukan', 'Coba ubah kata kunci atau filter. Tim Humas secara berkala menambahkan dokumentasi kegiatan terbaru.', '/kegiatan' if query_string else None, 'Bersihkan filter' if query_string else None) }}
+{% endif %}
+{% endblock %}

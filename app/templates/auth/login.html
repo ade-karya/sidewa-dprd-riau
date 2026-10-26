@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7E4890">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Masuk — {{ app_name }}</title>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ app_version }}">
+  <link rel="manifest" href="/manifest.webmanifest">
+</head>
+<body class="login-page">
+  {% from "macros/ui.html" import icon %}
+  {% include "partials/icons.html" %}
+  <a class="skip-link" href="#login-form">Lewati ke formulir masuk</a>
+
+  <div class="login-shell">
+    <aside class="login-rail" aria-label="Identitas aplikasi">
+      <a class="brand" href="/login" aria-label="{{ app_name }}">
+        <img class="brand-mark" src="/static/img/logo.svg" alt="">
+        <span class="brand-name">{{ app_name }}</span>
+      </a>
+      <div class="login-rail-bottom">
+        <span style="writing-mode: vertical-rl; letter-spacing: .18em; font-size: 9.5px; text-transform: uppercase; color: var(--muted-2);">{{ organization }}</span>
+        <span>v{{ app_version }}</span>
+      </div>
+    </aside>
+
+    <main class="login-main">
+      <div class="login-card">
+        <div class="login-brand-mobile">
+          <img class="brand-mark" src="/static/img/logo.svg" alt="">
+          <span>{{ app_name }}</span>
+        </div>
+
+        <h1>Masuk ke {{ app_name }}</h1>
+        <p class="login-sub">
+          Sistem Dokumentasi Kegiatan Dewan. Temukan dokumentasi kegiatan DPRD Provinsi Riau
+          berdasarkan wajah, nama, jabatan, dan lokasi.
+        </p>
+
+        {% if flashes %}
+        <div class="flash-stack">
+          {% for item in flashes %}
+          <div class="flash flash-{{ item.category }}">
+            <span class="flash-icon">{{ icon('info') }}</span>
+            <span class="flash-text">{{ item.message }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="global-error" role="alert">{{ icon('alert') }}<span>{{ error }}</span></div>
+        {% endif %}
+
+        <form class="login-form" id="login-form" method="post" action="/login" data-loading>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="next" value="{{ next_path }}">
+
+          <div class="form-group">
+            <label class="form-label" for="username">Nama pengguna</label>
+            <div class="input-icon-wrap">
+              {{ icon('user') }}
+              <input class="input" id="username" name="username" type="text" required
+                     value="{{ username|default('') }}" placeholder="contoh: komisi1"
+                     autocomplete="username" autocapitalize="none" spellcheck="false" autofocus>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Kata sandi</label>
+            <div class="password-wrap">
+              <div class="input-icon-wrap">
+                {{ icon('lock') }}
+                <input class="input" id="password" name="password" type="password" required
+                       placeholder="Masukkan kata sandi" autocomplete="current-password">
+              </div>
+              <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kata sandi">{{ icon('eye') }}</button>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" type="submit">
+            {{ icon('logout') }} Masuk
+          </button>
+        </form>
+
+        {% if demo_mode and demo_accounts %}
+        <div class="login-divider">AKUN DEMO</div>
+        <div class="demo-panel">
+          <div class="demo-panel-head">
+            <strong>{{ icon('sparkles') }} Coba tanpa mengetik</strong>
+            <span>Klik untuk mengisi otomatis</span>
+          </div>
+          <div class="demo-accounts">
+            {% for account in demo_accounts %}
+            <button class="demo-account" type="button"
+                    data-demo-user="{{ account.username }}" data-demo-pass="{{ account.password }}"
+                    title="Isi kredensial {{ account.label }}">
+              <b>{{ account.label }}</b>
+              <span>{{ account.username }}</span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="login-help">
+          Butuh bantuan akses? Hubungi <a href="mailto:sekretariat@dprd.riau.go.id">Sekretariat DPRD Provinsi Riau</a>.
+        </div>
+
+        <div class="login-footer">
+          <span>© 2026 {{ organization }}</span>
+          <span>•</span>
+          <span>Akses terbatas untuk pegawai berwenang</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-root" id="toast-root" aria-live="polite"></div>
+  <script src="/static/js/app.js?v={{ app_version }}" defer></script>
+</body>
+</html>

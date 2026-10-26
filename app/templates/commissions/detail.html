@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, member_card, activity_card, empty_state, avatar %}
+
+{% block title %}{{ commission.name }}{% endblock %}
+{% block page_title %}{{ commission.name }}{% endblock %}
+{% block page_subtitle %}{{ commission.bidang }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/komisi">{{ icon('arrow-left') }}<span>Semua komisi</span></a>
+{% endblock %}
+
+{% block content %}
+<section class="commission-hero" style="--commission-color: {{ commission.color }};">
+  <div class="flex-between" style="align-items: flex-start;">
+    <div>
+      <span class="chip chip-commission" style="--chip-color: {{ commission.color }};"><span class="chip-dot"></span>Komisi {{ commission.code }}</span>
+      <h1 class="mt-1">{{ commission.name }}</h1>
+      <p class="commission-bidang">{{ commission.bidang }}</p>
+      <p class="muted-small mt-1" style="max-width: 760px;">{{ commission.description }}</p>
+    </div>
+    <div class="commission-emblem" style="width: 64px; height: 64px; border-radius: 20px;">{{ icon('building', 'icon-lg') }}</div>
+  </div>
+  <div class="member-stat-row">
+    <div class="member-stat"><b>{{ members|length }}</b><span>Anggota aktif</span></div>
+    <div class="member-stat"><b>{{ activities|length }}</b><span>Dokumentasi terbaru</span></div>
+    <div class="member-stat"><b>{{ staff|length }}</b><span>Staf komisi</span></div>
+  </div>
+</section>
+
+<div class="section-head" style="margin-top: 26px;">
+  <div>
+    <h2>Anggota komisi</h2>
+    <p>Anggota DPRD yang tergabung dalam {{ commission.name }}.</p>
+  </div>
+  <a class="section-link" href="/anggota?commission={{ commission.code }}">Direktori anggota {{ icon('arrow-right') }}</a>
+</div>
+{% if members %}
+<div class="member-grid">
+  {% for member in members %}{{ member_card(member) }}{% endfor %}
+</div>
+{% else %}
+{{ empty_state('users', 'Belum ada anggota', 'Belum ada anggota aktif yang terdaftar pada komisi ini.') }}
+{% endif %}
+
+<div class="section-head" style="margin-top: 30px;">
+  <div>
+    <h2>Dokumentasi kegiatan</h2>
+    <p>Kegiatan terbaru yang melibatkan {{ commission.name }}.</p>
+  </div>
+  <a class="section-link" href="/kegiatan?commission={{ commission.code }}">Semua kegiatan {{ icon('arrow-right') }}</a>
+</div>
+{% if activities %}
+<div class="activity-grid">
+  {% for activity in activities %}{{ activity_card(activity) }}{% endfor %}
+</div>
+{% else %}
+{{ empty_state('calendar', 'Belum ada dokumentasi', 'Dokumentasi kegiatan komisi ini akan tampil setelah diterbitkan oleh tim Humas.') }}
+{% endif %}
+
+<div class="detail-layout" style="margin-top: 30px;">
+  <div class="card card-pad">
+    <h2 style="font-size: 16px;">{{ icon('users') }} Staf komisi</h2>
+    <p class="muted-small mb-2">Pengguna dengan akses staf pada komisi ini.</p>
+    {% if staff %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Nama</th><th>Peran</th><th>Terakhir masuk</th></tr></thead>
+        <tbody>
+          {% for person in staff %}
+          <tr>
+            <td>
+              <div class="cell-main">
+                {{ avatar(person.full_name, person.avatar_path, 'sm') }}
+                <div><strong>{{ person.full_name }}</strong><span>@{{ person.username }}</span></div>
+              </div>
+            </td>
+            <td><span class="badge badge-purple">{{ role_labels.get(person.role, person.role) }}</span></td>
+            <td>{{ person.last_login_at|time_ago }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="muted-small">Belum ada staf yang ditautkan.</p>
+    {% endif %}
+  </div>
+
+  {% if can_manage_users %}
+  <div class="card card-pad">
+    <h2 style="font-size: 16px;">{{ icon('edit') }} Profil komisi</h2>
+    <p class="muted-small mb-2">Perubahan berlaku pada seluruh halaman komisi.</p>
+    <form method="post" action="/komisi/{{ commission.id }}/edit" data-loading>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="form-group mb-1">
+        <label class="form-label" for="c-name">Nama komisi</label>
+        <input class="input" id="c-name" name="name" value="{{ commission.name }}" required maxlength="80">
+      </div>
+      <div class="form-group mb-1">
+        <label class="form-label" for="c-bidang">Bidang</label>
+        <input class="input" id="c-bidang" name="bidang" value="{{ commission.bidang }}" maxlength="255">
+      </div>
+      <div class="form-group mb-1">
+        <label class="form-label" for="c-desc">Deskripsi</label>
+        <textarea class="textarea" id="c-desc" name="description" rows="4">{{ commission.description }}</textarea>
+      </div>
+      <div class="form-group mb-2">
+        <label class="form-label" for="c-color">Warna aksen</label>
+        <div class="flex">
+          <input type="color" id="c-color" name="color" value="{{ commission.color }}" style="width: 46px; height: 42px; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 3px;">
+          <span class="muted-small">{{ commission.color }}</span>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm btn-block" type="submit">{{ icon('check') }} Simpan profil</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

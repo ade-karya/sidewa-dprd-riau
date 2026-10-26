@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar, activity_card, status_badge, photo_status_badge, commission_chip, category_chip, empty_state %}
+
+{% block title %}{{ activity.title }}{% endblock %}
+{% block page_title %}Detail kegiatan{% endblock %}
+{% block page_subtitle %}{{ activity.code }} · {{ activity.activity_date|date_id }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/kegiatan">{{ icon('arrow-left') }}<span>Daftar kegiatan</span></a>
+{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/">Beranda</a>
+  <span>/</span>
+  <a href="/kegiatan">Kegiatan</a>
+  <span>/</span>
+  <span class="nowrap">{{ activity.code }}</span>
+</nav>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    <section class="detail-hero">
+      {% if activity.cover and activity.cover.file_path %}
+      <img src="/media/{{ activity.cover.file_path }}" alt="{{ activity.title }}">
+      {% endif %}
+      <div class="detail-hero-content">
+        <div class="chip-row">
+          {{ status_badge(activity.status) }}
+          {% for c in activity.commissions %}{{ commission_chip(c) }}{% endfor %}
+          {{ category_chip(activity.category) }}
+        </div>
+        <h1>{{ activity.title }}</h1>
+        <div class="hero-sub">
+          <span>{{ icon('calendar') }} {{ activity.activity_date|date_id(true) }}</span>
+          {% if activity.start_time %}<span>{{ icon('clock') }} {{ activity.start_time }}{% if activity.end_time %}–{{ activity.end_time }}{% endif %} WIB</span>{% endif %}
+          <span>{{ icon('map-pin') }} {{ activity.location_name }}</span>
+          <span>{{ icon('users') }} {{ activity.confirmed_member_count }} peserta</span>
+          <span>{{ icon('eye') }} {{ activity.view_count }} dilihat</span>
+        </div>
+        <div class="detail-actions">
+          {% if can_manage_content %}
+          <a class="btn btn-primary btn-sm" href="/kegiatan/{{ activity.id }}/edit">{{ icon('edit') }} Sunting</a>
+          {% endif %}
+          {% if activity.status != 'published' and can_manage_content %}
+          <form method="post" action="/kegiatan/{{ activity.id }}/terbit">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline btn-sm" type="submit">{{ icon('check') }} Terbitkan</button>
+          </form>
+          {% endif %}
+          {% if activity.status == 'archived' and can_manage_content %}
+          <form method="post" action="/kegiatan/{{ activity.id }}/pulihkan">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline btn-sm" type="submit">{{ icon('refresh') }} Pulihkan ke draf</button>
+          </form>
+          {% endif %}
+          {% if activity.status == 'published' and can_manage_content %}
+          <form method="post" action="/kegiatan/{{ activity.id }}/arsip" data-confirm="Arsipkan kegiatan ini? Dokumentasi tidak lagi tampil untuk staf komisi.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline btn-sm" type="submit">{{ icon('database') }} Arsipkan</button>
+          </form>
+          {% endif %}
+          <button class="btn btn-outline btn-sm" type="button" data-print>{{ icon('printer') }} Cetak</button>
+          <button class="btn btn-outline btn-sm" type="button" data-copy="{{ request.url }}">{{ icon('link') }} Salin tautan</button>
+        </div>
+      </div>
+    </section>
+
+    {% if pending %}
+    <div class="processing-banner" data-processing-url="/kegiatan/{{ activity.id }}/proses-status">
+      <span class="spinner"></span>
+      <span data-processing-text>Mengenali wajah pada foto yang baru diunggah…</span>
+    </div>
+    {% endif %}
+    {% if failed_count %}
+    <div class="failed-banner">
+      {{ icon('alert') }}
+      <span>{{ failed_count }} foto gagal diproses. Buka tinjauan deteksi untuk memproses ulang.</span>
+    </div>
+    {% endif %}
+
+    <section class="section-card">
+      <h2>{{ icon('file-text') }} Deskripsi kegiatan</h2>
+      <div class="prose">
+        {% for paragraph in activity.description.split('\n\n') if paragraph.strip() %}
+        <p>{{ paragraph }}</p>
+        {% else %}
+        <p class="muted">Belum ada deskripsi untuk kegiatan ini.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="section-card" id="galeri">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('image') }} Galeri dokumentasi <span class="badge badge-gray">{{ photos|length }} foto</span></h2>
+        <label class="switch">
+          <input type="checkbox" data-face-toggle>
+          <span class="switch-track"></span>
+          <span>Kotak wajah</span>
+        </label>
+      </div>
+
+      {% if photos %}
+      <div class="face-toolbar">
+        <span class="hint">{{ icon('info') }} Aktifkan “Kotak wajah” untuk melihat posisi wajah yang terdeteksi. Klik foto untuk memperbesar.</span>
+      </div>
+      <div class="gallery">
+        {% for photo in photos %}
+        {% set pw = photo.width or 1 %}
+        {% set ph = photo.height or 1 %}
+        <figure class="photo-figure" id="foto-{{ photo.id }}">
+          <div class="photo-frame" data-lightbox data-caption="{{ photo.caption or activity.title }}">
+            {% if photo.thumb_path or photo.file_path %}
+            <img src="/media/{{ photo.thumb_path or photo.file_path }}" alt="{{ photo.caption or activity.title }}" loading="lazy">
+            {% endif %}
+            {% if photo.status == 'ready' %}
+              {% for d in detections_by_photo.get(photo.id, []) %}
+              <span class="face-box {{ 'suggested' if d.member and not d.is_confirmed and not d.is_rejected }}{{ ' rejected' if d.is_rejected }}"
+                    data-label="{{ d.label }}{% if d.confidence %} · {{ d.confidence }}%{% endif %}"
+                    style="left: {{ (d.bbox_left / pw * 100)|round(2) }}%; top: {{ (d.bbox_top / ph * 100)|round(2) }}%; width: {{ ((d.bbox_right - d.bbox_left) / pw * 100)|round(2) }}%; height: {{ ((d.bbox_bottom - d.bbox_top) / ph * 100)|round(2) }}%;"></span>
+              {% endfor %}
+            {% endif %}
+          </div>
+          <figcaption class="photo-caption">
+            <div class="left">
+              {{ photo_status_badge(photo.status) }}
+              <span title="{{ photo.caption }}">{{ photo.caption or (photo.width ~ ' × ' ~ photo.height) }}</span>
+            </div>
+            <div class="photo-tools">
+              {% if photo.face_count %}<span class="muted-small">{{ icon('scan') }} {{ photo.face_count }}</span>{% endif %}
+              {% if can_manage_content %}
+              <form method="post" action="/kegiatan/{{ activity.id }}/foto/{{ photo.id }}/proses">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="icon-btn" type="submit" title="Proses ulang wajah" aria-label="Proses ulang wajah">{{ icon('refresh') }}</button>
+              </form>
+              <form method="post" action="/kegiatan/{{ activity.id }}/foto/{{ photo.id }}/hapus" data-confirm="Hapus foto ini dari kegiatan?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="icon-btn" type="submit" title="Hapus foto" aria-label="Hapus foto">{{ icon('trash') }}</button>
+              </form>
+              {% endif %}
+            </div>
+          </figcaption>
+          {% if can_manage_content and detections_by_photo.get(photo.id) %}
+          <details style="padding: 0 11px 10px; background: #fff;">
+            <summary class="link-btn" style="list-style: none; cursor: pointer; padding: 2px 0;">Tinjau {{ detections_by_photo[photo.id]|length }} deteksi wajah</summary>
+            <div class="detection-list">
+              {% for d in detections_by_photo[photo.id] %}
+              <div class="detection-row">
+                <span class="det-name">
+                  <strong>{{ d.label }}</strong>
+                  <span class="det-meta">
+                    {% if d.distance %}jarak {{ '%.3f'|format(d.distance) }}{% endif %}
+                    {% if d.confidence %} · kemiripan {{ d.confidence }}%{% endif %}
+                    {% if d.is_confirmed %} · <span class="muted" style="color: var(--green);">terkonfirmasi</span>{% endif %}
+                  </span>
+                </span>
+                {% if not d.is_confirmed and not d.is_rejected %}
+                <form method="post" action="/deteksi/{{ d.id }}/konfirmasi">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <select class="select" name="member_id" aria-label="Pilih anggota">
+                    {% for m in members %}
+                    <option value="{{ m.id }}" {{ 'selected' if d.member_id == m.id }}>{{ m.full_name }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="btn btn-soft btn-sm" type="submit">{{ icon('check') }}</button>
+                </form>
+                <form method="post" action="/deteksi/{{ d.id }}/tolak">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="btn btn-danger btn-sm" type="submit" title="Tolak deteksi">{{ icon('x') }}</button>
+                </form>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
+        </figure>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada foto dokumentasi pada kegiatan ini.</p>
+      {% endif %}
+
+      {% if can_manage_content %}
+      <hr class="divider">
+      <form method="post" action="/kegiatan/{{ activity.id }}/foto" enctype="multipart/form-data" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="upload-zone">
+          <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple
+                 data-preview="#add-photo-preview" data-max="{{ settings.max_photos_per_activity }}">
+          <div class="upload-icon">{{ icon('camera') }}</div>
+          <h4>Tambah foto dokumentasi</h4>
+          <p>Maksimal {{ settings.max_photos_per_activity }} foto per kegiatan · {{ settings.max_upload_mb }} MB per foto</p>
+        </div>
+        <div class="upload-previews" id="add-photo-preview"></div>
+        <div class="flex" style="justify-content: flex-end; margin-top: 14px;">
+          <button class="btn btn-primary btn-sm" type="submit">{{ icon('upload') }} Unggah &amp; proses wajah</button>
+        </div>
+      </form>
+      {% endif %}
+    </section>
+
+    <section class="section-card" id="peserta">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('users') }} Peserta teridentifikasi <span class="badge badge-gray">{{ activity.members|length }}</span></h2>
+        {% if can_manage_content %}<span class="muted-small">Tautan manual &amp; hasil konfirmasi wajah</span>{% endif %}
+      </div>
+      {% if activity.members %}
+      <div class="people-grid">
+        {% for m in activity.members %}
+        <div class="person-card">
+          {{ avatar(m.full_name, m.portrait_path, 'sm') }}
+          <a class="person-copy" href="/anggota/{{ m.id }}" style="color: inherit;">
+            <strong>{{ m.full_name }}</strong>
+            <span>{{ m.position }}{% if m.commission %} · {{ m.commission.short_name }}{% endif %}</span>
+          </a>
+          {% if can_manage_content %}
+          <form class="remove-form" method="post" action="/kegiatan/{{ activity.id }}/anggota/{{ m.id }}/hapus"
+                data-confirm="Lepas {{ m.full_name }} dari kegiatan ini?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="icon-btn" type="submit" title="Lepas peserta" aria-label="Lepas {{ m.full_name }}">{{ icon('x') }}</button>
+          </form>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada peserta yang tertaut. Peserta akan muncul otomatis setelah wajah dikenali atau ditambahkan manual.</p>
+      {% endif %}
+
+      {% if can_manage_content %}
+      {% set linked_ids = activity.member_links|map(attribute='member_id')|list %}
+      <form method="post" action="/kegiatan/{{ activity.id }}/anggota" class="filter-row" style="margin-top: 16px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <select class="select grow" name="member_id" aria-label="Pilih anggota untuk ditambahkan" required>
+          <option value="">Tambah peserta manual…</option>
+          {% for m in members if m.id not in linked_ids %}
+          <option value="{{ m.id }}">{{ m.full_name }} — {{ m.position }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-soft" type="submit">{{ icon('plus') }} Tambahkan</button>
+      </form>
+      {% endif %}
+    </section>
+
+    {% if related %}
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Kegiatan terkait</h2>
+          <p>Dokumentasi lain pada komisi yang sama.</p>
+        </div>
+        <a class="section-link" href="/kegiatan?commission={{ activity.commissions[0].code if activity.commissions else '' }}">Lihat semua {{ icon('arrow-right') }}</a>
+      </div>
+      <div class="activity-grid" style="grid-template-columns: repeat(3, minmax(0,1fr));">
+        {% for item in related %}{{ activity_card(item) }}{% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="detail-side">
+    <div class="section-card">
+      <h2>{{ icon('info') }} Informasi</h2>
+      <div class="side-list">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('calendar') }}</span>
+          <div class="side-copy"><span>Tanggal</span><strong>{{ activity.activity_date|date_id(true) }}</strong></div>
+        </div>
+        {% if activity.start_time %}
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('clock') }}</span>
+          <div class="side-copy"><span>Waktu</span><strong>{{ activity.start_time }}{% if activity.end_time %}–{{ activity.end_time }}{% endif %} WIB</strong></div>
+        </div>
+        {% endif %}
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('map-pin') }}</span>
+          <div class="side-copy"><span>Lokasi</span><strong>{{ activity.location_name }}</strong>
+            {% if activity.location_address %}<span style="text-transform: none; letter-spacing: 0; margin-top: 3px;">{{ activity.location_address }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('layers') }}</span>
+          <div class="side-copy"><span>Komisi</span><strong>{{ activity.commissions|map(attribute='short_name')|join(', ') or '—' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('user') }}</span>
+          <div class="side-copy"><span>Diunggah oleh</span><strong>{{ activity.creator.full_name if activity.creator else 'Sistem' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('activity') }}</span>
+          <div class="side-copy"><span>Terakhir diperbarui</span><strong>{{ activity.updated_at|datetime_id }}</strong></div>
+        </div>
+        {% if activity.published_at %}
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('check') }}</span>
+          <div class="side-copy"><span>Diterbitkan</span><strong>{{ activity.published_at|datetime_id }}</strong></div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="side-stats mt-2">
+        <div class="side-stat"><b>{{ photos|length }}</b><span>Foto</span></div>
+        <div class="side-stat"><b>{{ activity.confirmed_member_count }}</b><span>Peserta</span></div>
+        <div class="side-stat"><b>{{ photos|sum(attribute='face_count') }}</b><span>Wajah terdeteksi</span></div>
+        <div class="side-stat"><b>{{ activity.view_count }}</b><span>Dilihat</span></div>
+      </div>
+
+      {% if activity.latitude and activity.longitude %}
+      <iframe class="map-frame mt-2" loading="lazy" title="Peta lokasi kegiatan"
+              src="https://www.openstreetmap.org/export/embed.html?bbox={{ activity.longitude - 0.01 }},{{ activity.latitude - 0.008 }},{{ activity.longitude + 0.01 }},{{ activity.latitude + 0.008 }}&amp;layer=mapnik&amp;marker={{ activity.latitude }},{{ activity.longitude }}"></iframe>
+      {% endif %}
+
+      {% if can_manage_users %}
+      <hr class="divider">
+      <form method="post" action="/kegiatan/{{ activity.id }}/hapus"
+            data-confirm="Hapus kegiatan ini beserta seluruh foto dan deteksi wajahnya? Tindakan tidak dapat dibatalkan.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-danger btn-sm btn-block" type="submit">{{ icon('trash') }} Hapus kegiatan</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="section-card">
+      <h2>{{ icon('activity') }} Riwayat</h2>
+      {% if audit_entries %}
+      <div class="timeline">
+        {% for entry in audit_entries %}
+        <div class="timeline-item">
+          <span class="timeline-dot">{{ icon('check') }}</span>
+          <div class="timeline-copy">
+            <p>{{ entry.summary or entry.action }}</p>
+            <span>{{ entry.actor_name }} · {{ entry.created_at|datetime_id }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada riwayat perubahan.</p>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+{% endblock %}

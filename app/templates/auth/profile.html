@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, avatar %}
+
+{% block title %}Profil{% endblock %}
+{% block page_title %}Profil &amp; keamanan{% endblock %}
+{% block page_subtitle %}Kelola identitas akun, kata sandi, dan token integrasi{% endblock %}
+
+{% block content %}
+<div class="card card-pad mb-2">
+  <div class="profile-hero">
+    {{ avatar(user.full_name, user.avatar_path, 'xl') }}
+    <div class="grow">
+      <h2>{{ user.full_name }}</h2>
+      <p>@{{ user.username }} · {{ role_label }}{% if user.commission %} · {{ user.commission.short_name }}{% endif %}</p>
+      <div class="chip-row mt-1">
+        <span class="chip chip-purple">{{ icon('shield') }} {{ role_label }}</span>
+        <span class="chip chip-gray">{{ icon('clock') }} Masuk {{ user.last_login_at|time_ago }}</span>
+        {% if user.must_change_password %}<span class="chip chip-gold">{{ icon('alert') }} Wajib ganti sandi</span>{% endif %}
+        {% if user.commission %}<span class="chip chip-commission" style="--chip-color: {{ user.commission.color }};"><span class="chip-dot"></span>{{ user.commission.name }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="muted-small">Akun dibuat</div>
+      <strong style="font-size: 13px;">{{ user.created_at|date_id }}</strong>
+    </div>
+  </div>
+</div>
+
+{% if new_api_token %}
+<div class="card card-pad mb-2" style="border-color: #d8c6df; background: linear-gradient(120deg, #faf6fc, #fff);">
+  <div class="flex-between mb-1">
+    <strong style="font-size: 13px;">{{ icon('key') }} Token API baru — salin sekarang</strong>
+    <span class="badge badge-gold">Hanya ditampilkan sekali</span>
+  </div>
+  <div class="token-box">
+    <code id="new-token-value">{{ new_api_token }}</code>
+    <button class="btn btn-soft btn-sm" type="button" data-copy="{{ new_api_token }}">{{ icon('check') }} Salin</button>
+  </div>
+  <p class="form-hint mt-1">Gunakan header <code>Authorization: Bearer &lt;token&gt;</code> pada permintaan API. Simpan di tempat aman.</p>
+</div>
+{% endif %}
+
+<div class="profile-grid">
+  <div class="detail-main">
+    <section class="card card-pad">
+      <h2 style="font-size: 16px;">{{ icon('user') }} Identitas</h2>
+      <p class="muted-small mb-2">Nama dan email tampil pada jejak audit dan dokumen internal.</p>
+      <form class="profile-form" method="post" action="/profil" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="form-group">
+          <label class="form-label" for="full_name">Nama lengkap</label>
+          <input class="input" id="full_name" name="full_name" type="text" required maxlength="160" value="{{ user.full_name }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input class="input" id="email" name="email" type="email" maxlength="160" value="{{ user.email or '' }}" placeholder="nama@dprd.riau.go.id">
+        </div>
+        <div class="flex" style="justify-content: flex-end;">
+          <button class="btn btn-primary btn-sm" type="submit">{{ icon('check') }} Simpan identitas</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card card-pad">
+      <h2 style="font-size: 16px;">{{ icon('lock') }} Kata sandi</h2>
+      <p class="muted-small mb-2">Gunakan minimal 10 karakter dengan huruf besar, huruf kecil, angka, dan simbol. Ganti secara berkala.</p>
+      <form class="profile-form" method="post" action="/profil/password" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="form-group">
+          <label class="form-label" for="current_password">Kata sandi saat ini</label>
+          <div class="password-wrap">
+            <input class="input" id="current_password" name="current_password" type="password" required autocomplete="current-password">
+            <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kata sandi">{{ icon('eye') }}</button>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="new_password">Kata sandi baru</label>
+            <div class="password-wrap">
+              <input class="input" id="new_password" name="new_password" type="password" required minlength="10" autocomplete="new-password">
+              <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kata sandi">{{ icon('eye') }}</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirm_password">Ulangi kata sandi baru</label>
+            <div class="password-wrap">
+              <input class="input" id="confirm_password" name="confirm_password" type="password" required minlength="10" autocomplete="new-password">
+              <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kata sandi">{{ icon('eye') }}</button>
+            </div>
+          </div>
+        </div>
+        <div class="flex" style="justify-content: flex-end;">
+          <button class="btn btn-primary btn-sm" type="submit">{{ icon('lock') }} Perbarui kata sandi</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card card-pad">
+      <h2 style="font-size: 16px;">{{ icon('activity') }} Aktivitas saya</h2>
+      <p class="muted-small mb-2">Sepuluh peristiwa terakhir yang tercatat atas nama Anda.</p>
+      {% if my_audit %}
+      <div class="timeline">
+        {% for entry in my_audit %}
+        <div class="timeline-item">
+          <span class="timeline-dot">{{ icon('check') }}</span>
+          <div class="timeline-copy">
+            <p>{{ entry.summary or entry.action }}</p>
+            <span>{{ entry.created_at|datetime_id }} · {{ entry.ip_address or 'IP tidak tercatat' }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada aktivitas tercatat.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <div class="card card-pad">
+      <div class="flex-between mb-1">
+        <h2 style="font-size: 16px; margin: 0;">{{ icon('key') }} Token API</h2>
+        <span class="badge badge-gray">{{ tokens|length }} token</span>
+      </div>
+      <p class="muted-small mb-2">Token digunakan aplikasi eksternal untuk mengakses API SIDEWA atas nama Anda.</p>
+
+      {% if tokens %}
+      <div class="mb-2">
+        {% for token in tokens %}
+        <div class="token-row">
+          <div class="token-copy">
+            <strong>{{ token.name }}</strong>
+            <span>{{ token.prefix }}•••• · {{ 'kedaluwarsa ' ~ token.expires_at|date_id if token.expires_at else 'tanpa kedaluwarsa' }}</span>
+            <span>Dipakai {{ token.last_used_at|time_ago if token.last_used_at else 'belum pernah' }}</span>
+          </div>
+          {% if token.is_active %}
+          <form method="post" action="/profil/token/{{ token.id }}/hapus" data-confirm="Cabut token ini? Integrasi yang menggunakannya akan berhenti.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="icon-btn" type="submit" title="Cabut token" aria-label="Cabut token {{ token.name }}">{{ icon('trash') }}</button>
+          </form>
+          {% else %}
+          <span class="badge badge-gray">Dicabut</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small mb-2">Belum ada token API.</p>
+      {% endif %}
+
+      <hr class="divider" style="margin: 14px 0;">
+      <form method="post" action="/profil/token" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="form-group mb-1">
+          <label class="form-label" for="token_name">Nama integrasi</label>
+          <input class="input" id="token_name" name="name" type="text" maxlength="120" value="Token integrasi" required>
+        </div>
+        <div class="form-group mb-2">
+          <label class="form-label" for="token_days">Masa berlaku</label>
+          <select class="select" id="token_days" name="days">
+            <option value="30">30 hari</option>
+            <option value="90" selected>90 hari</option>
+            <option value="365">1 tahun</option>
+            <option value="0">Tanpa kedaluwarsa</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm btn-block" type="submit">{{ icon('plus') }} Buat token baru</button>
+      </form>
+      <div class="face-note mt-2">
+        {{ icon('shield') }}
+        <span>Jangan bagikan token. Cabut segera jika token bocor atau tidak lagi digunakan.</span>
+      </div>
+    </div>
+
+    <div class="card card-pad">
+      <h2 style="font-size: 16px;">{{ icon('info') }} Informasi akun</h2>
+      <div class="side-list mt-1">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('user') }}</span>
+          <div class="side-copy"><span>Username</span><strong>@{{ user.username }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('shield') }}</span>
+          <div class="side-copy"><span>Peran</span><strong>{{ role_label }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('layers') }}</span>
+          <div class="side-copy"><span>Komisi</span><strong>{{ user.commission.name if user.commission else 'Tidak terikat' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('activity') }}</span>
+          <div class="side-copy"><span>Terakhir diperbarui</span><strong>{{ user.updated_at|datetime_id }}</strong></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
