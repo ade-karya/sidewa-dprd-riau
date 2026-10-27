@@ -23,6 +23,9 @@ def _prepare_env(tmp_path, demo: bool = False, secret: str | None = None):
     os.environ["SIDEWA_COOKIE_SECURE"] = "false"
     os.environ["SIDEWA_FACE_WORKERS"] = "1"
     os.environ["SIDEWA_LOG_LEVEL"] = "WARNING"
+    # Isolasi pengujian: jangan pernah memanggil layanan eksternal secara nyata.
+    os.environ["SIDEWA_TAVILY_API_KEY"] = ""
+    os.environ["SIDEWA_GEMINI_API_KEY"] = ""
     for name in list(sys.modules):
         if name == "app" or name.startswith("app."):
             del sys.modules[name]

@@ -130,6 +130,40 @@ class Settings:
     )
     tavily_days: int = field(default_factory=lambda: _int("SIDEWA_TAVILY_DAYS", 180))
 
+    # ── Gemini: analisis relevansi & sentimen pemberitaan ───────────────────
+    # Dipakai bersama Tavily: Tavily menemukan artikel, Gemini menilai
+    # relevansi dan sentimennya, lalu hasilnya dipadukan dengan leksikon lokal.
+    gemini_api_key: str = field(
+        default_factory=lambda: (
+            os.getenv("SIDEWA_GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY", "")
+        ).strip()
+    )
+    gemini_api_url: str = field(
+        default_factory=lambda: os.getenv(
+            "SIDEWA_GEMINI_API_URL",
+            "https://generativelanguage.googleapis.com/v1beta",
+        ).rstrip("/")
+    )
+    gemini_model: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_GEMINI_MODEL", "gemini-3.5-flash-lite")
+    )
+    gemini_timeout: int = field(default_factory=lambda: _int("SIDEWA_GEMINI_TIMEOUT", 60))
+    gemini_max_output_tokens: int = field(
+        default_factory=lambda: _int("SIDEWA_GEMINI_MAX_OUTPUT_TOKENS", 4096)
+    )
+    gemini_analysis_enabled: bool = field(
+        default_factory=lambda: _bool("SIDEWA_GEMINI_ANALYSIS_ENABLED", True)
+    )
+    gemini_refine_query: bool = field(
+        default_factory=lambda: _bool("SIDEWA_GEMINI_REFINE_QUERY", True)
+    )
+    gemini_filter_irrelevant: bool = field(
+        default_factory=lambda: _bool("SIDEWA_GEMINI_FILTER_IRRELEVANT", True)
+    )
+    gemini_score_weight: float = field(
+        default_factory=lambda: _float("SIDEWA_GEMINI_SCORE_WEIGHT", 0.7)
+    )
+
     demo_mode: bool = field(default_factory=lambda: _bool("SIDEWA_DEMO_MODE", True))
     bootstrap_admin_username: str = field(
         default_factory=lambda: os.getenv("SIDEWA_BOOTSTRAP_ADMIN_USERNAME", "")
@@ -203,6 +237,10 @@ class Settings:
     @property
     def tavily_configured(self) -> bool:
         return bool(self.tavily_api_key)
+
+    @property
+    def gemini_configured(self) -> bool:
+        return bool(self.gemini_api_key)
 
     @property
     def hf_s3_configured(self) -> bool:

@@ -125,6 +125,7 @@ def member_dashboard(
         sentiment_tones=SENTIMENT_TONES,
         can_search_sentiment=_can_search_sentiment(user, member),
         tavily_configured=settings.tavily_configured,
+        gemini_configured=settings.gemini_configured,
     )
 
 
@@ -170,6 +171,7 @@ def member_sentiment_list(
         sentiment_tones=SENTIMENT_TONES,
         can_search_sentiment=_can_search_sentiment(user, member),
         tavily_configured=settings.tavily_configured,
+        gemini_configured=settings.gemini_configured,
     )
 
 
@@ -215,6 +217,7 @@ def sentiment_overview_page(
         q=q,
         commission=commission,
         tavily_configured=settings.tavily_configured,
+        gemini_configured=settings.gemini_configured,
         sentiment_labels=SENTIMENT_LABELS,
         sentiment_tones=SENTIMENT_TONES,
     )
@@ -260,6 +263,7 @@ def _run_sentiment_for_member(
         summary=(
             f"Memindai {run.result_count} pemberitaan tentang {member.full_name} "
             f"melalui Tavily"
+            + (" dan Gemini" if settings.gemini_configured else "")
         ),
         detail={
             "positive": run.positive_count,

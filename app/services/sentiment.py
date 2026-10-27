@@ -1,9 +1,9 @@
-"""Analisis sentimen sederhana untuk pemberitaan media online berbahasa Indonesia.
+"""Analisis sentimen pemberitaan media online berbahasa Indonesia.
 
-Modul ini sengaja tidak bergantung pada layanan AI eksternal. Skor dihitung
-dari leksikon kata/frasa positif dan negatif, dengan penanganan negasi dasar.
-Hasilnya dipakai sebagai indikator awal pada dashboard anggota dewan; admin
-komisi tetap dapat membaca artikel aslinya melalui tautan sumber.
+Leksikon lokal dipakai sebagai dasar yang deterministik. Bila Gemini
+dikonfigurasi, hasilnya dipadukan oleh :mod:`app.services.media_monitor` untuk
+meningkatkan akurasi konteks (relevansi, negasi, dan sindiran). Hasil akhir tetap
+merupakan indikator awal; admin komisi dapat membaca artikel aslinya.
 """
 
 from __future__ import annotations
@@ -130,7 +130,6 @@ def _count_terms(
     normalized = _normalize(text)
     if not normalized:
         return [], 0.0
-    words = normalized.split()
     hits: list[str] = []
     total = 0.0
     for term, weight in terms.items():

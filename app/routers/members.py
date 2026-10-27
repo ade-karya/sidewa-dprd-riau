@@ -336,6 +336,7 @@ def member_detail(
         face_login=face_login,
         can_search_sentiment=_can_search_sentiment(user, member),
         tavily_configured=settings.tavily_configured,
+        gemini_configured=settings.gemini_configured,
     )
 
 

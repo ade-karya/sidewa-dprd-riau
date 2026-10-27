@@ -15,7 +15,9 @@
   <div class="flex-between mb-2">
     <div>
       <h2 style="margin-bottom: 4px;">{{ icon('chart') }} Ringkasan sentimen</h2>
-      <p class="muted-small">Hasil pemindaian pemberitaan media online melalui Tavily, dianalisis dengan leksikon sentimen Bahasa Indonesia.</p>
+      <p class="muted-small">
+        Hasil pencarian Tavily{% if gemini_configured %}, dinilai relevansi dan sentimennya oleh Gemini lalu dipadukan dengan leksikon Bahasa Indonesia{% else %}, dianalisis dengan leksikon sentimen Bahasa Indonesia{% endif %}.
+      </p>
     </div>
     {% if summary.latest_run %}
     <span class="badge badge-{{ 'green' if summary.latest_run.status == 'success' else 'red' }}">
@@ -72,6 +74,9 @@
     <p class="muted-small mt-1">
       {% if tavily_configured %}
       Gunakan tombol pindai untuk mencari pemberitaan media online tentang anggota ini.
+      {% if not gemini_configured %}
+      Analisis masih memakai leksikon lokal; isi <code>SIDEWA_GEMINI_API_KEY</code> untuk penilaian AI yang lebih akurat.
+      {% endif %}
       {% else %}
       Tavily belum dikonfigurasi. Hubungi administrator untuk mengaktifkan pemindaian media online.
       {% endif %}
@@ -137,6 +142,9 @@
         {% if mention.snippet %}<p class="mention-snippet" style="-webkit-line-clamp: 3;">{{ mention.snippet }}</p>{% endif %}
         <div class="mention-meta">
           <span class="badge badge-{{ sentiment_tones.get(mention.sentiment, 'gray') }}">{{ sentiment_labels.get(mention.sentiment, mention.sentiment) }}</span>
+          {% if 'gemini' in (mention.provider or '') %}
+          <span class="badge badge-purple">{{ icon('sparkles') }} Tavily + Gemini</span>
+          {% endif %}
           <span>{{ mention.source or 'Media online' }}</span>
           {% if mention.published_at %}<span>· {{ mention.published_at|date_id }}</span>{% else %}<span>· Diambil {{ mention.fetched_at|date_id }}</span>{% endif %}
           <span class="sentiment-score {{ mention.sentiment }}">{{ '%+.2f'|format(mention.sentiment_score or 0) }}</span>

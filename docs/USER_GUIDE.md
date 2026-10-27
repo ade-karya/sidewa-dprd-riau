@@ -39,8 +39,10 @@
 - Hasil menampilkan tingkat kemiripan, bukan identitas final; konfirmasi manual bila perlu.
 
 ## Sentimen media online
-- Pemindaian menggunakan Tavily dan disimpan sebagai pemberitaan terverifikasi.
-- Tanpa API key (`SIDEWA_TAVILY_API_KEY`), fitur tetap menampilkan pesan bahwa Tavily
-  belum dikonfigurasi.
-- Sentimen dianalisis secara lokal (positif/netral/negatif) sebagai indikator awal;
-  admin komisi tetap dapat membuka artikel sumber.
+- Pemindaian menggunakan Tavily untuk mencari pemberitaan.
+- Gemini menilai relevansi artikel dan sentimen terhadap anggota, lalu hasilnya
+  dipadukan dengan leksikon lokal agar lebih akurat.
+- Tanpa API key Tavily (`SIDEWA_TAVILY_API_KEY`), pemindaian tidak dapat dijalankan.
+  Tanpa API key Gemini (`SIDEWA_GEMINI_API_KEY`), analisis otomatis memakai leksikon.
+- Sentimen adalah indikator awal (positif/netral/negatif), bukan penilaian resmi
+  lembaga; admin komisi tetap dapat membuka artikel sumber.

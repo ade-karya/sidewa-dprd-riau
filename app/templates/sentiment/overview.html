@@ -3,7 +3,7 @@
 
 {% block title %}Sentimen media online{% endblock %}
 {% block page_title %}Pemantauan sentimen{% endblock %}
-{% block page_subtitle %}Pemberitaan media online tentang anggota dewan · sumber Tavily{% endblock %}
+{% block page_subtitle %}Pemberitaan media online tentang anggota dewan · sumber Tavily{% if gemini_configured %} + analisis Gemini{% endif %}{% endblock %}
 
 {% block topbar_actions %}
 <a class="btn btn-outline btn-sm" href="/anggota">{{ icon('users') }}<span>Direktori</span></a>
@@ -42,7 +42,10 @@
   <span class="result-count">
     {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> anggota{% else %}Tidak ada anggota{% endif %}
   </span>
-  <span class="muted-small">{{ icon('info') }} Sentimen dihitung dari judul dan kutipan pemberitaan, bukan penilaian resmi lembaga.</span>
+  <span class="muted-small">{{ icon('info') }} Sentimen dinilai dari judul dan kutipan pemberitaan{% if gemini_configured %} dengan Gemini dan leksikon Bahasa Indonesia{% endif %}, bukan penilaian resmi lembaga.</span>
+  {% if tavily_configured and not gemini_configured %}
+  <span class="muted-small">{{ icon('alert') }} Gemini belum dikonfigurasi; analisis memakai leksikon lokal.</span>
+  {% endif %}
 </div>
 
 {% if result.items %}

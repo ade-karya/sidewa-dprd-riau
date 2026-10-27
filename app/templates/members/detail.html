@@ -126,6 +126,7 @@
         <div>
           <div class="chip-row mb-2">
             <span class="badge badge-gray">{{ sentiment.total }} pemberitaan</span>
+            {% if sentiment.gemini_mentions %}<span class="badge badge-purple">{{ icon('sparkles') }} Tavily + Gemini · {{ sentiment.gemini_mentions }}</span>{% endif %}
             {% if sentiment.last_updated %}<span class="badge badge-gray">{{ icon('clock') }} {{ sentiment.last_updated|time_ago }}</span>{% endif %}
           </div>
           <div class="sentiment-bars">
@@ -161,6 +162,7 @@
             {% if mention.snippet %}<p class="mention-snippet">{{ mention.snippet }}</p>{% endif %}
             <div class="mention-meta">
               <span class="badge badge-{{ sentiment_tones.get(mention.sentiment, 'gray') }}">{{ sentiment_labels.get(mention.sentiment, mention.sentiment) }}</span>
+              {% if 'gemini' in (mention.provider or '') %}<span class="badge badge-purple">{{ icon('sparkles') }} Gemini</span>{% endif %}
               <span>{{ mention.source or 'Media online' }}</span>
               {% if mention.published_at %}<span>· {{ mention.published_at|date_id }}</span>{% endif %}
             </div>

@@ -3,8 +3,8 @@
 Dua sumber data utama:
 1. Publikasi & dokumentasi Humas (tabel activities, activity_photos,
    activity_members).
-2. Sentimen pemberitaan media online hasil pencarian Tavily (tabel
-   media_mentions, sentiment_runs).
+2. Sentimen pemberitaan media online hasil pencarian Tavily dan analisis Gemini
+   (tabel media_mentions, sentiment_runs).
 """
 
 from __future__ import annotations
@@ -157,11 +157,14 @@ def _sentiment_from_mentions(
     negative = counts.get("negatif", 0)
     keywords = Counter()
     sources = Counter()
+    gemini_mentions = 0
     for mention in mentions:
         for keyword in mention.keywords or []:
             keywords[keyword] += 1
         if mention.source:
             sources[mention.source] += 1
+        if "gemini" in (mention.provider or "").lower():
+            gemini_mentions += 1
     gauge = round((average + 1.0) / 2.0 * 100)
     if average >= 0.12:
         tone = "positif"
@@ -184,6 +187,7 @@ def _sentiment_from_mentions(
         "positive": positive,
         "neutral": neutral,
         "negative": negative,
+        "gemini_mentions": gemini_mentions,
         "positive_pct": round(positive / total * 100) if total else 0,
         "neutral_pct": round(neutral / total * 100) if total else 0,
         "negative_pct": round(negative / total * 100) if total else 0,
