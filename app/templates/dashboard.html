@@ -228,4 +228,10 @@
 {% if not face_available %}
 <div class="failed-banner mt-3">{{ icon('alert') }} Mesin pengenalan wajah tidak tersedia. Pencarian wajah dinonaktifkan sementara.</div>
 {% endif %}
+
+{% include "partials/app_guide.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/app-guide.js?v={{ app_version }}" defer></script>
 {% endblock %}

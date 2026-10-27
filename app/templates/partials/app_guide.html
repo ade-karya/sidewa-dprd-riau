@@ -1,0 +1,538 @@
+{% from "macros/ui.html" import icon %}
+{# Floating guide: explains the purpose, problems, and features of SIDEWA. #}
+<button class="guide-fab" type="button" data-guide-open aria-haspopup="dialog" aria-controls="app-guide" aria-label="Buka panduan aplikasi SIDEWA">
+  <span class="guide-fab-icon">{{ icon('book-open') }}</span>
+  <span class="guide-fab-text">
+    <strong>Kenali SIDEWA</strong>
+    <small>Panduan · tujuan, masalah, fitur</small>
+  </span>
+</button>
+
+<div class="guide-root" id="app-guide" data-guide role="dialog" aria-modal="true" aria-label="Panduan aplikasi SIDEWA" hidden>
+  <div class="guide-topbar">
+    <div class="guide-brand">
+      <img src="/static/img/logo.svg" alt="">
+      <div>
+        <strong>SIDEWA</strong>
+        <span>Panduan aplikasi · {{ organization }}</span>
+      </div>
+    </div>
+    <span class="guide-counter" data-guide-counter>01 / 10</span>
+    <div class="guide-tools">
+      <button class="guide-tool guide-tool-ai" type="button" data-guide-ai-toggle aria-expanded="false" aria-controls="guide-ai" aria-label="Buka asisten AI SIDEWA" title="Tanya AI (A)">
+        {{ icon('sparkles') }}<span class="guide-ai-chip-label">Tanya AI</span>
+      </button>
+      <button class="guide-tool" type="button" data-guide-fullscreen aria-label="Tampilkan layar penuh" title="Layar penuh (F)">
+        <svg class="icon" aria-hidden="true"><use href="#i-maximize"></use></svg>
+      </button>
+      <button class="guide-tool" type="button" data-guide-close aria-label="Tutup panduan" title="Tutup (Esc)">
+        {{ icon('x') }}
+      </button>
+    </div>
+  </div>
+
+  <div class="guide-stage">
+    <div class="guide-frame">
+      <div class="guide-progress" aria-hidden="true"><span data-guide-progress></span></div>
+      <div class="guide-slides" data-guide-slides>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Sampul" aria-label="Halaman 1: Sampul">
+          <div class="gs-cover">
+            <div class="gs-cover-copy">
+              <span class="gs-eyebrow">{{ icon('sparkles') }} Panduan aplikasi · {{ organization }}</span>
+              <h2>SIDEWA</h2>
+              <p class="gs-cover-title">{{ app_long_name }}</p>
+              <p class="gs-lead">
+                Satu pintu untuk mendokumentasikan, menemukan, dan memahami kegiatan dewan —
+                dari foto di lapangan hingga sentimen pemberitaan media.
+              </p>
+              <div class="gs-cover-stats">
+                <div class="gs-stat">
+                  <strong>{{ "{:,}".format(stats.total_activities).replace(',', '.') }}</strong>
+                  <span>dokumentasi kegiatan</span>
+                </div>
+                <div class="gs-stat">
+                  <strong>{{ "{:,}".format(stats.total_photos).replace(',', '.') }}</strong>
+                  <span>foto terarsip</span>
+                </div>
+                <div class="gs-stat">
+                  <strong>{{ "{:,}".format(stats.total_members).replace(',', '.') }}</strong>
+                  <span>anggota dewan</span>
+                </div>
+              </div>
+              <div class="gs-actions">
+                <button class="btn btn-primary btn-lg" type="button" data-guide-next>
+                  Mulai panduan {{ icon('arrow-right') }}
+                </button>
+                <button class="btn btn-outline btn-lg" type="button" data-guide-close>Langsung jelajah</button>
+              </div>
+              <p class="gs-kbd-hint">
+                <span class="gs-kbd">←</span><span class="gs-kbd">→</span> untuk berpindah halaman
+                <span class="gs-kbd-sep">·</span>
+                <span class="gs-kbd">Esc</span> untuk menutup
+              </p>
+            </div>
+            <div class="gs-cover-art" aria-hidden="true">
+              <span class="gs-art-ring gs-ring-1"></span>
+              <span class="gs-art-ring gs-ring-2"></span>
+              <div class="gs-art-card">
+                <div class="gs-art-top"><span class="gs-art-dot"></span> Pencarian wajah</div>
+                <div class="gs-art-scan">
+                  <span class="gs-art-scan-icon">{{ icon('scan') }}</span>
+                  <span class="gs-art-line"></span>
+                </div>
+                <div class="gs-art-result">
+                  <span class="gs-art-check">{{ icon('check') }}</span>
+                  <div>
+                    <strong>Dokumentasi ditemukan</strong>
+                    <small>Rapat Paripurna · 98% cocok</small>
+                  </div>
+                </div>
+              </div>
+              <span class="gs-float-chip gs-chip-1">{{ icon('users') }} {{ stats.total_members }} anggota</span>
+              <span class="gs-float-chip gs-chip-2">{{ icon('layers') }} {{ stats.commission_stats|length }} komisi</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Tujuan aplikasi" aria-label="Halaman 2: Tujuan aplikasi">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('target') }} Tujuan aplikasi</span>
+            <h2>Satu arsip, satu pencarian, satu sumber wawasan.</h2>
+            <p class="gs-lead">
+              SIDEWA dirancang agar setiap momen kegiatan dewan tersimpan rapi, mudah ditemukan,
+              dan dapat dimanfaatkan untuk pengambilan keputusan.
+            </p>
+          </div>
+          <div class="gs-grid gs-grid-3">
+            <article class="gs-card">
+              <span class="gs-icon">{{ icon('database') }}</span>
+              <h3>Sentralisasi arsip</h3>
+              <p>Seluruh foto, metadata kegiatan, dan direktori anggota tersimpan dalam satu arsip resmi yang dapat diaudit.</p>
+            </article>
+            <article class="gs-card">
+              <span class="gs-icon cyan">{{ icon('scan') }}</span>
+              <h3>Pencarian secepat kilat</h3>
+              <p>Temukan dokumentasi lewat wajah, nama, jabatan, komisi, lokasi, atau rentang tanggal — tanpa menelusuri folder.</p>
+            </article>
+            <article class="gs-card">
+              <span class="gs-icon gold">{{ icon('chart') }}</span>
+              <h3>Wawasan untuk pimpinan</h3>
+              <p>Statistik kegiatan dan sentimen pemberitaan disajikan ringkas sebagai bahan evaluasi dan komunikasi publik.</p>
+            </article>
+          </div>
+          <div class="gs-callout">
+            {{ icon('info') }}
+            <p><strong>Hasil yang diharapkan:</strong> waktu pencarian turun drastis, arsip tidak lagi hilang, dan laporan kegiatan lebih cepat disusun.</p>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Masalah yang diselesaikan" aria-label="Halaman 3: Masalah yang diselesaikan">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('alert') }} Masalah yang diselesaikan</span>
+            <h2>Dokumentasi berlimpah, tetapi sulit dimanfaatkan.</h2>
+            <p class="gs-lead">
+              Tanpa sistem terpadu, dokumentasi yang seharusnya menjadi bukti kerja dewan
+              justru berubah menjadi beban administrasi.
+            </p>
+          </div>
+          <div class="gs-grid gs-grid-2">
+            <article class="gs-problem">
+              <span class="gs-problem-icon">{{ icon('layers') }}</span>
+              <div>
+                <h3>Arsip tersebar</h3>
+                <p>Foto tersimpan di ponsel, grup pesan, dan folder pribadi. Tidak ada satu sumber resmi yang bisa dirujuk.</p>
+              </div>
+            </article>
+            <article class="gs-problem">
+              <span class="gs-problem-icon">{{ icon('search') }}</span>
+              <div>
+                <h3>Pencarian manual</h3>
+                <p>Menemukan foto seorang anggota pada satu kegiatan bisa memakan waktu puluhan menit.</p>
+              </div>
+            </article>
+            <article class="gs-problem">
+              <span class="gs-problem-icon">{{ icon('clock') }}</span>
+              <div>
+                <h3>Rekap kehadiran lambat</h3>
+                <p>Bukti penampilan anggota dihitung manual dari tumpukan foto dan catatan kegiatan.</p>
+              </div>
+            </article>
+            <article class="gs-problem">
+              <span class="gs-problem-icon">{{ icon('chart') }}</span>
+              <div>
+                <h3>Isu publik tak terpantau</h3>
+                <p>Pemberitaan media tersebar; sentimen dan isu penting sulit dirangkum dengan cepat.</p>
+              </div>
+            </article>
+          </div>
+          <div class="gs-callout is-warm">
+            {{ icon('alert') }}
+            <p><strong>Dampak nyata:</strong> waktu terbuang, risiko arsip hilang, dan informasi tidak sampai ke pimpinan tepat waktu.</p>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Solusi SIDEWA" aria-label="Halaman 4: Solusi SIDEWA">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('check') }} Solusi SIDEWA</span>
+            <h2>Dari pencarian manual menjadi layanan dokumentasi digital.</h2>
+            <p class="gs-lead">Setiap masalah operasional dijawab dengan satu alur kerja yang terintegrasi.</p>
+          </div>
+          <div class="gs-compare">
+            <div class="gs-compare-head" aria-hidden="true">
+              <span>Sebelum</span>
+              <span>Sesudah bersama SIDEWA</span>
+            </div>
+            <div class="gs-compare-row">
+              <div class="gs-compare-cell before"><span class="gs-mark bad">{{ icon('x') }}</span><span><b class="gs-compare-label">Sebelum · </b>Foto berserakan di banyak perangkat dan folder.</span></div>
+              <div class="gs-compare-cell after"><span class="gs-mark good">{{ icon('check') }}</span><span><b class="gs-compare-label">Sesudah · </b>Satu arsip terpusat dengan metadata lengkap.</span></div>
+            </div>
+            <div class="gs-compare-row">
+              <div class="gs-compare-cell before"><span class="gs-mark bad">{{ icon('x') }}</span><span><b class="gs-compare-label">Sebelum · </b>Mencari foto anggota secara manual.</span></div>
+              <div class="gs-compare-cell after"><span class="gs-mark good">{{ icon('check') }}</span><span><b class="gs-compare-label">Sesudah · </b>Pencarian wajah dan filter presisi dalam hitungan detik.</span></div>
+            </div>
+            <div class="gs-compare-row">
+              <div class="gs-compare-cell before"><span class="gs-mark bad">{{ icon('x') }}</span><span><b class="gs-compare-label">Sebelum · </b>Rekap kegiatan dan kehadiran dibuat manual.</span></div>
+              <div class="gs-compare-cell after"><span class="gs-mark good">{{ icon('check') }}</span><span><b class="gs-compare-label">Sesudah · </b>Statistik dan penampilan anggota terhitung otomatis.</span></div>
+            </div>
+            <div class="gs-compare-row">
+              <div class="gs-compare-cell before"><span class="gs-mark bad">{{ icon('x') }}</span><span><b class="gs-compare-label">Sebelum · </b>Pemberitaan media dibaca satu per satu.</span></div>
+              <div class="gs-compare-cell after"><span class="gs-mark good">{{ icon('check') }}</span><span><b class="gs-compare-label">Sesudah · </b>Sentimen media dirangkum per anggota dan komisi.</span></div>
+            </div>
+            <div class="gs-compare-row">
+              <div class="gs-compare-cell before"><span class="gs-mark bad">{{ icon('x') }}</span><span><b class="gs-compare-label">Sebelum · </b>Akses data tidak seragam dan sulit diaudit.</span></div>
+              <div class="gs-compare-cell after"><span class="gs-mark good">{{ icon('check') }}</span><span><b class="gs-compare-label">Sesudah · </b>Hak akses berjenjang, jejak audit, dan data biometrik terlindungi.</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Fitur pencarian wajah" aria-label="Halaman 5: Fitur pencarian wajah">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('scan') }} Fitur inti · 01</span>
+            <h2>Cari dokumentasi hanya dengan satu foto.</h2>
+            <p class="gs-lead">
+              Unggah foto, sistem mengenali wajah, lalu menampilkan kegiatan tempat anggota
+              tersebut hadir — lengkap dengan tingkat kecocokan.
+            </p>
+          </div>
+          <div class="gs-split">
+            <div>
+              <ul class="gs-list">
+                <li class="gs-list-item">{{ icon('check') }}<span>Deteksi wajah otomatis pada setiap foto yang diunggah.</span></li>
+                <li class="gs-list-item">{{ icon('check') }}<span>Pencocokan dengan direktori anggota dewan yang terverifikasi.</span></li>
+                <li class="gs-list-item">{{ icon('check') }}<span>Hasil dilengkapi skor kecocokan dan tetap dapat diverifikasi manusia.</span></li>
+                <li class="gs-list-item">{{ icon('check') }}<span>Bisa juga dicari lewat nama, jabatan, komisi, lokasi, dan tanggal.</span></li>
+              </ul>
+              <div class="gs-note">{{ icon('sparkles') }} <span>Waktu pencarian berubah dari puluhan menit menjadi hitungan detik.</span></div>
+            </div>
+            <div class="gs-flow" aria-label="Alur pencarian wajah">
+              <div class="gs-flow-step">
+                <span class="gs-flow-num">1</span>
+                <span class="gs-flow-icon">{{ icon('upload') }}</span>
+                <div><strong>Unggah foto</strong><span>Foto wajah yang jelas, bisa dari perangkat mana pun.</span></div>
+              </div>
+              <div class="gs-flow-step">
+                <span class="gs-flow-num">2</span>
+                <span class="gs-flow-icon">{{ icon('scan') }}</span>
+                <div><strong>Deteksi wajah</strong><span>Sistem membaca ciri wajah dan menyiapkan pencocokan.</span></div>
+              </div>
+              <div class="gs-flow-step">
+                <span class="gs-flow-num">3</span>
+                <span class="gs-flow-icon">{{ icon('users') }}</span>
+                <div><strong>Cocokkan anggota</strong><span>Dibandingkan dengan direktori anggota yang terdaftar.</span></div>
+              </div>
+              <div class="gs-flow-step">
+                <span class="gs-flow-num">4</span>
+                <span class="gs-flow-icon">{{ icon('calendar') }}</span>
+                <div><strong>Tampilkan dokumentasi</strong><span>Kegiatan yang relevan muncul lengkap dengan skor kecocokan.</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Fitur dokumentasi dan direktori" aria-label="Halaman 6: Fitur dokumentasi dan direktori">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('layers') }} Fitur inti · 02</span>
+            <h2>Dokumentasi, anggota, dan komisi dalam satu ekosistem.</h2>
+            <p class="gs-lead">Semua data saling terhubung, sehingga satu pencarian membuka konteks yang lengkap.</p>
+          </div>
+          <div class="gs-grid gs-grid-2">
+            <article class="gs-feature">
+              <span class="gs-icon">{{ icon('calendar') }}</span>
+              <div>
+                <h3>Dokumentasi kegiatan</h3>
+                <p>Metadata, lokasi, tanggal, kategori, komisi, dan galeri foto tersaji dalam satu halaman yang rapi.</p>
+              </div>
+            </article>
+            <article class="gs-feature">
+              <span class="gs-icon cyan">{{ icon('users') }}</span>
+              <div>
+                <h3>Direktori anggota</h3>
+                <p>Profil, jabatan, komisi, daerah pemilihan, dan rekam penampilan anggota dalam satu tempat.</p>
+              </div>
+            </article>
+            <article class="gs-feature">
+              <span class="gs-icon gold">{{ icon('building') }}</span>
+              <div>
+                <h3>Komisi &amp; pimpinan</h3>
+                <p>Dokumentasi tersusun per komisi dan pimpinan sehingga penelusuran sesuai bidang menjadi mudah.</p>
+              </div>
+            </article>
+            <article class="gs-feature">
+              <span class="gs-icon pink">{{ icon('filter') }}</span>
+              <div>
+                <h3>Pencarian multi-filter</h3>
+                <p>Gabungkan kata kunci, kategori, komisi, lokasi, dan rentang tanggal untuk hasil yang presisi.</p>
+              </div>
+            </article>
+          </div>
+          <div class="gs-callout">
+            {{ icon('info') }}
+            <p><strong>Satu alur konsisten:</strong> dari unggahan tim Humas hingga laporan yang dibaca pimpinan, semua memakai sumber data yang sama.</p>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Dashboard anggota dan sentimen media" aria-label="Halaman 7: Dashboard anggota dan sentimen media">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('chart') }} Fitur inti · 03</span>
+            <h2>Wawasan pribadi dan pantauan isu publik.</h2>
+            <p class="gs-lead">Bukan hanya arsip foto — SIDEWA juga membantu membaca kegiatan dan opini publik.</p>
+          </div>
+          <div class="gs-grid gs-grid-2">
+            <article class="gs-panel">
+              <div class="gs-panel-head">
+                <span class="gs-icon">{{ icon('user') }}</span>
+                <span class="gs-chip-soft">Khusus anggota dewan</span>
+              </div>
+              <h3>Dashboard pribadi</h3>
+              <p>Setiap anggota memiliki ruang pribadi berisi dokumentasi Humas, penampilan terverifikasi, tren kegiatan, dan sentimen pemberitaan.</p>
+              <div class="gs-tag-row">
+                <span class="gs-tag">{{ icon('fingerprint') }} Login Face ID</span>
+                <span class="gs-tag">{{ icon('camera') }} Rekap penampilan</span>
+                <span class="gs-tag">{{ icon('chart') }} Tren 6 bulan</span>
+              </div>
+            </article>
+            <article class="gs-panel">
+              <div class="gs-panel-head">
+                <span class="gs-icon cyan">{{ icon('activity') }}</span>
+                <span class="gs-chip-soft">Tavily + Gemini</span>
+              </div>
+              <h3>Sentimen media online</h3>
+              <p>Pemberitaan ditelusuri otomatis, dinilai relevansi dan sentimennya, lalu disaring berdasarkan identitas anggota.</p>
+              <div class="gs-sentiment" aria-hidden="true">
+                <div class="gs-sentiment-row"><span>Positif</span><span class="gs-meter"><i style="width: 68%;"></i></span></div>
+                <div class="gs-sentiment-row"><span>Netral</span><span class="gs-meter gold"><i style="width: 24%;"></i></span></div>
+                <div class="gs-sentiment-row"><span>Negatif</span><span class="gs-meter red"><i style="width: 8%;"></i></span></div>
+              </div>
+              <div class="gs-tag-row">
+                <span class="gs-tag">{{ icon('search') }} Pemindaian berkala</span>
+                <span class="gs-tag">{{ icon('shield') }} Relevansi terverifikasi</span>
+              </div>
+            </article>
+          </div>
+          <div class="gs-support-row">
+            <span class="gs-support-label">Dukungan operasional:</span>
+            <span class="gs-tag">{{ icon('shield') }} Hak akses berjenjang</span>
+            <span class="gs-tag">{{ icon('activity') }} Log audit</span>
+            <span class="gs-tag">{{ icon('download') }} Ekspor CSV</span>
+            <span class="gs-tag">{{ icon('link') }} API v1</span>
+            <span class="gs-tag">{{ icon('database') }} Supabase + cache lokal</span>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Kegunaan untuk setiap peran" aria-label="Halaman 8: Kegunaan untuk setiap peran">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('users') }} Kegunaan</span>
+            <h2>Manfaat langsung untuk setiap peran.</h2>
+            <p class="gs-lead">Satu aplikasi, tampilan yang sesuai dengan kebutuhan dan kewenangan masing-masing.</p>
+          </div>
+          <div class="gs-grid gs-grid-3">
+            <article class="gs-role">
+              <span class="gs-role-icon">{{ icon('building') }}</span>
+              <div>
+                <h3>Pimpinan</h3>
+                <p>Melihat seluruh dokumentasi, statistik, dan laporan dalam satu layar untuk pengambilan keputusan.</p>
+              </div>
+            </article>
+            <article class="gs-role">
+              <span class="gs-role-icon cyan">{{ icon('user') }}</span>
+              <div>
+                <h3>Anggota Dewan</h3>
+                <p>Dashboard pribadi, login Face ID, rekap penampilan, dan sentimen pemberitaan terkait.</p>
+              </div>
+            </article>
+            <article class="gs-role">
+              <span class="gs-role-icon gold">{{ icon('upload') }}</span>
+              <div>
+                <h3>Tim Humas</h3>
+                <p>Mengunggah, menyunting, dan menerbitkan dokumentasi kegiatan dengan alur yang cepat.</p>
+              </div>
+            </article>
+            <article class="gs-role">
+              <span class="gs-role-icon pink">{{ icon('search') }}</span>
+              <div>
+                <h3>Staf Komisi</h3>
+                <p>Mencari bukti kegiatan dan memantau sentimen media sesuai komisi yang diampu.</p>
+              </div>
+            </article>
+            <article class="gs-role">
+              <span class="gs-role-icon green">{{ icon('settings') }}</span>
+              <div>
+                <h3>Administrator</h3>
+                <p>Mengelola pengguna, hak akses, konfigurasi, dan memastikan jejak audit tetap rapi.</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Alur kerja dan keamanan" aria-label="Halaman 9: Alur kerja dan keamanan">
+          <div class="gs-head">
+            <span class="gs-eyebrow">{{ icon('activity') }} Cara kerja</span>
+            <h2>Empat langkah sederhana, satu alur yang konsisten.</h2>
+            <p class="gs-lead">Dirancang agar mudah dipakai staf, namun tetap aman untuk data dewan.</p>
+          </div>
+          <div class="gs-steps">
+            <article class="gs-step">
+              <span class="gs-step-num">1</span>
+              <span class="gs-step-icon">{{ icon('upload') }}</span>
+              <h3>Unggah</h3>
+              <p>Tim Humas mengunggah foto beserta metadata kegiatan dan komisi terkait.</p>
+            </article>
+            <article class="gs-step">
+              <span class="gs-step-num">2</span>
+              <span class="gs-step-icon">{{ icon('scan') }}</span>
+              <h3>Dikenali</h3>
+              <p>Sistem mendeteksi wajah dan menautkannya ke direktori anggota.</p>
+            </article>
+            <article class="gs-step">
+              <span class="gs-step-num">3</span>
+              <span class="gs-step-icon">{{ icon('search') }}</span>
+              <h3>Ditemukan</h3>
+              <p>Pengguna mencari lewat wajah, nama, komisi, lokasi, atau tanggal.</p>
+            </article>
+            <article class="gs-step">
+              <span class="gs-step-num">4</span>
+              <span class="gs-step-icon">{{ icon('chart') }}</span>
+              <h3>Dipahami</h3>
+              <p>Statistik dan sentimen membantu evaluasi serta penyusunan laporan.</p>
+            </article>
+          </div>
+          <div class="gs-security">
+            <div class="gs-security-icon">{{ icon('lock') }}</div>
+            <div>
+              <h3>Keamanan sejak awal</h3>
+              <p>Kata sandi Argon2, proteksi CSRF, hak akses berbasis peran (RBAC), jejak audit, dan data wajah disimpan sebagai <b>encoding biometrik</b> — bukan foto mentah.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="guide-slide" data-guide-slide data-guide-title="Penutup" aria-label="Halaman 10: Penutup">
+          <div class="gs-closing">
+            <span class="gs-eyebrow">{{ icon('sparkles') }} Siap digunakan</span>
+            <h2>Dokumentasi rapi.<br>Pelayanan lebih cepat.</h2>
+            <p class="gs-lead">
+              SIDEWA menyatukan arsip, pencarian, dan wawasan kegiatan dewan
+              dalam satu aplikasi yang mudah digunakan.
+            </p>
+            <div class="gs-recap">
+              <span>{{ icon('database') }} Satu arsip resmi</span>
+              <span>{{ icon('scan') }} Pencarian dalam hitungan detik</span>
+              <span>{{ icon('chart') }} Wawasan untuk keputusan</span>
+            </div>
+            <div class="gs-actions is-centered">
+              <button class="btn btn-primary btn-lg" type="button" data-guide-close>
+                Jelajahi aplikasi {{ icon('arrow-right') }}
+              </button>
+              <button class="btn btn-outline btn-lg" type="button" data-guide-restart>
+                {{ icon('refresh') }} Ulangi panduan
+              </button>
+            </div>
+            <p class="gs-closing-note">{{ app_name }} v{{ app_version }} · {{ organization }}</p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="guide-controls">
+      <p class="guide-hint">
+        <span class="gs-kbd">←</span><span class="gs-kbd">→</span> navigasi
+        <span class="gs-kbd-sep">·</span>
+        <span class="gs-kbd">F</span> layar penuh
+        <span class="gs-kbd-sep">·</span>
+        <span class="gs-kbd">Esc</span> tutup
+      </p>
+      <div class="guide-dots" data-guide-dots role="group" aria-label="Navigasi halaman panduan"></div>
+      <div class="guide-nav">
+        <button class="btn btn-outline" type="button" data-guide-prev aria-label="Halaman sebelumnya">
+          {{ icon('arrow-left') }}<span>Sebelumnya</span>
+        </button>
+        <button class="btn btn-primary" type="button" data-guide-next aria-label="Halaman berikutnya">
+          <span data-guide-next-label>Berikutnya</span>{{ icon('arrow-right') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <p class="sr-only" aria-live="polite" data-guide-live></p>
+
+  <aside class="guide-ai" id="guide-ai" data-guide-ai hidden aria-label="Asisten AI SIDEWA">
+    <header class="guide-ai-head">
+      <div class="guide-ai-id">
+        <span class="guide-ai-orb">{{ icon('sparkles') }}</span>
+        <div>
+          <strong>Asisten SIDEWA</strong>
+          <small class="guide-ai-status" data-guide-ai-status><i></i><span>Menghubungkan…</span></small>
+        </div>
+      </div>
+      <div class="guide-ai-head-actions">
+        <button class="guide-tool" type="button" data-guide-ai-mute aria-label="Matikan suara asisten" title="Matikan suara" aria-pressed="false">
+          {{ icon('volume') }}
+        </button>
+        <button class="guide-tool" type="button" data-guide-ai-close aria-label="Tutup asisten AI" title="Tutup asisten">
+          {{ icon('x') }}
+        </button>
+      </div>
+    </header>
+
+    <div class="guide-ai-context">
+      <span class="guide-ai-context-left">
+        <span class="guide-ai-context-label">{{ icon('presentation') }}<span data-guide-ai-context>Halaman 1 · Sampul</span></span>
+        <span class="guide-ai-mode" data-guide-ai-mode hidden>Mode teknis</span>
+      </span>
+      <button class="guide-ai-narrate" type="button" data-guide-ai-narrate>
+        Jelaskan halaman ini {{ icon('arrow-right') }}
+      </button>
+    </div>
+
+    <div class="guide-ai-log" data-guide-ai-log aria-live="polite">
+      <div class="guide-ai-msg is-assistant">
+        <span class="guide-ai-mini-avatar">{{ icon('sparkles') }}</span>
+        <div class="guide-ai-bubble">
+          <p>Halo! Saya asisten presentasi SIDEWA. Saya bisa menjelaskan tujuan, masalah, fitur, atau manfaat aplikasi — lewat suara maupun tulisan.</p>
+        </div>
+      </div>
+      <div class="guide-ai-suggestions" data-guide-ai-suggestions>
+        <button type="button" data-guide-ask="Jelaskan tujuan utama SIDEWA dalam 2 kalimat.">Tujuan SIDEWA</button>
+        <button type="button" data-guide-ask="Masalah apa saja yang diselesaikan SIDEWA?">Masalah yang diselesaikan</button>
+        <button type="button" data-guide-ask="Bagaimana cara kerja pencarian wajah?">Cara pencarian wajah</button>
+        <button type="button" data-guide-ask="Apa manfaat SIDEWA bagi anggota dewan?">Manfaat untuk anggota</button>
+        <button type="button" data-guide-ask="Jelaskan teknologi dan arsitektur yang dipakai SIDEWA.">Teknologi &amp; arsitektur</button>
+      </div>
+    </div>
+
+    <form class="guide-ai-form" data-guide-ai-form>
+      <button class="guide-ai-mic" type="button" data-guide-ai-mic aria-label="Mulai bicara ke asisten" title="Bicara" aria-pressed="false">
+        {{ icon('mic') }}
+      </button>
+      <input class="guide-ai-input" data-guide-ai-input type="text" maxlength="500" autocomplete="off" placeholder="Tanya apa saja tentang SIDEWA…" aria-label="Pertanyaan untuk asisten AI">
+      <button class="guide-ai-send" type="submit" data-guide-ai-send aria-label="Kirim pertanyaan">
+        {{ icon('send') }}
+      </button>
+    </form>
+    <div class="guide-ai-foot">
+      <span data-guide-ai-hint>Gemini 3.8 Live · jawaban dapat diverifikasi</span>
+      <button class="link-btn" type="button" data-guide-ai-reconnect hidden>Hubungkan ulang</button>
+    </div>
+  </aside>
+</div>

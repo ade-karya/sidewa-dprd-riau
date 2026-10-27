@@ -147,6 +147,24 @@ class Settings:
     gemini_model: str = field(
         default_factory=lambda: os.getenv("SIDEWA_GEMINI_MODEL", "gemini-3.5-flash-lite")
     )
+    gemini_live_model: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_GEMINI_LIVE_MODEL", "gemini-3.8-live")
+    )
+    gemini_live_technical_model: str = field(
+        default_factory=lambda: os.getenv(
+            "SIDEWA_GEMINI_LIVE_TECHNICAL_MODEL",
+            "gemini-3.8-live-extended-thinking",
+        )
+    )
+    gemini_live_voice: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_GEMINI_LIVE_VOICE", "Aoede")
+    )
+    gemini_live_enabled: bool = field(
+        default_factory=lambda: _bool("SIDEWA_GEMINI_LIVE_ENABLED", True)
+    )
+    gemini_live_thinking_level: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_GEMINI_LIVE_THINKING_LEVEL", "low")
+    )
     gemini_timeout: int = field(default_factory=lambda: _int("SIDEWA_GEMINI_TIMEOUT", 60))
     gemini_max_output_tokens: int = field(
         default_factory=lambda: _int("SIDEWA_GEMINI_MAX_OUTPUT_TOKENS", 4096)
@@ -266,6 +284,10 @@ class Settings:
     @property
     def gemini_configured(self) -> bool:
         return bool(self.gemini_api_key)
+
+    @property
+    def gemini_live_available(self) -> bool:
+        return bool(self.gemini_api_key and self.gemini_live_enabled)
 
     @property
     def hf_s3_configured(self) -> bool:

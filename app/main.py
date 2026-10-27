@@ -30,6 +30,7 @@ from .routers import (
     auth,
     commissions,
     dashboard,
+    guide,
     media,
     member_dashboard,
     members,
@@ -68,7 +69,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+        response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
@@ -204,6 +205,7 @@ def create_app() -> FastAPI:
     application.include_router(system.router)
     application.include_router(auth.router)
     application.include_router(dashboard.router)
+    application.include_router(guide.router)
     application.include_router(member_dashboard.router)
     application.include_router(activities.router)
     application.include_router(search.router)
