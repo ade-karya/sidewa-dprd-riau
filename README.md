@@ -104,6 +104,13 @@ Tanpa API key Tavily, pemindaian dinonaktifkan. Tanpa API key Gemini, pemindaian
 tetap berjalan dengan analisis leksikon lokal, sehingga aplikasi tidak pernah
 bergantung pada satu penyedia saja.
 
+Gemini juga melakukan **resolusi identitas** sebelum menilai sentimen: nama
+(variasi ejaan/gelar), instansi, lokasi, jabatan, rentang tahun, akun resmi.
+Berita yang membahas orang lain dengan nama sama (misalnya anggota DPRD daerah
+lain) ditolak. Variabel terkait: `SIDEWA_MEMBER_IDENTITY_FILE`,
+`SIDEWA_SENTIMENT_YEAR_FROM`, `SIDEWA_SENTIMENT_YEAR_TO`,
+`SIDEWA_GEMINI_MIN_IDENTITY_SCORE`, `SIDEWA_GEMINI_REQUIRE_IDENTITY`.
+
 ## Konfigurasi
 
 Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Variabel penting:
@@ -128,7 +135,15 @@ Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Var
   `SIDEWA_GEMINI_MAX_OUTPUT_TOKENS` — model dan batas pemanggilan Gemini.
 - `SIDEWA_GEMINI_REFINE_QUERY` — minta Gemini menyusun kueri Tavily yang lebih tepat.
 - `SIDEWA_GEMINI_FILTER_IRRELEVANT` — buang artikel yang tidak membahas anggota.
+- `SIDEWA_GEMINI_FILTER_IRRELEVANT` — buang artikel yang tidak membahas anggota.
 - `SIDEWA_GEMINI_SCORE_WEIGHT` (default `0.7`) — bobot skor Gemini terhadap leksikon.
+- `SIDEWA_MEMBER_IDENTITY_FILE` (default `data/member_identity.json`) — berkas JSON
+  opsional berisi alias/akun resmi per ID anggota (lihat
+  `docs/member_identity.example.json`).
+- `SIDEWA_SENTIMENT_YEAR_FROM` (default `2024`) dan `SIDEWA_SENTIMENT_YEAR_TO`
+  (default tahun berjalan + 1) — rentang tahun terbit yang masih relevan.
+- `SIDEWA_GEMINI_MIN_IDENTITY_SCORE` (default `0.65`) dan
+  `SIDEWA_GEMINI_REQUIRE_IDENTITY` (default `true`) — ambang resolusi identitas.
 - `SIDEWA_BOOTSTRAP_ADMIN_*` — membuat superadmin saat database kosong.
 
 ## Perintah CLI

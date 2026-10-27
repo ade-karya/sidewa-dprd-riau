@@ -17,6 +17,7 @@ from email.utils import parsedate_to_datetime
 
 from ..config import settings
 from ..models import Member
+from .identity import resolve_identity
 
 logger = logging.getLogger("sidewa.tavily")
 
@@ -54,8 +55,20 @@ def _domain(url: str) -> str:
 
 
 def build_query(member: Member) -> str:
-    """Susun kueri yang relevan dengan tugas dan fungsi dewan."""
-    parts = [f'"{member.full_name}"', "DPRD", "Riau"]
+    """Susun kueri pencarian berita dengan jangkar identitas yang membedakan.
+
+    Nama saja sering tertukar dengan anggota dewan daerah lain yang namanya
+    sama, jadi instansi dan lokasi/dapil ikut disertakan.
+    """
+    identity = resolve_identity(member)
+    name = identity.names[0] if identity.names else member.full_name
+    parts = [f'"{name}"']
+    if identity.institution:
+        parts.append(identity.institution)
+    location = identity.location or "Riau"
+    if "riau" not in location.lower():
+        location = f"{location} Riau"
+    parts.append(location)
     if member.commission and member.commission.bidang:
         bidang = member.commission.bidang.split(",")[0].strip()
         if bidang:

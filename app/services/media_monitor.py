@@ -15,6 +15,11 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..models import MediaMention, Member, SentimentRun, User, utcnow
 from . import gemini, tavily
+from .identity import (
+    MemberIdentity,
+    article_has_out_of_region_hint,
+    resolve_identity,
+)
 from .sentiment import SentimentResult, analyze_sentiment, label_from_score
 
 logger = logging.getLogger("sidewa.media_monitor")
@@ -46,6 +51,38 @@ def _search_query(member: Member) -> str:
     if not settings.gemini_configured or not settings.gemini_refine_query:
         return fallback
     return gemini.build_search_query(member, fallback=fallback)
+
+
+def _identity_rejection(
+    ai: gemini.NewsAnalysis | None,
+    identity: MemberIdentity,
+    item: dict,
+) -> str:
+    """Alasan artikel ditolak karena identitas, atau string kosong bila lolos.
+
+    Hanya aktif saat Gemini memberi penilaian. Tanpa Gemini, penyaringan
+    memakai deteksi kasar daerah lain agar perilaku lama tetap berjalan.
+    """
+    if ai is None:
+        if article_has_out_of_region_hint(
+            item.get("title", ""), item.get("snippet", ""), identity
+        ):
+            return "petunjuk daerah lain (tanpa Gemini)"
+        return ""
+
+    if ai.identity_conflict:
+        return ai.conflict_reason or "konflik identitas"
+    if not ai.year_valid:
+        return "tahun terbit di luar rentang"
+    if not identity.year_valid(item.get("published_at")):
+        return "tahun terbit di luar rentang"
+    if (
+        settings.gemini_require_identity
+        and ai.relevant
+        and ai.identity_score < settings.gemini_min_identity_score
+    ):
+        return f"skor identitas {ai.identity_score:.2f} < {settings.gemini_min_identity_score:.2f}"
+    return ""
 
 
 def run_member_sentiment(
@@ -82,10 +119,12 @@ def run_member_sentiment(
         db.commit()
         raise
 
+    identity = resolve_identity(member)
+
     ai_analyses: dict[int, gemini.NewsAnalysis] = {}
     if settings.gemini_configured and settings.gemini_analysis_enabled and results:
         try:
-            ai_analyses = gemini.analyze_news(member, results)
+            ai_analyses = gemini.analyze_news(member, results, identity=identity)
         except gemini.GeminiError as exc:
             logger.warning("Analisis Gemini gagal, beralih ke leksikon: %s", exc)
 
@@ -93,6 +132,7 @@ def run_member_sentiment(
     score_total = 0.0
     stored = 0
     filtered = 0
+    identity_filtered = 0
     ai_used = 0
     fetched_at = utcnow()
     for index, item in enumerate(results):
@@ -100,6 +140,17 @@ def run_member_sentiment(
         ai = ai_analyses.get(index)
         if ai is not None and not ai.relevant and settings.gemini_filter_irrelevant:
             filtered += 1
+            continue
+
+        rejection = _identity_rejection(ai, identity, item)
+        if rejection:
+            identity_filtered += 1
+            logger.info(
+                "Berita ditolak untuk %s (%s): %s",
+                member.full_name,
+                rejection,
+                (item.get("url") or "")[:160],
+            )
             continue
 
         if ai is not None and ai.relevant:
@@ -149,12 +200,14 @@ def run_member_sentiment(
     run.negative_count = counts["negatif"]
     run.average_score = round(score_total / stored, 4) if stored else 0.0
     db.commit()
-    if filtered or ai_used:
+    if filtered or ai_used or identity_filtered:
         logger.info(
-            "Sentimen %s: %s tersimpan, %s dianalisis Gemini, %s tidak relevan dibuang",
+            "Sentimen %s: %s tersimpan, %s dianalisis Gemini, "
+            "%s tidak relevan dibuang, %s ditolak karena identitas",
             member.full_name,
             stored,
             ai_used,
             filtered,
+            identity_filtered,
         )
     return run

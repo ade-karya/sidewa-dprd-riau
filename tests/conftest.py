@@ -23,6 +23,13 @@ def _prepare_env(tmp_path, demo: bool = False, secret: str | None = None):
     os.environ["SIDEWA_COOKIE_SECURE"] = "false"
     os.environ["SIDEWA_FACE_WORKERS"] = "1"
     os.environ["SIDEWA_LOG_LEVEL"] = "WARNING"
+    # Isolasi pengujian: matikan sinkronisasi agar tidak menyentuh Supabase
+    # yang mungkin dikonfigurasi pada lingkungan produksi.
+    os.environ["SIDEWA_SYNC_ENABLED"] = "false"
+    os.environ["SIDEWA_SYNC_PULL_ON_START"] = "false"
+    os.environ["SIDEWA_MEDIA_SYNC_ENABLED"] = "false"
+    os.environ["SIDEWA_SUPABASE_DATABASE_URL"] = ""
+    os.environ["SIDEWA_SUPABASE_ADMIN_DATABASE_URL"] = ""
     # Isolasi pengujian: jangan pernah memanggil layanan eksternal secara nyata.
     os.environ["SIDEWA_TAVILY_API_KEY"] = ""
     os.environ["SIDEWA_GEMINI_API_KEY"] = ""

@@ -46,3 +46,8 @@
   Tanpa API key Gemini (`SIDEWA_GEMINI_API_KEY`), analisis otomatis memakai leksikon.
 - Sentimen adalah indikator awal (positif/netral/negatif), bukan penilaian resmi
   lembaga; admin komisi tetap dapat membuka artikel sumber.
+- Sebelum menilai sentimen, Gemini melakukan resolusi identitas (nama/variasi/gelar,
+  instansi, lokasi, jabatan, rentang tahun, akun resmi) dan menolak berita yang
+  membahas orang lain dengan nama sama (mis. anggota DPRD daerah lain).
+- Untuk identitas khusus (alias, akun resmi, rentang tahun), gunakan berkas JSON
+  `data/member_identity.json` (contoh: `docs/member_identity.example.json`).

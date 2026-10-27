@@ -164,6 +164,31 @@ class Settings:
         default_factory=lambda: _float("SIDEWA_GEMINI_SCORE_WEIGHT", 0.7)
     )
 
+    # ── Resolusi identitas anggota untuk penyaringan berita ─────────────────
+    member_identity_file: Path = field(
+        default_factory=lambda: Path(
+            os.getenv(
+                "SIDEWA_MEMBER_IDENTITY_FILE",
+                str(BASE_DIR / "data" / "member_identity.json"),
+            )
+        )
+    )
+    sentiment_year_from: int = field(
+        default_factory=lambda: _int("SIDEWA_SENTIMENT_YEAR_FROM", 2024)
+    )
+    sentiment_year_to: int = field(
+        default_factory=lambda: _int("SIDEWA_SENTIMENT_YEAR_TO", 0)
+    )
+    sentiment_location: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_SENTIMENT_LOCATION", "Provinsi Riau")
+    )
+    gemini_min_identity_score: float = field(
+        default_factory=lambda: _float("SIDEWA_GEMINI_MIN_IDENTITY_SCORE", 0.65)
+    )
+    gemini_require_identity: bool = field(
+        default_factory=lambda: _bool("SIDEWA_GEMINI_REQUIRE_IDENTITY", True)
+    )
+
     demo_mode: bool = field(default_factory=lambda: _bool("SIDEWA_DEMO_MODE", True))
     bootstrap_admin_username: str = field(
         default_factory=lambda: os.getenv("SIDEWA_BOOTSTRAP_ADMIN_USERNAME", "")

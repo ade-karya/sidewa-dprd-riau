@@ -1,0 +1,34 @@
+{
+  "_catatan": [
+    "Contoh berkas resolusi identitas anggota untuk menyaring pemberitaan.",
+    "Salin ke data/member_identity.json lalu sesuaikan dengan data anggota.",
+    "Kunci objek 'members' adalah ID anggota di database SIDEWA.",
+    "Semua kolom opsional; nilai yang kosong akan memakai data dari database.",
+    "Berkas ini TIDAK perlu di-commit bila berisi data pribadi."
+  ],
+  "members": {
+    "1": {
+      "aliases": [
+        "Nama Pendek",
+        "Nama Lengkap Tanpa Gelar",
+        "Inisial N. Lengkap"
+      ],
+      "institution": "DPRD Provinsi Riau",
+      "location": "Pekanbaru",
+      "position": "Anggota DPRD Provinsi Riau",
+      "organizations": [
+        "Partai Contoh",
+        "Organisasi Contoh"
+      ],
+      "year_from": 2024,
+      "year_to": 2029,
+      "official_accounts": [
+        "https://instagram.com/akunresmi",
+        "https://facebook.com/akunresmi",
+        "https://www.tiktok.com/@akunresmi"
+      ],
+      "photo_url": "https://contoh.go.id/foto-anggota.jpg",
+      "notes": "Anggota DPRD Provinsi Riau periode 2024-2029, dapil Pekanbaru."
+    }
+  }
+}
