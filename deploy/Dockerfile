@@ -1,5 +1,5 @@
 # SIDEWA — image produksi
-# Build dari direktori dprd-riau:  docker build -f deploy/Dockerfile -t sidewa:1.0.0 .
+# Build dari direktori dprd-riau:  docker build -f deploy/Dockerfile -t sidewa:1.1.0 .
 FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
