@@ -16,7 +16,10 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
+import logging
 import sys
+
+logger = logging.getLogger("sidewa.cli")
 
 from sqlalchemy import func
 
@@ -35,6 +38,7 @@ from .models import (
     HumasStaff,
     HumasStaffFaceLogin,
     Member,
+    utcnow,
     MemberFace,
     User,
 )
@@ -72,6 +76,62 @@ def cmd_seed(args) -> int:
 
     for account in demo_credentials():
         print(f"  {account['username']:12s} / {account['password']:18s}  {account['label']}")
+    return 0
+
+
+def cmd_seed_staff(_args) -> int:
+    """Isi tabel staf Humas dari daftar resmi (idempoten)."""
+    init_db()
+    from .services.seed import HUMAS_STAFF, _staff_portrait_source
+    from .services.images import ImageValidationError, copy_seed_image
+
+    db = _db()
+    try:
+        inserted = 0
+        updated = 0
+        for index, (full_name, position) in enumerate(HUMAS_STAFF, start=1):
+            staff = db.query(HumasStaff).filter(HumasStaff.full_name == full_name).first()
+            if staff:
+                if not staff.portrait_path:
+                    source = _staff_portrait_source(index, full_name)
+                    if source:
+                        try:
+                            _, rel_thumb, _, _ = copy_seed_image(source, "staff")
+                            staff.portrait_path = rel_thumb
+                            updated += 1
+                        except (ImageValidationError, OSError):
+                            logger.warning("Foto staf %s dilewati: %s", full_name, source)
+                continue
+            staff = HumasStaff(
+                full_name=full_name,
+                position=position,
+                unit="Bagian Humas & Perpustakaan",
+                sort_order=index,
+                bio=(
+                    f"{full_name} bertugas sebagai {position} di Bagian Humas & "
+                    "Perpustakaan Sekretariat DPRD Provinsi Riau."
+                ),
+                is_active=True,
+                consent_granted_at=utcnow(),
+                consent_note="Data staf Humas Sekretariat DPRD Provinsi Riau.",
+            )
+            source = _staff_portrait_source(index, full_name)
+            if source:
+                try:
+                    _, rel_thumb, _, _ = copy_seed_image(source, "staff")
+                    staff.portrait_path = rel_thumb
+                except (ImageValidationError, OSError):
+                    logger.warning("Foto staf %s dilewati: %s", full_name, source)
+            db.add(staff)
+            inserted += 1
+        db.commit()
+        print(
+            f"Staf Humas: {inserted} baru, "
+            f"{len(HUMAS_STAFF) - inserted} sudah ada, "
+            f"{updated} foto diperbarui."
+        )
+    finally:
+        db.close()
     return 0
 
 
@@ -298,6 +358,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("seed", help="Isi database dengan data demo")
     p.add_argument("--force", action="store_true", help="Hapus data lama lalu buat ulang")
     p.set_defaults(func=cmd_seed)
+
+    p = sub.add_parser("seed-staff", help="Isi tabel staf Humas dari daftar resmi (idempoten)")
+    p.set_defaults(func=cmd_seed_staff)
 
     p = sub.add_parser("create-user", help="Buat akun pengguna baru")
     p.add_argument("--username", required=True)
