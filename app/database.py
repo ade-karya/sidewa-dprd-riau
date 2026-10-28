@@ -12,6 +12,10 @@ from .config import settings
 
 logger = logging.getLogger("sidewa.database")
 
+# Kunci advisory PostgreSQL agar beberapa worker uvicorn tidak berlomba
+# membuat tabel/tipe yang sama saat start pertama setelah migrasi.
+SCHEMA_LOCK_KEY = 730421
+
 
 class Base(DeclarativeBase):
     pass
@@ -56,7 +60,18 @@ def init_db() -> None:
     from . import models  # noqa: F401  (memastikan model terdaftar)
 
     settings.ensure_dirs()
-    Base.metadata.create_all(bind=engine)
+    if engine.dialect.name == "postgresql":
+        # Serialisasi DDL antar-worker. Tanpa ini, dua worker dapat mencoba
+        # membuat tabel baru secara bersamaan dan gagal dengan "type already
+        # exists" pada PostgreSQL.
+        with engine.begin() as conn:
+            conn.execute(
+                text("SELECT pg_advisory_xact_lock(:key)"),
+                {"key": SCHEMA_LOCK_KEY},
+            )
+            Base.metadata.create_all(bind=conn)
+    else:
+        Base.metadata.create_all(bind=engine)
 
     # Tabel outbox, trigger perubahan, dan antrean media (khusus PostgreSQL).
     try:

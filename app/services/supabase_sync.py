@@ -28,7 +28,7 @@ from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..config import settings
-from ..database import Base
+from ..database import SCHEMA_LOCK_KEY, Base
 from ..database import engine as local_engine
 
 logger = logging.getLogger("sidewa.sync")
@@ -221,6 +221,10 @@ def install_local_schema() -> None:
 
     try:
         with local_engine.begin() as conn:
+            conn.execute(
+                text("SELECT pg_advisory_xact_lock(:key)"),
+                {"key": SCHEMA_LOCK_KEY},
+            )
             for statement in _LOCAL_SCHEMA_STATEMENTS:
                 conn.execute(text(statement))
             conn.execute(text(_CAPTURE_FUNCTION_SQL))
