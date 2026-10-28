@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, empty_state %}
+
+{% block title %}Staf Humas{% endblock %}
+{% block page_title %}Staf Humas Sekretariat{% endblock %}
+{% block page_subtitle %}{{ total_active }} staf aktif · {{ total_faces }} Face ID terdaftar{% endblock %}
+
+{% block content %}
+<div class="card filter-card">
+  <form class="filter-form" method="get" action="/staf-humas">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input search-pill" type="search" name="q" value="{{ q }}"
+               placeholder="Cari nama, jabatan, atau unit kerja…" aria-label="Cari staf Humas">
+      </div>
+      <select class="select" name="status" aria-label="Status">
+        <option value="active" {{ 'selected' if status == 'active' }}>Aktif</option>
+        <option value="inactive" {{ 'selected' if status == 'inactive' }}>Nonaktif</option>
+        <option value="all" {{ 'selected' if status == 'all' }}>Semua status</option>
+      </select>
+      <button class="btn btn-primary" type="submit">{{ icon('search') }} Cari</button>
+      {% if q %}<a class="btn btn-ghost" href="/staf-humas">Reset</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count"><b>{{ rows|length }}</b> staf Humas ditampilkan</span>
+  <span class="muted-small">{{ icon('fingerprint') }} Setiap staf memiliki ruang kerja pribadi dan dapat masuk dengan Face ID</span>
+</div>
+
+{% if rows %}
+<div class="member-grid">
+  {% for row in rows %}
+  {% set staff = row.staff %}
+  {% set can_open = not own_staff_id or staff.id == own_staff_id %}
+  <a class="member-card staff-card{{ ' staff-card-locked' if not can_open }}"
+     href="{{ '/dashboard-staf/' ~ staff.id if can_open else '#' }}"
+     {% if not can_open %}aria-disabled="true" tabindex="-1" title="Ruang kerja pribadi staf"{% endif %}>
+    <div class="member-portrait">
+      {% if staff.portrait_path %}
+        <img src="/media/{{ staff.portrait_path }}" alt="{{ staff.full_name }}" loading="lazy">
+      {% else %}
+        <span class="portrait-initials">{{ staff.full_name|initials }}</span>
+      {% endif %}
+      {% if row.face_active %}
+      <span class="face-count" title="Face ID aktif">{{ icon('scan') }} Face ID</span>
+      {% endif %}
+      {% if not staff.is_active %}<span class="inactive-flag">Nonaktif</span>{% endif %}
+    </div>
+    <div class="member-body">
+      <h3>{{ staff.full_name }}</h3>
+      <p class="member-position">{{ staff.position }}</p>
+      <span class="chip chip-purple">{{ icon('book-open') }} {{ staff.unit }}</span>
+      <div class="member-meta staff-meta">
+        <span>{{ row.activity_count }} unggahan</span>
+        <span class="sep">•</span>
+        {% if row.face_active %}
+        <span class="staff-face-on">{{ icon('check') }} Face ID aktif</span>
+        {% else %}
+        <span class="staff-face-off">{{ icon('scan') }} Belum daftar Face ID</span>
+        {% endif %}
+      </div>
+      {% if not can_open %}
+      <span class="chip chip-gray">{{ icon('lock') }} Ruang kerja pribadi</span>
+      {% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+{{ empty_state('book-open', 'Staf Humas tidak ditemukan', 'Ubah kata kunci pencarian atau tambahkan data staf Humas.') }}
+{% endif %}
+{% endblock %}

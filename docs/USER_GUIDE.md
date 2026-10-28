@@ -12,11 +12,24 @@
    tren kegiatan, tugas & fungsi dewan, serta sentimen pemberitaan media online.
 
 ## Tim Humas
-1. Masuk dengan akun Humas.
+1. Masuk dengan akun Humas atau Face ID staf Humas.
 2. Pilih **Unggah** pada bilah atas atau menu Kegiatan.
 3. Isi metadata kegiatan, pilih komisi terkait, unggah foto (maks. 12, 15 MB per foto).
 4. Sistem mendeteksi wajah otomatis; tinjau hasil pada detail kegiatan.
 5. Terbitkan kegiatan agar terlihat oleh staf komisi. Arsipkan bila perlu.
+
+## Staf Humas Sekretariat
+Setiap staf Humas memiliki **ruang kerja pribadi** di `/dashboard-staf/{id}`.
+1. Buka halaman login, pilih tab **Face ID** → **Daftarkan Face ID**.
+2. Pilih nama Anda pada kelompok **Staf Humas Sekretariat**, ambil foto frontal
+   (atau unggah foto), centang persetujuan biometrik, lalu daftarkan.
+3. Setelah terdaftar, masuk cukup dengan **Masuk dengan wajah**. Sistem otomatis
+   mengarahkan ke ruang kerja pribadi.
+4. Ruang kerja menampilkan unggahan dokumentasi pribadi, draf yang perlu
+   diselesaikan, tren unggahan enam bulan, aktivitas terbaru tim Humas, status
+   Face ID, dan pintasan tugas harian.
+5. Administrator dapat membuka direktori **Staf Humas** (`/staf-humas`) untuk
+   melihat seluruh staf, mengunggah foto resmi, atau menghapus Face ID.
 
 ## Staf Komisi
 1. Masuk dengan akun komisi.

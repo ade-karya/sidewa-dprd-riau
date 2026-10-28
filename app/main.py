@@ -31,6 +31,7 @@ from .routers import (
     commissions,
     dashboard,
     guide,
+    humas_staff,
     media,
     member_dashboard,
     members,
@@ -207,6 +208,7 @@ def create_app() -> FastAPI:
     application.include_router(dashboard.router)
     application.include_router(guide.router)
     application.include_router(member_dashboard.router)
+    application.include_router(humas_staff.router)
     application.include_router(activities.router)
     application.include_router(search.router)
     application.include_router(members.router)

@@ -161,7 +161,7 @@
     form.append("csrf_token", csrf);
 
     if (target === "enroll") {
-      const select = facePanel.querySelector("#face-member");
+      const select = facePanel.querySelector("#face-subject");
       const consent = facePanel.querySelector("[data-face-consent]");
       if (!select || !select.value) {
         setStatus(target, "Pilih nama Anda terlebih dahulu.", "danger");
@@ -175,7 +175,9 @@
         );
         return;
       }
-      form.append("member_id", select.value);
+      const [kind, id] = select.value.split(":");
+      form.append("subject", select.value);
+      form.append(kind === "staff" ? "staff_id" : "member_id", id);
       form.append("consent", "true");
     }
 

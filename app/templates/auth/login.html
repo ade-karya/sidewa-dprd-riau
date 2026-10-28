@@ -99,7 +99,7 @@
 
         <div data-login-panel="face" data-csrf="{{ csrf_token }}" hidden>
           <div class="face-login-intro">
-            <span class="face-login-badge">{{ icon('fingerprint') }} Face ID anggota dewan</span>
+            <span class="face-login-badge">{{ icon('fingerprint') }} Face ID anggota dewan &amp; staf Humas</span>
             <p>Daftarkan wajah sekali, lalu masuk cukup dengan memindai wajah. Data wajah disimpan sebagai encoding biometrik, bukan foto mentah.</p>
           </div>
 
@@ -137,14 +137,23 @@
           <section data-face-panel="enroll" hidden>
             <form class="face-enroll-form" data-face-enroll-form novalidate>
               <div class="form-group">
-                <label class="form-label" for="face-member">Pilih nama Anda</label>
-                <select class="select" id="face-member" name="member_id" required>
-                  <option value="">— Pilih anggota dewan —</option>
-                  {% for m in face_members|default([]) %}
-                  <option value="{{ m.id }}" {{ 'disabled' if m.id in face_registered_ids|default([]) }}>
-                    {{ m.full_name }}{% if m.position %} — {{ m.position }}{% endif %}{% if m.id in face_registered_ids|default([]) %} (Face ID aktif){% endif %}
-                  </option>
-                  {% endfor %}
+                <label class="form-label" for="face-subject">Pilih nama Anda</label>
+                <select class="select" id="face-subject" name="subject" required>
+                  <option value="">— Pilih nama —</option>
+                  <optgroup label="Anggota Dewan">
+                    {% for m in face_members|default([]) %}
+                    <option value="member:{{ m.id }}" {{ 'disabled' if m.id in face_registered_ids|default([]) }}>
+                      {{ m.full_name }}{% if m.position %} — {{ m.position }}{% endif %}{% if m.id in face_registered_ids|default([]) %} (Face ID aktif){% endif %}
+                    </option>
+                    {% endfor %}
+                  </optgroup>
+                  <optgroup label="Staf Humas Sekretariat">
+                    {% for s in face_staff|default([]) %}
+                    <option value="staff:{{ s.id }}" {{ 'disabled' if s.id in face_staff_registered_ids|default([]) }}>
+                      {{ s.full_name }}{% if s.position %} — {{ s.position }}{% endif %}{% if s.id in face_staff_registered_ids|default([]) %} (Face ID aktif){% endif %}
+                    </option>
+                    {% endfor %}
+                  </optgroup>
                 </select>
               </div>
               <div class="face-camera" data-face-camera="enroll">
@@ -175,7 +184,7 @@
 
           <div class="face-note">
             {{ icon('shield') }}
-            <span>Pendaftaran hanya dapat dilakukan satu kali per anggota. Jika wajah tidak dikenali, hubungi Sekretariat DPRD untuk menghapus data Face ID.</span>
+            <span>Pendaftaran hanya dapat dilakukan satu kali per orang. Jika wajah tidak dikenali, hubungi Sekretariat DPRD untuk menghapus data Face ID.</span>
           </div>
         </div>
 

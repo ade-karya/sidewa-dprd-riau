@@ -1037,6 +1037,73 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
 .member-dash-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 18px; margin-top: 20px; align-items: start; }
 .member-dash-main, .member-dash-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 
+/* ---------- Ruang kerja staf Humas ---------- */
+.staff-dash-hero {
+  background:
+    radial-gradient(460px 240px at 92% 0%, rgba(88, 203, 245, .15), transparent 65%),
+    radial-gradient(360px 220px at 4% 100%, rgba(192, 138, 46, .12), transparent 70%),
+    #fff;
+}
+.staff-dash-hero .member-dash-meta { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.workspace-card { overflow: hidden; }
+.workspace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.workspace-tile {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fbf9fc;
+  color: var(--ink);
+  transition: transform .18s, box-shadow .18s, border-color .18s;
+}
+.workspace-tile:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(80, 45, 98, .09); border-color: #e5d7eb; }
+.workspace-icon {
+  width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--purple-100); color: var(--purple); flex: none;
+}
+.workspace-tile.tone-blue .workspace-icon { background: var(--blue-soft); color: var(--blue); }
+.workspace-tile.tone-green .workspace-icon { background: var(--green-soft); color: var(--green); }
+.workspace-tile.tone-gold .workspace-icon { background: var(--gold-soft); color: var(--gold); }
+.workspace-icon .icon { width: 18px; height: 18px; }
+.workspace-copy { min-width: 0; flex: 1; }
+.workspace-copy strong { display: block; font-size: 11.5px; font-weight: 600; }
+.workspace-copy span { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.workspace-arrow { color: var(--muted-2); }
+.workspace-arrow .icon { width: 14px; height: 14px; }
+.workspace-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.workspace-stat {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 12px; border-radius: 14px;
+  background: #f7f3f9; border: 1px solid #efe7f3;
+}
+.workspace-stat-icon { color: var(--purple); display: flex; }
+.workspace-stat-icon .icon { width: 17px; height: 17px; }
+.workspace-stat b { display: block; font-family: var(--font-display); font-size: 17px; line-height: 1; color: var(--ink); }
+.workspace-stat span { display: block; font-size: 9.5px; color: var(--muted); margin-top: 3px; }
+.workspace-drafts { margin-top: 18px; padding-top: 15px; border-top: 1px dashed var(--line); }
+.staff-portrait-preview {
+  width: 100%; aspect-ratio: 4 / 4.4; object-fit: cover; object-position: center 18%;
+  border-radius: 18px; border: 1px solid var(--line); background: var(--purple-50);
+}
+.staff-portrait-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; color: var(--purple); font-family: var(--font-display); font-size: 38px;
+}
+.staff-portrait-empty small { font-family: var(--font-body); font-size: 10px; color: var(--muted); }
+.staff-meta { align-items: center; }
+.staff-face-on { color: var(--green); display: inline-flex; align-items: center; gap: 3px; }
+.staff-face-off { color: var(--muted); display: inline-flex; align-items: center; gap: 3px; }
+.staff-meta .icon { width: 12px; height: 12px; }
+.staff-card .chip { margin-top: 2px; }
+.staff-card-locked { pointer-events: none; opacity: .78; }
+
 /* Sentimen */
 .sentiment-summary {
   display: grid;
@@ -1186,6 +1253,8 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
 }
 @media (max-width: 760px) {
   .member-dash-hero { flex-direction: column; padding: 22px; }
+  .workspace-grid, .workspace-summary { grid-template-columns: 1fr; }
+  .staff-dash-hero .member-dash-meta { grid-template-columns: 1fr 1fr; }
   .member-dash-photo { width: 118px; }
   .member-dash-meta { grid-template-columns: 1fr 1fr; }
   .sentiment-summary { grid-template-columns: 1fr; justify-items: center; text-align: center; }

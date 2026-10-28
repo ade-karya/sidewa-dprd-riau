@@ -20,8 +20,10 @@ from .constants import (
     ROLE_ANGGOTA,
     ROLE_DESCRIPTIONS,
     ROLE_LABELS,
+    ROLE_STAF_HUMAS,
     ROLES,
     SENTIMENT_ROLES,
+    STAFF_VIEW_ROLES,
     STATUS_LABELS,
     STATUSES,
 )
@@ -89,6 +91,20 @@ NAV_ITEMS = [
         "roles": {ROLE_ANGGOTA},
     },
     {
+        "key": "staff_dashboard",
+        "label": "Ruang Kerja",
+        "icon": "presentation",
+        "href": "/dashboard-staf",
+        "roles": {ROLE_STAF_HUMAS},
+    },
+    {
+        "key": "humas_staff",
+        "label": "Staf Humas",
+        "icon": "book-open",
+        "href": "/staf-humas",
+        "roles": STAFF_VIEW_ROLES,
+    },
+    {
         "key": "activities",
         "label": "Kegiatan",
         "icon": "calendar",
@@ -131,6 +147,8 @@ def _active_key(path: str) -> str:
         return "dashboard"
     for key, prefix in (
         ("member_dashboard", "/dashboard-anggota"),
+        ("staff_dashboard", "/dashboard-staf"),
+        ("humas_staff", "/staf-humas"),
         ("activities", "/kegiatan"),
         ("search", "/cari"),
         ("members", "/anggota"),

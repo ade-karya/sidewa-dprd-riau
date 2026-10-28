@@ -51,6 +51,7 @@ class KnownFace:
     member_name: str
     encoding: np.ndarray
     face_id: int
+    kind: str = "member"
 
 
 @dataclass
@@ -60,6 +61,7 @@ class FaceMatch:
     distance: float
     confidence: int
     face_id: int
+    kind: str = "member"
 
 
 @dataclass
@@ -183,17 +185,22 @@ class FaceEngine:
         return known
 
     def known_login_faces(self, db: Session) -> list[KnownFace]:
-        """Encoding wajah khusus login Face ID anggota dewan."""
-        from ..models import Member, MemberFaceLogin
+        """Encoding wajah khusus login Face ID anggota dewan dan staf Humas."""
+        from ..models import (
+            HumasStaff,
+            HumasStaffFaceLogin,
+            Member,
+            MemberFaceLogin,
+        )
 
-        rows = (
+        known: list[KnownFace] = []
+        member_rows = (
             db.query(MemberFaceLogin, Member)
             .join(Member, MemberFaceLogin.member_id == Member.id)
             .filter(Member.is_active.is_(True), MemberFaceLogin.is_active.is_(True))
             .all()
         )
-        known: list[KnownFace] = []
-        for face, member in rows:
+        for face, member in member_rows:
             if not face.encoding:
                 continue
             known.append(
@@ -202,6 +209,26 @@ class FaceEngine:
                     member_name=member.full_name,
                     encoding=np.asarray(face.encoding, dtype=np.float64),
                     face_id=face.id,
+                    kind="member",
+                )
+            )
+
+        staff_rows = (
+            db.query(HumasStaffFaceLogin, HumasStaff)
+            .join(HumasStaff, HumasStaffFaceLogin.staff_id == HumasStaff.id)
+            .filter(HumasStaff.is_active.is_(True), HumasStaffFaceLogin.is_active.is_(True))
+            .all()
+        )
+        for face, staff in staff_rows:
+            if not face.encoding:
+                continue
+            known.append(
+                KnownFace(
+                    member_id=staff.id,
+                    member_name=staff.full_name,
+                    encoding=np.asarray(face.encoding, dtype=np.float64),
+                    face_id=face.id,
+                    kind="staff",
                 )
             )
         return known
@@ -212,17 +239,19 @@ class FaceEngine:
         matrix = np.vstack([item.encoding for item in known])
         target = np.asarray(encoding, dtype=np.float64)
         distances = np.linalg.norm(matrix - target, axis=1)
-        best: dict[int, FaceMatch] = {}
+        best: dict[tuple[str, int], FaceMatch] = {}
         for item, distance in zip(known, distances, strict=False):
             value = float(distance)
-            if item.member_id in best and best[item.member_id].distance <= value:
+            key = (item.kind, item.member_id)
+            if key in best and best[key].distance <= value:
                 continue
-            best[item.member_id] = FaceMatch(
+            best[key] = FaceMatch(
                 member_id=item.member_id,
                 member_name=item.member_name,
                 distance=round(value, 4),
                 confidence=confidence_from_distance(value),
                 face_id=item.face_id,
+                kind=item.kind,
             )
         return sorted(best.values(), key=lambda m: m.distance)
 

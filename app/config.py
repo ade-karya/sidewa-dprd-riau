@@ -310,6 +310,7 @@ class Settings:
         self.media_root.mkdir(parents=True, exist_ok=True)
         (self.media_root / "activities").mkdir(exist_ok=True)
         (self.media_root / "members").mkdir(exist_ok=True)
+        (self.media_root / "staff").mkdir(exist_ok=True)
         if self.database_url.startswith("sqlite:///"):
             db_path = Path(self.database_url.replace("sqlite:///", "", 1))
             if not db_path.is_absolute():

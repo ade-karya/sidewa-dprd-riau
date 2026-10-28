@@ -92,7 +92,7 @@ def normalize_upload(raw: bytes, *, max_dimension: int = 2560) -> NormalizedImag
 
 
 def _kind_dir(kind: str) -> Path:
-    if kind not in {"activities", "members"}:
+    if kind not in {"activities", "members", "staff"}:
         raise ValueError("Jenis media tidak dikenal")
     directory = settings.media_root / kind / datetime.now().strftime("%Y/%m")
     directory.mkdir(parents=True, exist_ok=True)

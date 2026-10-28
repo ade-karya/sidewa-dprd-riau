@@ -10,7 +10,9 @@ mewakili wajah orang sungguhan.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, time
+from pathlib import Path
 
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
@@ -21,6 +23,7 @@ from ..constants import (
     ROLE_HUMAS,
     ROLE_PIMPINAN,
     ROLE_STAF,
+    ROLE_STAF_HUMAS,
     ROLE_SUPERADMIN,
     STATUS_ARCHIVED,
     STATUS_DRAFT,
@@ -34,6 +37,9 @@ from ..models import (
     AuditLog,
     Commission,
     FaceDetection,
+    HumasStaff,
+    HumasStaffAccount,
+    HumasStaffFaceLogin,
     MediaMention,
     Member,
     MemberAccount,
@@ -44,13 +50,14 @@ from ..models import (
     activity_commissions,
     utcnow,
 )
-from ..security import hash_password
+from ..security import generate_password, hash_password
 from . import face_engine, jobs
-from .images import copy_seed_image, delete_paths
+from .images import ImageValidationError, copy_seed_image, delete_paths
 
 logger = logging.getLogger("sidewa.seed")
 
 ASSETS = BASE_DIR / "seed_assets"
+STAFF_PORTRAIT_DIR = ASSETS / "staff_portraits"
 
 COMMISSIONS = [
     {
@@ -645,6 +652,42 @@ MEMBER_PORTRAITS = {
     "Hj. Magdalisni": "portraits_real/23.webp",
 }
 
+HUMAS_STAFF = [
+    ("Radinal Munandar, S.STP., M.M., M.IP", "Kepala Tim Humas"),
+    ("Arief Adithia Irsandi, S.STP., M.Si", "Koordinator Humas"),
+    ("Wahyu Jati Wibowo", "Staf Humas & Perpustakaan"),
+    ("Ayatullah Khumaini", "Staf Humas & Perpustakaan"),
+    ("Afdan Syaputra", "Staf Humas & Perpustakaan"),
+    ("Raja Rasmawati, S.E., M.Si", "Staf Humas & Perpustakaan"),
+    ("Shinta Puji Lestari", "Staf Humas & Perpustakaan"),
+    ("Risky Perdana", "Staf Humas & Perpustakaan"),
+    ("Muhammad Rais, S.I.Kom", "Staf Humas & Perpustakaan"),
+    ("Novita Elya", "Staf Humas & Perpustakaan"),
+    ("Repan", "Staf Humas & Perpustakaan"),
+    ("Muhammad Rozikin", "Staf Humas & Perpustakaan"),
+    ("Rio Ary Novianto", "Staf Humas & Perpustakaan"),
+    ("Marthalena Diningsih D, S.IP", "Staf Humas & Perpustakaan"),
+    ("Irwan Yanofrizon", "Staf Humas & Perpustakaan"),
+    ("Evantio Perdana, S.S.T", "Staf Humas & Perpustakaan"),
+    ("Sukma Adefa", "Staf Humas & Perpustakaan"),
+    ("Rizalman", "Staf Humas & Perpustakaan"),
+    ("Yusmiati", "Staf Humas & Perpustakaan"),
+    ("Hastin Atas Asih", "Staf Humas & Perpustakaan"),
+    ("Nasrizan, S.Pd", "Staf Humas & Perpustakaan"),
+    ("Yosie Palupi, S.E.", "Staf Humas & Perpustakaan"),
+    ("Randy Eka Putra", "Staf Humas & Perpustakaan"),
+    ("Marthalena, A.Md", "Staf Humas & Perpustakaan"),
+    ("Reza Lia Reffino", "Staf Humas & Perpustakaan"),
+    ("Roby Rahman", "Staf Humas & Perpustakaan"),
+    ("Muzakir, S.Sos", "Staf Humas & Perpustakaan"),
+    ("Aisyah Sri Utari", "Staf Humas & Perpustakaan"),
+    ("Mhd. Fauzan Kathin, S.STP", "Staf Humas & Perpustakaan"),
+    ("Muhammad Reyhan Shabrinas", "Staf Humas & Perpustakaan"),
+    ("Agustinus", "Staf Humas & Perpustakaan"),
+    ("Ade Karya Jaya, S.Kom", "Staf Humas & Perpustakaan"),
+    ("Robi Saputra", "Staf Humas & Perpustakaan"),
+]
+
 ACTIVITIES = [
     {
         "slug": "paripurna-apbd",
@@ -921,6 +964,9 @@ def _reset(db: Session) -> None:
     for model in (
         MediaMention,
         SentimentRun,
+        HumasStaffFaceLogin,
+        HumasStaffAccount,
+        HumasStaff,
         MemberFaceLogin,
         MemberAccount,
         FaceDetection,
@@ -943,15 +989,42 @@ def _wipe_media(db: Session) -> None:
     photos = db.query(ActivityPhoto).all()
     faces = db.query(MemberFace).all()
     login_faces = db.query(MemberFaceLogin).all()
+    staff_faces = db.query(HumasStaffFaceLogin).all()
     members = db.query(Member).all()
+    staff_rows = db.query(HumasStaff).all()
     for photo in photos:
         delete_paths(photo.file_path, photo.thumb_path)
     for face in faces:
         delete_paths(face.image_path)
     for face in login_faces:
         delete_paths(face.image_path)
+    for face in staff_faces:
+        delete_paths(face.image_path)
     for member in members:
         delete_paths(member.portrait_path)
+    for staff in staff_rows:
+        delete_paths(staff.portrait_path)
+
+
+def _staff_portrait_source(index: int, full_name: str) -> Path | None:
+    """Cari foto staf dari folder seed_assets/staff_portraits.
+
+    Nama berkas yang didukung: ``01.jpg`` (nomor urut) atau nama yang
+    dinormalisasi, misalnya ``radinal-munandar.jpg``.
+    """
+    if not STAFF_PORTRAIT_DIR.exists():
+        return None
+    candidates: list[Path] = []
+    for suffix in (".jpg", ".jpeg", ".png", ".webp"):
+        candidates.append(STAFF_PORTRAIT_DIR / f"{index:02d}{suffix}")
+        candidates.append(STAFF_PORTRAIT_DIR / f"{index}{suffix}")
+    slug = re.sub(r"[^a-z0-9]+", "-", full_name.lower()).strip("-")
+    for suffix in (".jpg", ".jpeg", ".png", ".webp"):
+        candidates.append(STAFF_PORTRAIT_DIR / f"{slug}{suffix}")
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def seed_demo(db: Session, *, force: bool = False) -> dict:
@@ -985,6 +1058,52 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
         )
         db.add(user)
         users[username] = user
+    db.flush()
+
+    staff_rows: list[HumasStaff] = []
+    for index, (full_name, position) in enumerate(HUMAS_STAFF, start=1):
+        staff = HumasStaff(
+            full_name=full_name,
+            position=position,
+            unit="Bagian Humas & Perpustakaan",
+            sort_order=index,
+            bio=(
+                f"{full_name} bertugas sebagai {position} di Bagian Humas & "
+                "Perpustakaan Sekretariat DPRD Provinsi Riau."
+            ),
+            is_active=True,
+            consent_granted_at=utcnow(),
+            consent_note="Data staf Humas Sekretariat DPRD Provinsi Riau.",
+        )
+        portrait_source = _staff_portrait_source(index, full_name)
+        if portrait_source:
+            try:
+                _, rel_thumb, _, _ = copy_seed_image(portrait_source, "staff")
+                staff.portrait_path = rel_thumb
+            except (ImageValidationError, OSError):
+                logger.warning(
+                    "Foto staf %s dilewati karena berkas tidak valid: %s",
+                    full_name,
+                    portrait_source,
+                )
+        db.add(staff)
+        staff_rows.append(staff)
+    db.flush()
+
+    staff_users: list[User] = []
+    for staff in staff_rows:
+        user = User(
+            username=f"humas{staff.id}",
+            full_name=staff.full_name,
+            email=staff.email,
+            role=ROLE_STAF_HUMAS,
+            password_hash=hash_password(generate_password()),
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        db.add(HumasStaffAccount(user_id=user.id, staff_id=staff.id))
+        staff_users.append(user)
     db.flush()
 
     members: list[Member] = []
@@ -1039,6 +1158,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
     created_objects: list[Activity] = []
     for index, item in enumerate(ACTIVITIES, start=1):
         year = item["date"].year
+        creator = staff_users[(index - 1) % len(staff_users)] if staff_users else users["humas"]
         activity = Activity(
             code=f"KEG-{year}-{index:04d}",
             title=item["title"],
@@ -1053,7 +1173,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
             commission_id=commissions[item["commissions"][0]].id
             if len(item["commissions"]) == 1
             else None,
-            created_by_id=users["humas"].id,
+            created_by_id=creator.id,
             published_at=datetime.combine(item["date"], time(9, 0))
             if item["status"] == STATUS_PUBLISHED
             else None,
@@ -1088,7 +1208,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
                 caption=f"Dokumentasi {item['title']}",
                 status="pending",
                 sort_order=photo_index,
-                uploaded_by_id=users["humas"].id,
+                uploaded_by_id=creator.id,
             )
             db.add(photo)
         created_activities += 1
@@ -1097,10 +1217,11 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
     # Jejak audit yang realistis agar halaman riwayat tidak kosong.
     for activity in created_objects:
         uploaded_at = datetime.combine(activity.activity_date, time(10, 0))
+        actor = activity.creator or users["humas"]
         db.add(
             AuditLog(
-                actor_id=users["humas"].id,
-                actor_name=users["humas"].full_name,
+                actor_id=actor.id,
+                actor_name=actor.full_name,
                 action="ACTIVITY_CREATE",
                 entity_type="activity",
                 entity_id=activity.id,
@@ -1111,8 +1232,8 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
         if activity.status == STATUS_PUBLISHED:
             db.add(
                 AuditLog(
-                    actor_id=users["humas"].id,
-                    actor_name=users["humas"].full_name,
+                    actor_id=actor.id,
+                    actor_name=actor.full_name,
                     action="ACTIVITY_PUBLISH",
                     entity_type="activity",
                     entity_id=activity.id,
@@ -1153,8 +1274,9 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
     return {
         "skipped": False,
         "commissions": len(commissions),
-        "users": len(users),
+        "users": len(users) + len(staff_users),
         "members": len(members),
+        "humas_staff": len(staff_rows),
         "activities": created_activities,
         "photos": len(photos),
     }

@@ -8,10 +8,11 @@ ROLE_HUMAS = "humas"
 ROLE_STAF = "staf_komisi"
 ROLE_PIMPINAN = "pimpinan"
 ROLE_ANGGOTA = "anggota_dewan"
+ROLE_STAF_HUMAS = "staf_humas"
 
-# Akun anggota dewan dibuat otomatis saat pendaftaran Face ID di halaman login.
-# Peran ini sengaja tidak dimasukkan ke ROLES agar tidak bisa dibuat manual
-# tanpa terhubung ke data anggota.
+# Akun anggota dewan dan staf Humas dibuat otomatis saat pendaftaran Face ID
+# di halaman login. Peran ini sengaja tidak dimasukkan ke ROLES agar tidak bisa
+# dibuat manual tanpa terhubung ke data orang yang sah.
 ROLES = [
     ROLE_SUPERADMIN,
     ROLE_ADMIN,
@@ -27,6 +28,7 @@ ROLE_LABELS = {
     ROLE_STAF: "Staf Komisi",
     ROLE_PIMPINAN: "Pimpinan",
     ROLE_ANGGOTA: "Anggota Dewan",
+    ROLE_STAF_HUMAS: "Staf Humas",
 }
 
 ROLE_DESCRIPTIONS = {
@@ -36,13 +38,21 @@ ROLE_DESCRIPTIONS = {
     ROLE_STAF: "Mencari, membaca dokumentasi, dan menjalankan pemindaian sentimen komisi.",
     ROLE_PIMPINAN: "Melihat seluruh dokumentasi, statistik, dan laporan.",
     ROLE_ANGGOTA: "Dashboard pribadi anggota dewan, dokumentasi Humas, dan sentimen publik.",
+    ROLE_STAF_HUMAS: "Ruang kerja pribadi staf Humas, unggahan dokumentasi, dan Face ID.",
 }
 
-CONTENT_MANAGER_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_HUMAS}
+CONTENT_MANAGER_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_HUMAS, ROLE_STAF_HUMAS}
 ADMIN_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN}
 AUDIT_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN}
 SENTIMENT_ROLES = {ROLE_SUPERADMIN, ROLE_ADMIN, ROLE_STAF}
-ALL_ROLES = set(ROLES) | {ROLE_ANGGOTA}
+STAFF_VIEW_ROLES = {
+    ROLE_SUPERADMIN,
+    ROLE_ADMIN,
+    ROLE_HUMAS,
+    ROLE_PIMPINAN,
+    ROLE_STAF_HUMAS,
+}
+ALL_ROLES = set(ROLES) | {ROLE_ANGGOTA, ROLE_STAF_HUMAS}
 
 STATUS_DRAFT = "draft"
 STATUS_PUBLISHED = "published"
@@ -105,6 +115,7 @@ AUDIT_ACTIONS = {
     "FACE_LOGIN_FAILED": "Gagal Face ID",
     "FACE_LOGIN_ENROLL": "Daftarkan Face ID",
     "FACE_LOGIN_DELETE": "Hapus Face ID",
+    "STAFF_PORTRAIT_UPDATE": "Ubah foto staf",
     "SENTIMENT_SEARCH": "Pindai sentimen",
     "SENTIMENT_SEARCH_FAILED": "Pindai sentimen gagal",
     "ACTIVITY_CREATE": "Buat kegiatan",

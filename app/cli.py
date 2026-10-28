@@ -32,6 +32,8 @@ from .models import (
     ActivityPhoto,
     AuditLog,
     Commission,
+    HumasStaff,
+    HumasStaffFaceLogin,
     Member,
     MemberFace,
     User,
@@ -173,6 +175,10 @@ def cmd_stats(_args) -> int:
             f"Anggota       : {db.query(Member).count()} ({db.query(Member).filter(Member.is_active.is_(True)).count()} aktif)"
         )
         print(f"Data wajah    : {db.query(MemberFace).count()}")
+        print(
+            f"Staf Humas    : {db.query(HumasStaff).count()} "
+            f"({db.query(HumasStaffFaceLogin).count()} Face ID)"
+        )
         print(f"Kegiatan      : {db.query(Activity).count()}")
         print(f"Foto          : {db.query(ActivityPhoto).count()}")
         status_rows = (

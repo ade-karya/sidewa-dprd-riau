@@ -6,8 +6,9 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 ## Fitur utama
 
 - Autentikasi berbasis sesi (Argon2), CSRF, RBAC (Super Admin, Administrator, Tim Humas, Staf Komisi, Pimpinan, Anggota Dewan).
-- Login **Face ID** untuk anggota dewan: daftarkan wajah sekali di halaman login, lalu masuk cukup dengan pemindaian wajah.
+- Login **Face ID** untuk anggota dewan dan **staf Humas**: daftarkan wajah sekali di halaman login, lalu masuk cukup dengan pemindaian wajah.
 - **Dashboard pribadi per anggota dewan** berisi dokumentasi Humas, penampilan terverifikasi, tren kegiatan, serta sentimen pemberitaan media online.
+- **Ruang kerja pribadi per staf Humas** (`/dashboard-staf/{id}`) berisi unggahan dokumentasi, draf, tren unggahan, status Face ID, direktori staf Humas, dan pintasan tugas harian.
 - Pemantauan sentimen media online melalui **Tavily** dan **Gemini** oleh staf komisi/admin:
   Tavily mencari berita, Gemini menilai relevansi dan sentimen, lalu hasilnya
   dipadukan dengan leksikon sentimen Bahasa Indonesia.

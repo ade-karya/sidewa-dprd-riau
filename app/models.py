@@ -96,6 +96,9 @@ class User(Base, TimestampMixin):
     member_account: Mapped[MemberAccount | None] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    staff_account: Mapped[HumasStaffAccount | None] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
     tokens: Mapped[list[ApiToken]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
@@ -192,6 +195,81 @@ class MemberFaceLogin(Base):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     member: Mapped[Member] = relationship(back_populates="face_logins")
+
+
+class HumasStaff(Base, TimestampMixin):
+    """Staf Sekretariat DPRD yang bertugas di bagian Humas & Perpustakaan."""
+
+    __tablename__ = "humas_staff"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    full_name: Mapped[str] = mapped_column(String(160), index=True, nullable=False)
+    position: Mapped[str] = mapped_column(String(160), index=True, default="", nullable=False)
+    unit: Mapped[str] = mapped_column(
+        String(160), default="Bagian Humas & Perpustakaan", nullable=False
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    bio: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    portrait_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True, nullable=False)
+    consent_granted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    consent_note: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
+    faces: Mapped[list[HumasStaffFaceLogin]] = relationship(
+        back_populates="staff", cascade="all, delete-orphan", order_by="HumasStaffFaceLogin.id"
+    )
+    account: Mapped[HumasStaffAccount | None] = relationship(
+        back_populates="staff", uselist=False, cascade="all, delete-orphan"
+    )
+
+    @property
+    def initials(self) -> str:
+        parts = [p for p in (self.full_name or "").split() if p]
+        if not parts:
+            return "?"
+        if len(parts) == 1:
+            return parts[0][:2].upper()
+        return (parts[0][0] + parts[-1][0]).upper()
+
+
+class HumasStaffAccount(Base):
+    """Penghubung akun login Face ID dengan data staf Humas."""
+
+    __tablename__ = "humas_staff_accounts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    staff_id: Mapped[int] = mapped_column(
+        ForeignKey("humas_staff.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    last_face_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="staff_account")
+    staff: Mapped[HumasStaff] = relationship(back_populates="account")
+
+
+class HumasStaffFaceLogin(Base):
+    """Encoding wajah khusus login Face ID staf Humas."""
+
+    __tablename__ = "humas_staff_face_logins"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    staff_id: Mapped[int] = mapped_column(
+        ForeignKey("humas_staff.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    image_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    encoding: Mapped[list[float]] = mapped_column(JSON, nullable=False)
+    quality: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    staff: Mapped[HumasStaff] = relationship(back_populates="faces")
 
 
 class SentimentRun(Base):

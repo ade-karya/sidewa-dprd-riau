@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, activity_card, empty_state %}
+
+{% block title %}Ruang Kerja {{ staff.full_name }}{% endblock %}
+{% block page_title %}Ruang kerja staf Humas{% endblock %}
+{% block page_subtitle %}{{ staff.position }} · {{ staff.unit }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/staf-humas">{{ icon('book-open') }}<span>Direktori staf</span></a>
+<a class="btn btn-primary btn-sm" href="/kegiatan/baru">{{ icon('plus') }}<span>Unggah</span></a>
+{% endblock %}
+
+{% block content %}
+<section class="member-dash-hero staff-dash-hero">
+  <div class="member-dash-photo">
+    {% if staff.portrait_path %}
+    <img src="/media/{{ staff.portrait_path }}" alt="{{ staff.full_name }}">
+    {% else %}
+    <span class="portrait-initials">{{ staff.full_name|initials }}</span>
+    {% endif %}
+  </div>
+  <div class="member-dash-copy">
+    <div class="chip-row mb-1">
+      <span class="chip chip-purple">{{ icon('book-open') }} Staf Humas</span>
+      {% if data.face_login %}
+      <span class="chip chip-green">{{ icon('scan') }} Face ID aktif</span>
+      {% else %}
+      <span class="chip chip-gray">{{ icon('scan') }} Face ID belum aktif</span>
+      {% endif %}
+      {% if staff.position and 'Kepala' in staff.position %}
+      <span class="chip chip-gold">{{ icon('target') }} Pimpinan tim</span>
+      {% elif staff.position and 'Koordinator' in staff.position %}
+      <span class="chip chip-gold">{{ icon('target') }} Koordinator</span>
+      {% endif %}
+    </div>
+    <h1>{{ staff.full_name }}</h1>
+    <p class="role-line">{{ staff.position }} · {{ staff.unit }}</p>
+    <div class="member-dash-facts">
+      <span class="fact">{{ icon('building') }} Sekretariat DPRD Provinsi Riau</span>
+      <span class="fact">{{ icon('users') }} {{ data.staff_total }} staf Humas</span>
+      {% if data.last_activity_date %}
+      <span class="fact">{{ icon('calendar-check') }} Unggahan terakhir {{ data.last_activity_date|date_id }}</span>
+      {% endif %}
+    </div>
+    <div class="member-dash-actions">
+      <a class="btn btn-primary btn-sm" href="#workspace">{{ icon('presentation') }} Buka ruang kerja</a>
+      <a class="btn btn-outline btn-sm" href="/kegiatan">{{ icon('calendar') }} Semua dokumentasi</a>
+      <button class="btn btn-outline btn-sm" type="button" data-print>{{ icon('printer') }} Cetak</button>
+    </div>
+    <div class="member-dash-meta">
+      <div class="side-stat"><b>{{ data.activity_count }}</b><span>Kegiatan diunggah</span></div>
+      <div class="side-stat"><b>{{ data.published_count }}</b><span>Sudah terbit</span></div>
+      <div class="side-stat"><b>{{ data.photo_count }}</b><span>Foto diunggah</span></div>
+      <div class="side-stat"><b>{{ data.draft_count }}</b><span>Draf aktif</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="member-dash-grid">
+  <div class="member-dash-main">
+    <section class="section-card workspace-card" id="workspace">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('presentation') }} Ruang kerja saya</h2>
+        <span class="badge badge-purple">{{ data.today|date_id }}</span>
+      </div>
+      <div class="workspace-grid">
+        {% for item in data.shortcuts %}
+        <a class="workspace-tile tone-{{ item.tone }}" href="{{ item.href }}">
+          <span class="workspace-icon">{{ icon(item.icon) }}</span>
+          <span class="workspace-copy">
+            <strong>{{ item.label }}</strong>
+            <span>{{ item.description }}</span>
+          </span>
+          <span class="workspace-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+
+      <div class="workspace-summary">
+        <div class="workspace-stat">
+          <span class="workspace-stat-icon">{{ icon('file-text') }}</span>
+          <div><b>{{ data.draft_count }}</b><span>Draf menunggu terbit</span></div>
+        </div>
+        <div class="workspace-stat">
+          <span class="workspace-stat-icon">{{ icon('calendar-check') }}</span>
+          <div><b>{{ data.recent_count }}</b><span>Unggahan 30 hari</span></div>
+        </div>
+        <div class="workspace-stat">
+          <span class="workspace-stat-icon">{{ icon('eye') }}</span>
+          <div><b>{{ data.view_count }}</b><span>Total dilihat</span></div>
+        </div>
+        <div class="workspace-stat">
+          <span class="workspace-stat-icon">{{ icon('users') }}</span>
+          <div><b>{{ data.team_total }}</b><span>Kegiatan tim Humas</span></div>
+        </div>
+      </div>
+
+      {% if data.draft_activities %}
+      <div class="workspace-drafts">
+        <h3 style="font-size: 13px; margin: 0 0 10px;">Draf yang perlu diselesaikan</h3>
+        {% for activity in data.draft_activities %}
+        <a class="humas-item" href="/kegiatan/{{ activity.id }}/edit">
+          <span class="humas-thumb">
+            {% if activity.cover and activity.cover.thumb_path %}
+            <img src="/media/{{ activity.cover.thumb_path }}" alt="" loading="lazy">
+            {% endif %}
+          </span>
+          <span class="humas-copy">
+            <strong>{{ activity.title }}</strong>
+            <span>{{ activity.activity_date|date_short }} · {{ activity.category }}</span>
+          </span>
+          <span class="badge badge-gray">Draf</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('upload') }} Unggahan dokumentasi saya</h2>
+        <a class="section-link" href="/kegiatan">Lihat semua {{ icon('arrow-right') }}</a>
+      </div>
+      <div class="publication-stats">
+        <div class="publication-stat"><b>{{ data.activity_count }}</b><span>Total kegiatan</span></div>
+        <div class="publication-stat"><b>{{ data.published_count }}</b><span>Sudah terbit</span></div>
+        <div class="publication-stat"><b>{{ data.draft_count }}</b><span>Draf</span></div>
+        <div class="publication-stat"><b>{{ data.photo_count }}</b><span>Foto</span></div>
+      </div>
+
+      {% if data.recent_activities %}
+      <div class="humas-list">
+        {% for activity in data.recent_activities %}
+        <a class="humas-item" href="/kegiatan/{{ activity.id }}">
+          <span class="humas-thumb">
+            {% if activity.cover and activity.cover.thumb_path %}
+            <img src="/media/{{ activity.cover.thumb_path }}" alt="" loading="lazy">
+            {% endif %}
+          </span>
+          <span class="humas-copy">
+            <strong>{{ activity.title }}</strong>
+            <span>{{ activity.activity_date|date_short }} · {{ activity.category }} · {{ activity.photos|length }} foto</span>
+          </span>
+          <span class="humas-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% elif data.team_recent %}
+      <p class="muted-small mb-2">
+        Anda belum memiliki unggahan pribadi. Berikut dokumentasi terbaru tim Humas yang dapat Anda kelola.
+      </p>
+      <div class="humas-list">
+        {% for activity in data.team_recent %}
+        <a class="humas-item" href="/kegiatan/{{ activity.id }}">
+          <span class="humas-thumb">
+            {% if activity.cover and activity.cover.thumb_path %}
+            <img src="/media/{{ activity.cover.thumb_path }}" alt="" loading="lazy">
+            {% endif %}
+          </span>
+          <span class="humas-copy">
+            <strong>{{ activity.title }}</strong>
+            <span>{{ activity.activity_date|date_short }} · {{ activity.category }}</span>
+          </span>
+          <span class="humas-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada dokumentasi kegiatan. Mulai dengan mengunggah kegiatan baru.</p>
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <div class="chart-head">
+        <h2 style="margin-bottom: 0;">{{ icon('chart') }} Tren unggahan 6 bulan</h2>
+        <span class="muted-small">{{ data.today|date_id }}</span>
+      </div>
+      <div class="bar-chart" role="img" aria-label="Grafik jumlah unggahan dokumentasi per bulan">
+        {% for month in data.monthly %}
+        <div class="bar-item">
+          <div class="bar-wrap">
+            <div class="bar" style="height: {{ month.height }}%;">
+              <span class="bar-value">{{ month.count }}</span>
+            </div>
+          </div>
+          <span class="bar-label">{{ month.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% if data.category_stats %}
+      <div class="filter-meta" style="margin-bottom: 0;">
+        <span class="result-count">Kategori terbanyak: <b>{{ data.category_stats[0].name }}</b> ({{ data.category_stats[0].count }} kegiatan)</span>
+        <a class="section-link" href="/kegiatan">Kelola kegiatan {{ icon('arrow-right') }}</a>
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('users') }} Aktivitas terbaru tim Humas</h2>
+        <a class="section-link" href="/kegiatan">Semua kegiatan {{ icon('arrow-right') }}</a>
+      </div>
+      {% if data.team_recent %}
+      <div class="activity-grid cols-2">
+        {% for activity in data.team_recent %}{{ activity_card(activity) }}{% endfor %}
+      </div>
+      {% else %}
+      {{ empty_state('calendar', 'Belum ada publikasi tim', 'Dokumentasi yang diterbitkan tim Humas akan tampil di sini.') }}
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="member-dash-side">
+    <section class="section-card face-id-card">
+      <div class="flex-between mb-1">
+        <h2 style="margin-bottom: 0;">{{ icon('fingerprint') }} Face ID login</h2>
+        {% if data.face_login %}
+        <span class="badge badge-green"><span class="dot"></span>Aktif</span>
+        {% else %}
+        <span class="badge badge-gray">Belum aktif</span>
+        {% endif %}
+      </div>
+      {% if data.face_login %}
+      <div class="face-id-status">{{ icon('check') }} Wajah terdaftar untuk masuk tanpa kata sandi</div>
+      <div class="face-id-meta">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('calendar') }}</span>
+          <div class="side-copy"><span>Terdaftar</span><strong>{{ data.face_login.created_at|datetime_id }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('clock') }}</span>
+          <div class="side-copy"><span>Terakhir dipakai</span><strong>{{ data.face_login.last_used_at|datetime_id if data.face_login.last_used_at else 'Belum pernah' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('user') }}</span>
+          <div class="side-copy"><span>Akun login</span><strong>{{ data.staff_account.user.username if data.staff_account and data.staff_account.user else '—' }}</strong></div>
+        </div>
+      </div>
+      {% if can_manage_users %}
+      <form class="mt-2" method="post" action="/staf-humas/{{ staff.id }}/face-login/hapus"
+            data-confirm="Hapus Face ID staf ini? Staf harus mendaftar ulang dari halaman login.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-danger btn-sm btn-block" type="submit">{{ icon('trash') }} Hapus Face ID</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <div class="face-id-status off">{{ icon('scan') }} Belum ada Face ID terdaftar</div>
+      {% if face_available %}
+      <p class="muted-small mt-2">
+        Buka halaman login, pilih tab <b>Face ID → Daftarkan Face ID</b>, lalu pilih nama pada
+        kelompok <b>Staf Humas Sekretariat</b>. Setelah terdaftar, masuk cukup dengan memindai wajah.
+      </p>
+      {% else %}
+      <p class="muted-small mt-2">
+        Mesin pengenalan wajah belum tersedia di server. Hubungi administrator agar Face ID
+        dapat diaktifkan.
+      </p>
+      {% endif %}
+      {% endif %}
+      <div class="face-note mt-2">
+        {{ icon('shield') }}
+        <span>Data wajah disimpan sebagai encoding biometrik. Penghapusan dapat dilakukan administrator kapan pun.</span>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <h2>{{ icon('image') }} Foto profil</h2>
+      {% if staff.portrait_path %}
+      <img class="staff-portrait-preview" src="/media/{{ staff.portrait_path }}" alt="{{ staff.full_name }}">
+      {% else %}
+      <div class="staff-portrait-preview staff-portrait-empty">
+        <span>{{ staff.full_name|initials }}</span>
+        <small>Belum ada foto</small>
+      </div>
+      {% endif %}
+      {% if can_manage_users %}
+      <form class="mt-2" method="post" action="/staf-humas/{{ staff.id }}/foto" enctype="multipart/form-data" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="form-label" for="staff-portrait">Unggah foto resmi</label>
+        <input class="input" id="staff-portrait" name="portrait" type="file" accept="image/jpeg,image/png,image/webp" required>
+        <button class="btn btn-soft btn-sm btn-block mt-2" type="submit">{{ icon('upload') }} Simpan foto</button>
+      </form>
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <h2>{{ icon('target') }} Tugas &amp; fungsi Humas</h2>
+      <div class="duty-list">
+        {% for duty in data.duties %}
+        <div class="duty-item">
+          <span class="duty-index">{{ loop.index }}</span>
+          <div class="duty-copy">
+            <strong>{{ duty.title }}</strong>
+            <span>{{ duty.text }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="section-card">
+      <h2>{{ icon('building') }} Ringkasan tim</h2>
+      <div class="side-list">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('users') }}</span>
+          <div class="side-copy"><span>Staf Humas aktif</span><strong>{{ data.staff_total }} orang</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('scan') }}</span>
+          <div class="side-copy"><span>Face ID terdaftar</span><strong>{{ data.staff_with_face }} orang</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('calendar') }}</span>
+          <div class="side-copy"><span>Kegiatan tim Humas</span><strong>{{ data.team_total }} kegiatan</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('check') }}</span>
+          <div class="side-copy"><span>Publikasi terbit</span><strong>{{ data.team_published }} kegiatan</strong></div>
+        </div>
+      </div>
+      <a class="btn btn-outline btn-sm btn-block mt-2" href="/staf-humas">{{ icon('book-open') }} Buka direktori staf</a>
+    </section>
+  </aside>
+</div>
+{% endblock %}

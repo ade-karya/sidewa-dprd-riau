@@ -13,12 +13,15 @@ from sqlalchemy.orm import Session
 
 from ..audit import audit
 from ..config import settings
-from ..constants import ROLE_ANGGOTA, ROLE_LABELS
+from ..constants import ROLE_ANGGOTA, ROLE_LABELS, ROLE_STAF_HUMAS
 from ..database import get_db
 from ..deps import csrf_protect, flash, get_current_user, require_user
 from ..models import (
     ApiToken,
     AuditLog,
+    HumasStaff,
+    HumasStaffAccount,
+    HumasStaffFaceLogin,
     Member,
     MemberAccount,
     MemberFaceLogin,
@@ -85,6 +88,24 @@ def _face_registered_ids(db: Session) -> set[int]:
     }
 
 
+def _face_staff(db: Session) -> list[HumasStaff]:
+    return (
+        db.query(HumasStaff)
+        .filter(HumasStaff.is_active.is_(True))
+        .order_by(HumasStaff.sort_order, HumasStaff.full_name)
+        .all()
+    )
+
+
+def _face_registered_staff_ids(db: Session) -> set[int]:
+    return {
+        row[0]
+        for row in db.query(HumasStaffFaceLogin.staff_id)
+        .filter(HumasStaffFaceLogin.is_active.is_(True))
+        .all()
+    }
+
+
 def _detect_login_face(raw: bytes):
     """Validasi unggahan lalu deteksi satu wajah tanpa menyimpan berkas permanen."""
     normalized = normalize_upload(raw, max_dimension=1400)
@@ -125,6 +146,36 @@ def _member_user(db: Session, member: Member) -> tuple[User, MemberAccount]:
     return user, account
 
 
+def _staff_user(db: Session, staff: HumasStaff) -> tuple[User, HumasStaffAccount]:
+    account = (
+        db.query(HumasStaffAccount)
+        .filter(HumasStaffAccount.staff_id == staff.id)
+        .first()
+    )
+    if account and account.user:
+        return account.user, account
+    username = f"humas{staff.id}"
+    suffix = 1
+    while db.query(User).filter(User.username == username).first():
+        suffix += 1
+        username = f"humas{staff.id}-{suffix}"
+    user = User(
+        username=username[:64],
+        full_name=staff.full_name[:160],
+        email=staff.email,
+        role=ROLE_STAF_HUMAS,
+        password_hash=hash_password(generate_password()),
+        is_active=True,
+        must_change_password=False,
+    )
+    db.add(user)
+    db.flush()
+    account = HumasStaffAccount(user_id=user.id, staff_id=staff.id)
+    db.add(account)
+    db.flush()
+    return user, account
+
+
 def _start_session(request: Request, user: User, *, method: str = "password") -> None:
     request.session.clear()
     request.session["user_id"] = user.id
@@ -149,6 +200,8 @@ def login_page(request: Request, next: str = "", db: Session = Depends(get_db)):
         demo_accounts=_demo_accounts(),
         face_members=_face_members(db),
         face_registered_ids=_face_registered_ids(db),
+        face_staff=_face_staff(db),
+        face_staff_registered_ids=_face_registered_staff_ids(db),
         face_available=face_engine.engine.available,
     )
 
@@ -205,6 +258,8 @@ def login(
             demo_accounts=_demo_accounts(),
             face_members=_face_members(db),
             face_registered_ids=_face_registered_ids(db),
+            face_staff=_face_staff(db),
+            face_staff_registered_ids=_face_registered_staff_ids(db),
             face_available=face_engine.engine.available,
         )
 
@@ -252,7 +307,7 @@ async def login_with_face(
     known = face_engine.engine.known_login_faces(db)
     if not known:
         return _face_error(
-            "Belum ada Face ID anggota yang terdaftar. Daftarkan wajah terlebih dahulu.",
+            "Belum ada Face ID yang terdaftar. Daftarkan wajah terlebih dahulu.",
             404,
         )
     matches = face_engine.engine.match(detected.encoding, known)
@@ -280,8 +335,49 @@ async def login_with_face(
         )
         db.commit()
         return _face_error(
-            "Wajah terlalu mirip dengan lebih dari satu anggota. Gunakan foto yang lebih jelas.",
+            "Wajah terlalu mirip dengan lebih dari satu orang. Gunakan foto yang lebih jelas.",
             401,
+        )
+
+    if best.kind == "staff":
+        staff = db.get(HumasStaff, best.member_id)
+        account = (
+            db.query(HumasStaffAccount)
+            .filter(HumasStaffAccount.staff_id == best.member_id)
+            .first()
+        )
+        if not staff or not staff.is_active or not account or not account.user:
+            return _face_error("Akun staf Humas tidak aktif. Hubungi Sekretariat DPRD.", 403)
+        user = account.user
+        if not user.is_active:
+            return _face_error("Akun staf Humas dinonaktifkan. Hubungi administrator.", 403)
+        login_face = db.get(HumasStaffFaceLogin, best.face_id)
+        if login_face:
+            login_face.last_used_at = utcnow()
+        account.last_face_login_at = utcnow()
+        user.failed_attempts = 0
+        user.locked_until = None
+        user.last_login_at = utcnow()
+        audit(
+            db,
+            request,
+            "FACE_LOGIN",
+            actor=user,
+            entity_type="staff",
+            entity_id=staff.id,
+            summary=f"{staff.full_name} masuk dengan Face ID sebagai staf Humas",
+            detail={"confidence": best.confidence, "distance": best.distance},
+        )
+        db.commit()
+        _start_session(request, user, method="face")
+        flash(request, f"Selamat datang, {staff.full_name}.", "success")
+        return JSONResponse(
+            {
+                "ok": True,
+                "redirect": f"/dashboard-staf/{staff.id}",
+                "name": staff.full_name,
+                "confidence": best.confidence,
+            }
         )
 
     member = db.get(Member, best.member_id)
@@ -327,7 +423,9 @@ async def login_with_face(
 @router.post("/login/wajah/daftar")
 async def enroll_face_login(
     request: Request,
-    member_id: int = Form(...),
+    member_id: int | None = Form(None),
+    staff_id: int | None = Form(None),
+    subject: str = Form(""),
     photo: UploadFile = File(...),
     consent: bool = Form(False),
     db: Session = Depends(get_db),
@@ -342,22 +440,52 @@ async def enroll_face_login(
         return _face_error(
             "Centang persetujuan penggunaan data biometrik untuk melanjutkan."
         )
-    member = db.get(Member, member_id)
-    if not member or not member.is_active:
-        return _face_error("Anggota tidak ditemukan atau sudah tidak aktif.", 404)
-    if not photo or not photo.filename:
-        return _face_error("Ambil atau pilih foto wajah terlebih dahulu.")
 
-    existing = (
-        db.query(MemberFaceLogin)
-        .filter(MemberFaceLogin.member_id == member.id, MemberFaceLogin.is_active.is_(True))
-        .first()
-    )
+    kind = "member"
+    subject_id = member_id
+    if subject:
+        raw_kind, _, raw_id = subject.partition(":")
+        if raw_kind in {"member", "staff"} and raw_id.isdigit():
+            kind = raw_kind
+            subject_id = int(raw_id)
+    elif staff_id:
+        kind = "staff"
+        subject_id = staff_id
+
+    if not subject_id:
+        return _face_error("Pilih nama Anda terlebih dahulu.")
+
+    if kind == "staff":
+        person = db.get(HumasStaff, subject_id)
+        if not person or not person.is_active:
+            return _face_error("Staf Humas tidak ditemukan atau sudah tidak aktif.", 404)
+        existing = (
+            db.query(HumasStaffFaceLogin)
+            .filter(
+                HumasStaffFaceLogin.staff_id == person.id,
+                HumasStaffFaceLogin.is_active.is_(True),
+            )
+            .first()
+        )
+    else:
+        person = db.get(Member, subject_id)
+        if not person or not person.is_active:
+            return _face_error("Anggota tidak ditemukan atau sudah tidak aktif.", 404)
+        existing = (
+            db.query(MemberFaceLogin)
+            .filter(
+                MemberFaceLogin.member_id == person.id,
+                MemberFaceLogin.is_active.is_(True),
+            )
+            .first()
+        )
     if existing:
         return _face_error(
-            "Face ID untuk anggota ini sudah terdaftar. Gunakan menu masuk dengan wajah.",
+            "Face ID untuk nama ini sudah terdaftar. Gunakan menu masuk dengan wajah.",
             409,
         )
+    if not photo or not photo.filename:
+        return _face_error("Ambil atau pilih foto wajah terlebih dahulu.")
 
     raw = await photo.read(settings.max_upload_bytes + 1)
     try:
@@ -372,36 +500,62 @@ async def enroll_face_login(
         matches = face_engine.engine.match(detected.encoding, known)
         if matches and matches[0].distance <= settings.face_login_tolerance:
             return _face_error(
-                "Wajah ini sudah terdaftar untuk anggota lain. Hubungi Sekretariat jika keliru.",
+                "Wajah ini sudah terdaftar untuk orang lain. Hubungi Sekretariat jika keliru.",
                 409,
             )
 
     saved: list[str] = []
     try:
-        rel_main, rel_thumb, _, _ = save_image(raw, "members", max_dimension=1400)
-        saved.extend([rel_main, rel_thumb])
-        login_face = MemberFaceLogin(
-            member_id=member.id,
-            image_path=rel_main,
-            encoding=detected.encoding,
-            quality=detected.quality,
+        rel_main, rel_thumb, _, _ = save_image(
+            raw, "staff" if kind == "staff" else "members", max_dimension=1400
         )
-        db.add(login_face)
-        user, account = _member_user(db, member)
-        if not user.is_active:
-            raise ValueError("Akun anggota dinonaktifkan.")
-        account.last_face_login_at = utcnow()
-        if not member.consent_granted_at:
-            member.consent_granted_at = utcnow()
-            member.consent_note = "Persetujuan Face ID tercatat pada halaman login."
+        saved.extend([rel_main, rel_thumb])
+        if kind == "staff":
+            db.add(
+                HumasStaffFaceLogin(
+                    staff_id=person.id,
+                    image_path=rel_main,
+                    encoding=detected.encoding,
+                    quality=detected.quality,
+                )
+            )
+            user, account = _staff_user(db, person)
+            if not user.is_active:
+                raise ValueError("Akun staf Humas dinonaktifkan.")
+            account.last_face_login_at = utcnow()
+            if not person.consent_granted_at:
+                person.consent_granted_at = utcnow()
+                person.consent_note = "Persetujuan Face ID tercatat pada halaman login."
+            entity_type = "staff"
+            redirect = f"/dashboard-staf/{person.id}"
+            message = f"Mendaftarkan Face ID untuk {person.full_name} (staf Humas) melalui halaman login"
+        else:
+            db.add(
+                MemberFaceLogin(
+                    member_id=person.id,
+                    image_path=rel_main,
+                    encoding=detected.encoding,
+                    quality=detected.quality,
+                )
+            )
+            user, account = _member_user(db, person)
+            if not user.is_active:
+                raise ValueError("Akun anggota dinonaktifkan.")
+            account.last_face_login_at = utcnow()
+            if not person.consent_granted_at:
+                person.consent_granted_at = utcnow()
+                person.consent_note = "Persetujuan Face ID tercatat pada halaman login."
+            entity_type = "member"
+            redirect = f"/dashboard-anggota/{person.id}"
+            message = f"Mendaftarkan Face ID untuk {person.full_name} melalui halaman login"
         audit(
             db,
             request,
             "FACE_LOGIN_ENROLL",
             actor=user,
-            entity_type="member",
-            entity_id=member.id,
-            summary=f"Mendaftarkan Face ID untuk {member.full_name} melalui halaman login",
+            entity_type=entity_type,
+            entity_id=person.id,
+            summary=message,
             detail={"quality": detected.quality},
         )
         db.commit()
@@ -412,12 +566,12 @@ async def enroll_face_login(
         return _face_error(f"Pendaftaran Face ID gagal: {exc}", 400)
 
     _start_session(request, user, method="face")
-    flash(request, f"Face ID {member.full_name} berhasil didaftarkan.", "success")
+    flash(request, f"Face ID {person.full_name} berhasil didaftarkan.", "success")
     return JSONResponse(
         {
             "ok": True,
-            "redirect": f"/dashboard-anggota/{member.id}",
-            "name": member.full_name,
+            "redirect": redirect,
+            "name": person.full_name,
         }
     )
 
