@@ -56,8 +56,23 @@ def cmd_init_db(_args) -> int:
     return 0
 
 
+def _blocked_in_production(action: str) -> bool:
+    """Tolak perintah yang mengisi ulang/menimpa data production."""
+    if not settings.is_production:
+        return False
+    print(
+        f"Menolak `{action}` di production: data production tidak boleh diisi ulang. "
+        "Supabase dan HF S3 dibiarkan apa adanya.",
+        file=sys.stderr,
+    )
+    return True
+
+
 def cmd_seed(args) -> int:
     from .services.seed import seed_demo
+
+    if _blocked_in_production("seed"):
+        return 2
 
     init_db()
     db = _db()
@@ -81,6 +96,9 @@ def cmd_seed(args) -> int:
 
 def cmd_seed_staff(_args) -> int:
     """Isi tabel staf Humas dari daftar resmi (idempoten)."""
+    if _blocked_in_production("seed-staff"):
+        return 2
+
     init_db()
     from .services.seed import HUMAS_STAFF, _staff_portrait_source
     from .services.images import (
@@ -270,6 +288,9 @@ def cmd_stats(_args) -> int:
 
 
 def cmd_resync(args) -> int:
+    if _blocked_in_production("resync"):
+        return 2
+
     init_db()
     from .services import media_sync, supabase_sync
 
@@ -362,6 +383,9 @@ def cmd_sync_status(_args) -> int:
 
 def cmd_upgrade_portraits(args) -> int:
     """Naikkan potret lama (thumbnail) ke gambar utama resolusi penuh."""
+    if _blocked_in_production("upgrade-portraits"):
+        return 2
+
     init_db()
     from .services import media_sync
     from .services.images import (

@@ -128,6 +128,11 @@ Media akan diunduh kembali dari HF S3 saat pertama kali diakses.
 
 ### Catatan operasional
 
+- **Tidak ada seed otomatis.** Saat container mulai, aplikasi hanya menjalankan
+  `init-db` (membuat tabel yang belum ada). Data production di Supabase dan HF S3
+  tidak pernah diisi ulang.
+- Perintah `seed`, `seed-staff`, `upgrade-portraits`, dan `resync` **diblokir
+  total** saat `SIDEWA_ENV=production`. Tidak ada flag bypass.
 - **Jangan** menjalankan `resync --truncate` saat ada perubahan lokal yang belum
   terkirim; jalankan `python -m app.cli sync` terlebih dahulu.
 - Hanya satu worker yang memegang lock sinkronisasi (leader election via
@@ -167,16 +172,15 @@ docker compose up -d --build
 Stack: PostgreSQL 17, aplikasi FastAPI (4 worker), Nginx reverse proxy. Volume
 `media_data` dan `postgres_data`.
 
-Saat container mulai, aplikasi otomatis menjalankan `seed-staff` (idempoten)
-sehingga daftar 33 staf Humas beserta **foto resolusi penuh** dari
-`seed_assets/staff_portraits/` langsung tersedia di server baru — tanpa unggah
-manual. Nonaktifkan dengan `SIDEWA_SEED_STAFF=false` bila data staf dikelola
-sepenuhnya dari database lain.
+Saat container mulai, aplikasi **hanya** menyiapkan tabel yang belum ada
+(`init-db`). Tidak ada seed demo maupun `seed-staff` otomatis: data production
+di Supabase dan HF S3 dibiarkan apa adanya.
 
-Muat data demo (opsional, hanya non-produksi):
+Untuk pengembangan non-produksi, isi data demo secara manual:
 
 ```bash
-SIDEWA_SEED_DEMO=true docker compose up -d
+SIDEWA_ENV=development python -m app.cli seed --force
+SIDEWA_ENV=development python -m app.cli seed-staff
 ```
 
 ## Produksi tanpa Docker (stack mandiri)
@@ -186,7 +190,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env  # edit
 python -m app.cli init-db
-python -m app.cli seed-staff   # daftar + foto staf Humas (idempoten)
+# Seed/seed-staff/resync sengaja tidak dijalankan di production.
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers
 ```
 

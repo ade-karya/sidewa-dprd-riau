@@ -62,8 +62,8 @@ python -m venv .venv && source .venv/bin/activate
 make install-dev
 cp .env.example .env   # sesuaikan bila perlu
 make init
-make seed              # data demo (opsional)
-make seed-staff        # daftar + foto staf Humas resolusi penuh (idempoten)
+make seed              # data demo (hanya development, tidak untuk production)
+make seed-staff        # daftar + foto staf Humas (hanya development)
 make run               # http://127.0.0.1:8000
 ```
 
@@ -152,7 +152,7 @@ Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Var
 
 ```bash
 python -m app.cli init-db
-python -m app.cli seed --force
+python -m app.cli seed --force   # HAPUS semua data; diblokir di production
 python -m app.cli create-user --username nama --name "Nama" --role humas
 python -m app.cli reindex [--activity ID]
 python -m app.cli stats

@@ -530,6 +530,11 @@ def truncate_supabase() -> None:
 
 def copy_local_to_supabase(*, truncate: bool = False) -> dict[str, int]:
     """Salin seluruh data lokal ke Supabase (upsert, opsional truncate dulu)."""
+    if settings.is_production:
+        raise RuntimeError(
+            "copy_local_to_supabase() diblokir di production: data Supabase "
+            "tidak boleh diisi ulang."
+        )
     if not enabled():
         raise RuntimeError("Sinkronisasi Supabase belum dikonfigurasi.")
     if not _ensure_schema_ready(force=True, wait=True):

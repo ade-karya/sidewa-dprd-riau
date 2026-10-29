@@ -17,7 +17,7 @@ from pathlib import Path
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from ..config import BASE_DIR
+from ..config import BASE_DIR, settings
 from ..constants import (
     ROLE_ADMIN,
     ROLE_HUMAS,
@@ -1028,6 +1028,11 @@ def _staff_portrait_source(index: int, full_name: str) -> Path | None:
 
 
 def seed_demo(db: Session, *, force: bool = False) -> dict:
+    if settings.is_production:
+        raise RuntimeError(
+            "seed_demo() diblokir di production: data production tidak boleh diisi ulang. "
+            "Supabase dan HF S3 harus dibiarkan apa adanya."
+        )
     if db.query(Commission).count() and not force:
         return {
             "skipped": True,
