@@ -863,9 +863,6 @@
   }
   if (aiNarrate) {
     aiNarrate.addEventListener("click", () => {
-      if (aiPanel && aiPanel.classList.contains("is-minimized")) {
-        setAiMinimized(false, true);
-      }
       sendQuestion(
         "Jelaskan halaman ini kepada anggota dewan dengan bahasa presentasi yang singkat, jelas, dan meyakinkan.",
         "Jelaskan halaman ini"
