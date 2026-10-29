@@ -32,6 +32,8 @@ RUN pip install --upgrade pip && pip install -r requirements.txt \
     && apt-get autoremove -y
 
 COPY app ./app
+# Foto contoh staf untuk `python -m app.cli seed-staff` (idempoten).
+COPY seed_assets ./seed_assets
 COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && addgroup --system sidewa \

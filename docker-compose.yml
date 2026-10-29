@@ -31,6 +31,9 @@ services:
       SIDEWA_TRUSTED_HOSTS: ${SIDEWA_TRUSTED_HOSTS:-localhost,127.0.0.1}
     volumes:
       - media_data:/app/data/media
+      # Opsional: berkas identitas anggota (dibuat dari data DB / manual).
+      # Hapus baris ini bila berkas tidak tersedia di server.
+      - ./data/member_identity.json:/app/data/member_identity.json:ro
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
@@ -48,6 +51,7 @@ services:
         condition: service_healthy
     volumes:
       - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
       - media_data:/var/www/media:ro
     ports:
       - "80:80"

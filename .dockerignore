@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+
+# Secrets & local env
+.env
+.env.*
+
+# Data & media (runtime, tidak perlu masuk image)
+data/
+media/
+uploads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

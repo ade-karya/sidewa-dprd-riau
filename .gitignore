@@ -24,6 +24,10 @@ htmlcov/
 coverage.xml
 .mypy_cache/
 
+# Sertifikat TLS (jangan commit)
+deploy/certs/*
+!deploy/certs/README.md
+
 # Editor / OS
 .DS_Store
 .idea/
