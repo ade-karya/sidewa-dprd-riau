@@ -1,6 +1,9 @@
 """Pengujian direktori, ruang kerja, dan Face ID staf Humas."""
 
+from io import BytesIO
 from pathlib import Path
+
+from PIL import Image
 
 from tests.conftest import get_csrf, login
 
@@ -56,6 +59,30 @@ def test_seeded_staff_directory_and_dashboard(seeded_client):
     assert "Ruang kerja saya" in response.text
     assert "Face ID login" in response.text
     assert "Tugas &amp; fungsi Humas" in response.text
+
+
+def test_staff_portrait_media_is_served(seeded_client):
+    """Foto staf Humas harus dapat diakses dan beresolusi tinggi."""
+    from app.database import SessionLocal
+    from app.models import HumasStaff
+
+    test_client, _ = seeded_client
+    login(test_client, "superadmin", "Riau#Admin2026")
+    staff_id, _ = _staff()
+
+    db = SessionLocal()
+    try:
+        staff = db.get(HumasStaff, staff_id)
+        portrait_path = staff.portrait_path
+    finally:
+        db.close()
+
+    assert portrait_path
+    response = test_client.get(f"/media/{portrait_path}")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    image = Image.open(BytesIO(response.content))
+    assert max(image.size) >= 1000
 
 
 def test_staff_face_enrollment_and_login(seeded_client):

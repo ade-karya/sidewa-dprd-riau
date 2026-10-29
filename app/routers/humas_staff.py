@@ -160,7 +160,9 @@ async def upload_staff_portrait(
         return RedirectResponse(f"/dashboard-staf/{staff.id}", status_code=303)
     raw = await portrait.read(settings.max_upload_bytes + 1)
     try:
-        rel_main, rel_thumb, _, _ = save_image(raw, "staff", max_dimension=1600)
+        rel_main, rel_thumb, _, _ = save_image(
+            raw, "staff", max_dimension=2000, thumb_dimension=1200
+        )
     except ImageValidationError as exc:
         flash(request, str(exc), "danger")
         return RedirectResponse(f"/dashboard-staf/{staff.id}", status_code=303)

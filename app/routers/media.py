@@ -12,7 +12,14 @@ from ..config import settings
 from ..constants import CONTENT_MANAGER_ROLES, STATUS_PUBLISHED
 from ..database import get_db
 from ..deps import require_user
-from ..models import ActivityPhoto, Member, MemberFace, MemberFaceLogin, User
+from ..models import (
+    ActivityPhoto,
+    HumasStaff,
+    Member,
+    MemberFace,
+    MemberFaceLogin,
+    User,
+)
 from ..services.images import absolute_path
 
 router = APIRouter()
@@ -48,6 +55,7 @@ def serve_media(
             db.query(MemberFace).filter(MemberFace.image_path == path).first()
             or db.query(MemberFaceLogin).filter(MemberFaceLogin.image_path == path).first()
             or db.query(Member).filter(Member.portrait_path == path).first()
+            or db.query(HumasStaff).filter(HumasStaff.portrait_path == path).first()
         )
         if not member_media:
             raise HTTPException(status_code=404, detail="Media tidak ditemukan.")

@@ -32,7 +32,9 @@ class NormalizedImage:
     height: int
 
 
-def _clean_image(img: Image.Image, max_dimension: int) -> tuple[bytes, bytes, int, int]:
+def _clean_image(
+    img: Image.Image, max_dimension: int, thumb_dimension: int = 760
+) -> tuple[bytes, bytes, int, int]:
     try:
         img.seek(0)
     except Exception:
@@ -51,14 +53,16 @@ def _clean_image(img: Image.Image, max_dimension: int) -> tuple[bytes, bytes, in
     clean.save(main_buf, format="JPEG", quality=88, optimize=True, progressive=True)
 
     thumb = clean.copy()
-    thumb.thumbnail((760, 760), Image.Resampling.LANCZOS)
+    thumb.thumbnail((thumb_dimension, thumb_dimension), Image.Resampling.LANCZOS)
     thumb_buf = io.BytesIO()
     thumb.save(thumb_buf, format="JPEG", quality=82, optimize=True, progressive=True)
 
     return main_buf.getvalue(), thumb_buf.getvalue(), width, height
 
 
-def normalize_upload(raw: bytes, *, max_dimension: int = 2560) -> NormalizedImage:
+def normalize_upload(
+    raw: bytes, *, max_dimension: int = 2560, thumb_dimension: int = 760
+) -> NormalizedImage:
     if not raw:
         raise ImageValidationError("Berkas gambar kosong.")
     if len(raw) > settings.max_upload_bytes:
@@ -83,7 +87,7 @@ def normalize_upload(raw: bytes, *, max_dimension: int = 2560) -> NormalizedImag
         if img.format not in ALLOWED_FORMATS:
             raise ImageValidationError("Format gambar harus JPG, PNG, atau WEBP.")
         img.load()
-        data, thumb, w, h = _clean_image(img, max_dimension)
+        data, thumb, w, h = _clean_image(img, max_dimension, thumb_dimension)
         return NormalizedImage(data=data, thumbnail=thumb, width=w, height=h)
     except ImageValidationError:
         raise
@@ -99,9 +103,13 @@ def _kind_dir(kind: str) -> Path:
     return directory
 
 
-def save_image(raw: bytes, kind: str, *, max_dimension: int = 2560) -> tuple[str, str, int, int]:
+def save_image(
+    raw: bytes, kind: str, *, max_dimension: int = 2560, thumb_dimension: int = 760
+) -> tuple[str, str, int, int]:
     """Simpan gambar + thumbnail. Mengembalikan path relatif."""
-    normalized = normalize_upload(raw, max_dimension=max_dimension)
+    normalized = normalize_upload(
+        raw, max_dimension=max_dimension, thumb_dimension=thumb_dimension
+    )
     directory = _kind_dir(kind)
     stem = uuid4().hex
     main_name = f"{stem}_{secrets.token_hex(2)}.jpg"
@@ -145,8 +153,19 @@ def delete_paths(*relative_paths: str | None) -> None:
 
 
 def copy_seed_image(source: Path, kind: str) -> tuple[str, str, int, int]:
+    if kind == "activities":
+        max_dimension, thumb_dimension = 2000, 760
+    elif kind == "staff":
+        # Foto staf Humas ditampilkan cukup besar pada kartu direktori dan
+        # ruang kerja, jadi simpan thumbnail resolusi tinggi (hingga 1200 px).
+        max_dimension, thumb_dimension = 2000, 1200
+    else:
+        max_dimension, thumb_dimension = 1200, 760
     return save_image(
-        source.read_bytes(), kind, max_dimension=2000 if kind == "activities" else 1200
+        source.read_bytes(),
+        kind,
+        max_dimension=max_dimension,
+        thumb_dimension=thumb_dimension,
     )
 
 
