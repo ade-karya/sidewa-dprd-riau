@@ -1653,7 +1653,7 @@ body.guide-open .guide-fab { opacity: 0; pointer-events: none; }
   box-shadow: 0 18px 48px rgba(0,0,0,.34);
 }
 .guide-ai.is-minimized .guide-ai-head { border-bottom: 0; border-radius: inherit; }
-.guide-ai.is-minimized .guide-ai-context,
+/* Tombol "Jelaskan halaman ini" tetap terlihat saat asisten diminimize. */
 .guide-ai.is-minimized .guide-ai-log,
 .guide-ai.is-minimized .guide-ai-form,
 .guide-ai.is-minimized .guide-ai-foot { display: none; }
