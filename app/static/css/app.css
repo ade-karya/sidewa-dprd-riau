@@ -1646,6 +1646,19 @@ body.guide-open .guide-fab { opacity: 0; pointer-events: none; }
 .guide-ai-head .guide-tool { width: 32px; height: 32px; border-color: transparent; background: transparent; color: var(--muted); }
 .guide-ai-head .guide-tool:hover { background: #fff; color: var(--purple); }
 
+/* Panel diciutkan: hanya bilah header yang tersisa, sesi tetap berjalan. */
+.guide-ai.is-minimized {
+  top: auto; bottom: 66px; height: auto;
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgba(0,0,0,.34);
+}
+.guide-ai.is-minimized .guide-ai-head { border-bottom: 0; border-radius: inherit; }
+.guide-ai.is-minimized .guide-ai-context,
+.guide-ai.is-minimized .guide-ai-log,
+.guide-ai.is-minimized .guide-ai-form,
+.guide-ai.is-minimized .guide-ai-foot { display: none; }
+.guide-ai.is-minimized .guide-ai-id { cursor: pointer; }
+
 .guide-ai-context { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; background: #fff; border-bottom: 1px solid var(--line); }
 .guide-ai-context-label { display: inline-flex; align-items: center; gap: 5px; min-width: 0; font-size: 9.8px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .guide-ai-context-label .icon { width: 13px; height: 13px; color: var(--purple); flex: none; }
@@ -1696,6 +1709,7 @@ body.guide-open .guide-fab { opacity: 0; pointer-events: none; }
   .guide-ai-chip-label { display: none; }
   .guide-tool-ai { width: 34px; padding: 0; justify-content: center; }
   .guide-ai { position: fixed; top: 56px; left: 8px; right: 8px; bottom: 54px; width: auto; border-radius: 18px; }
+  .guide-ai.is-minimized { top: auto; bottom: 54px; }
   .guide-ai-head { padding: 11px 12px; }
   .guide-ai-log { padding: 12px; }
   .guide-ai-msg.is-user .guide-ai-bubble { max-width: 90%; }

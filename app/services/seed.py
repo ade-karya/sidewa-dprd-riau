@@ -52,7 +52,7 @@ from ..models import (
 )
 from ..security import generate_password, hash_password
 from . import face_engine, jobs
-from .images import ImageValidationError, copy_seed_image, delete_paths
+from .images import ImageValidationError, copy_seed_image, delete_image, delete_paths
 
 logger = logging.getLogger("sidewa.seed")
 
@@ -1001,9 +1001,9 @@ def _wipe_media(db: Session) -> None:
     for face in staff_faces:
         delete_paths(face.image_path)
     for member in members:
-        delete_paths(member.portrait_path)
+        delete_image(member.portrait_path)
     for staff in staff_rows:
-        delete_paths(staff.portrait_path)
+        delete_image(staff.portrait_path)
 
 
 def _staff_portrait_source(index: int, full_name: str) -> Path | None:
@@ -1078,8 +1078,8 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
         portrait_source = _staff_portrait_source(index, full_name)
         if portrait_source:
             try:
-                _, rel_thumb, _, _ = copy_seed_image(portrait_source, "staff")
-                staff.portrait_path = rel_thumb
+                rel_main, _, _, _ = copy_seed_image(portrait_source, "staff")
+                staff.portrait_path = rel_main
             except (ImageValidationError, OSError):
                 logger.warning(
                     "Foto staf %s dilewati karena berkas tidak valid: %s",
@@ -1133,7 +1133,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
         source = ASSETS / portrait_rel if portrait_rel else None
         if source and source.exists():
             rel_main, rel_thumb, _, _ = copy_seed_image(source, "members")
-            member.portrait_path = rel_thumb
+            member.portrait_path = rel_main
             db.flush()
             try:
                 detected = face_engine.engine.detect_single(source)

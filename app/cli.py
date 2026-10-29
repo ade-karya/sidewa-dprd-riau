@@ -83,21 +83,31 @@ def cmd_seed_staff(_args) -> int:
     """Isi tabel staf Humas dari daftar resmi (idempoten)."""
     init_db()
     from .services.seed import HUMAS_STAFF, _staff_portrait_source
-    from .services.images import ImageValidationError, copy_seed_image
+    from .services.images import (
+        ImageValidationError,
+        copy_seed_image,
+        delete_image,
+        full_path,
+    )
 
     db = _db()
     try:
         inserted = 0
         updated = 0
+        replaced: list[str] = []
         for index, (full_name, position) in enumerate(HUMAS_STAFF, start=1):
             staff = db.query(HumasStaff).filter(HumasStaff.full_name == full_name).first()
             if staff:
-                if not staff.portrait_path:
+                current = staff.portrait_path
+                # Pasang foto baru atau naikkan thumbnail lama ke gambar utama.
+                if not current or full_path(current) != current:
                     source = _staff_portrait_source(index, full_name)
                     if source:
                         try:
-                            _, rel_thumb, _, _ = copy_seed_image(source, "staff")
-                            staff.portrait_path = rel_thumb
+                            rel_main, _, _, _ = copy_seed_image(source, "staff")
+                            if current:
+                                replaced.append(current)
+                            staff.portrait_path = rel_main
                             updated += 1
                         except (ImageValidationError, OSError):
                             logger.warning("Foto staf %s dilewati: %s", full_name, source)
@@ -118,13 +128,15 @@ def cmd_seed_staff(_args) -> int:
             source = _staff_portrait_source(index, full_name)
             if source:
                 try:
-                    _, rel_thumb, _, _ = copy_seed_image(source, "staff")
-                    staff.portrait_path = rel_thumb
+                    rel_main, _, _, _ = copy_seed_image(source, "staff")
+                    staff.portrait_path = rel_main
                 except (ImageValidationError, OSError):
                     logger.warning("Foto staf %s dilewati: %s", full_name, source)
             db.add(staff)
             inserted += 1
         db.commit()
+        for old_path in replaced:
+            delete_image(old_path)
         print(
             f"Staf Humas: {inserted} baru, "
             f"{len(HUMAS_STAFF) - inserted} sudah ada, "
@@ -348,6 +360,94 @@ def cmd_sync_status(_args) -> int:
     return 0
 
 
+def cmd_upgrade_portraits(args) -> int:
+    """Naikkan potret lama (thumbnail) ke gambar utama resolusi penuh."""
+    init_db()
+    from .services import media_sync
+    from .services.images import (
+        ImageValidationError,
+        copy_seed_image,
+        ensure_thumbnail,
+    )
+    from .services.seed import ASSETS, HUMAS_STAFF, MEMBER_PORTRAITS, _staff_portrait_source
+
+    dry_run = bool(getattr(args, "dry_run", False))
+    db = _db()
+    members_updated = staff_updated = skipped = 0
+    try:
+        for member in db.query(Member).all():
+            current = member.portrait_path
+            if current and not current.endswith("_thumb.jpg"):
+                continue
+            faces = sorted(
+                member.faces,
+                key=lambda face: (not face.is_primary, face.id or 0),
+            )
+            main = next(
+                (
+                    face.image_path
+                    for face in faces
+                    if face.image_path and not face.image_path.endswith("_thumb.jpg")
+                ),
+                None,
+            )
+            if main and not dry_run:
+                # Pastikan thumbnail pendamping ada agar kartu/avatar tetap ringan.
+                if ensure_thumbnail(main, thumb_dimension=760) is None:
+                    main = None
+            if not main:
+                source_rel = MEMBER_PORTRAITS.get(member.full_name)
+                source = ASSETS / source_rel if source_rel else None
+                if not source or not source.exists():
+                    skipped += 1
+                    continue
+                if not dry_run:
+                    try:
+                        main, _, _, _ = copy_seed_image(source, "members")
+                    except (ImageValidationError, OSError):
+                        logger.warning("Potret %s dilewati: %s", member.full_name, source)
+                        skipped += 1
+                        continue
+            if not dry_run:
+                member.portrait_path = main
+            members_updated += 1
+
+        for index, (full_name, _position) in enumerate(HUMAS_STAFF, start=1):
+            staff = db.query(HumasStaff).filter(HumasStaff.full_name == full_name).first()
+            if not staff or not staff.portrait_path:
+                continue
+            if not staff.portrait_path.endswith("_thumb.jpg"):
+                continue
+            source = _staff_portrait_source(index, full_name)
+            if not source:
+                skipped += 1
+                continue
+            if not dry_run:
+                try:
+                    main, _, _, _ = copy_seed_image(source, "staff")
+                except (ImageValidationError, OSError):
+                    logger.warning("Foto staf %s dilewati: %s", full_name, source)
+                    skipped += 1
+                    continue
+                staff.portrait_path = main
+            staff_updated += 1
+
+        if not dry_run:
+            db.commit()
+            uploaded = media_sync.sync_all()
+        else:
+            uploaded = 0
+        print(
+            f"Potret: {staff_updated} staf, {members_updated} anggota "
+            f"dinaikkan ke gambar utama, {skipped} dilewati"
+            + (f", {uploaded} berkas diunggah" if uploaded else "")
+            + (" (dry-run)." if dry_run else ".")
+        )
+    finally:
+        db.close()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="Utilitas SIDEWA")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -361,6 +461,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("seed-staff", help="Isi tabel staf Humas dari daftar resmi (idempoten)")
     p.set_defaults(func=cmd_seed_staff)
+
+    p = sub.add_parser(
+        "upgrade-portraits",
+        help="Naikkan potret staf/anggota lama dari thumbnail ke gambar utama",
+    )
+    p.add_argument("--dry-run", action="store_true", help="Hitung saja tanpa mengubah data")
+    p.set_defaults(func=cmd_upgrade_portraits)
 
     p = sub.add_parser("create-user", help="Buat akun pengguna baru")
     p.add_argument("--username", required=True)

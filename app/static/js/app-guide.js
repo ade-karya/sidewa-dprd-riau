@@ -30,6 +30,9 @@
   const aiSend = root.querySelector("[data-guide-ai-send]");
   const aiMic = root.querySelector("[data-guide-ai-mic]");
   const aiMute = root.querySelector("[data-guide-ai-mute]");
+  const aiMinimize = root.querySelector("[data-guide-ai-minimize]");
+  const aiMinimizeIcon = aiMinimize ? aiMinimize.querySelector("use") : null;
+  const aiHead = root.querySelector(".guide-ai-head");
   const aiNarrate = root.querySelector("[data-guide-ai-narrate]");
   const aiReconnect = root.querySelector("[data-guide-ai-reconnect]");
   const aiMode = root.querySelector("[data-guide-ai-mode]");
@@ -739,8 +742,35 @@
     );
   }
 
+  function setAiMinimized(minimized, focusInput = false) {
+    if (!aiPanel) return;
+    aiPanel.classList.toggle("is-minimized", minimized);
+    if (aiMinimize) {
+      aiMinimize.setAttribute("aria-expanded", minimized ? "false" : "true");
+      aiMinimize.setAttribute(
+        "aria-label",
+        minimized ? "Perluas asisten AI SIDEWA" : "Ciutkan asisten AI SIDEWA"
+      );
+      aiMinimize.title = minimized ? "Perluas asisten" : "Ciutkan asisten";
+    }
+    if (aiMinimizeIcon) {
+      aiMinimizeIcon.setAttribute("href", minimized ? "#i-chevron-up" : "#i-chevron-down");
+    }
+    if (!minimized && focusInput) {
+      window.setTimeout(() => {
+        if (aiInput && !aiInput.disabled) aiInput.focus({ preventScroll: true });
+      }, 80);
+    }
+  }
+
+  function toggleAiMinimized() {
+    if (!aiPanel || aiPanel.hidden) return;
+    setAiMinimized(!aiPanel.classList.contains("is-minimized"));
+  }
+
   function openAi() {
     if (!aiPanel) return;
+    setAiMinimized(false);
     aiPanel.hidden = false;
     if (aiToggle) {
       aiToggle.setAttribute("aria-expanded", "true");
@@ -756,6 +786,7 @@
 
   function closeAi() {
     if (!aiPanel || aiPanel.hidden) return;
+    setAiMinimized(false);
     aiPanel.hidden = true;
     if (aiToggle) {
       aiToggle.setAttribute("aria-expanded", "false");
@@ -781,13 +812,25 @@
 
   if (aiToggle) {
     aiToggle.addEventListener("click", () => {
-      if (aiPanel && aiPanel.hidden) openAi();
+      if (!aiPanel) return;
+      if (aiPanel.hidden) openAi();
+      else if (aiPanel.classList.contains("is-minimized")) setAiMinimized(false, true);
       else closeAi();
     });
   }
   root.querySelectorAll("[data-guide-ai-close]").forEach((button) => {
     button.addEventListener("click", closeAi);
   });
+  if (aiMinimize) {
+    aiMinimize.addEventListener("click", toggleAiMinimized);
+  }
+  if (aiHead) {
+    aiHead.addEventListener("click", (event) => {
+      if (!aiPanel || !aiPanel.classList.contains("is-minimized")) return;
+      if (event.target.closest("button")) return;
+      setAiMinimized(false, true);
+    });
+  }
   root.querySelectorAll("[data-guide-ask]").forEach((button) => {
     button.addEventListener("click", () => sendQuestion(button.dataset.guideAsk));
   });
@@ -909,7 +952,9 @@
       toggleFullscreen();
     } else if (key.toLowerCase() === "a") {
       event.preventDefault();
-      if (aiPanel && aiPanel.hidden) openAi();
+      if (!aiPanel) return;
+      if (aiPanel.hidden) openAi();
+      else if (aiPanel.classList.contains("is-minimized")) setAiMinimized(false, true);
       else closeAi();
     }
   });

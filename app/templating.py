@@ -29,6 +29,8 @@ from .constants import (
 )
 from .deps import consume_flashes
 from .security import new_csrf_token
+from .services.images import full_path as media_full
+from .services.images import thumb_path as media_thumb
 from .utils import (
     format_date_id,
     format_date_short_id,
@@ -51,6 +53,8 @@ templates.env.filters.update(
         "filesize": human_filesize,
         "initials": initials,
         "time_range": time_range,
+        "media_full": media_full,
+        "media_thumb": media_thumb,
     }
 )
 

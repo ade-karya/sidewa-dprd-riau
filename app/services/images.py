@@ -19,6 +19,40 @@ logger = logging.getLogger("sidewa.images")
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
+THUMB_SUFFIX = "_thumb"
+
+
+def thumb_path(relative_path: str | None) -> str | None:
+    """Path thumbnail pendamping untuk sebuah gambar utama."""
+    if not relative_path:
+        return None
+    path = Path(relative_path)
+    if path.stem.endswith(THUMB_SUFFIX):
+        return relative_path
+    return path.with_name(f"{path.stem}{THUMB_SUFFIX}{path.suffix or '.jpg'}").as_posix()
+
+
+def full_path(relative_path: str | None) -> str | None:
+    """Path gambar utama, termasuk saat yang diberikan adalah thumbnail."""
+    if not relative_path:
+        return None
+    path = Path(relative_path)
+    if not path.stem.endswith(THUMB_SUFFIX):
+        return relative_path
+    stem = path.stem[: -len(THUMB_SUFFIX)]
+    return path.with_name(f"{stem}{path.suffix or '.jpg'}").as_posix()
+
+
+def path_variants(relative_path: str) -> list[str]:
+    """Kandidat berkas: path yang diminta, lalu pasangan utama/thumbnail."""
+    full = full_path(relative_path)
+    thumb = thumb_path(full)
+    variants = [relative_path]
+    for candidate in (full, thumb):
+        if candidate and candidate not in variants:
+            variants.append(candidate)
+    return variants
+
 
 class ImageValidationError(ValueError):
     pass
@@ -112,8 +146,9 @@ def save_image(
     )
     directory = _kind_dir(kind)
     stem = uuid4().hex
-    main_name = f"{stem}_{secrets.token_hex(2)}.jpg"
-    thumb_name = f"{stem}_{secrets.token_hex(2)}_thumb.jpg"
+    suffix = secrets.token_hex(2)
+    main_name = f"{stem}_{suffix}.jpg"
+    thumb_name = f"{stem}_{suffix}_thumb.jpg"
     (directory / main_name).write_bytes(normalized.data)
     (directory / thumb_name).write_bytes(normalized.thumbnail)
     rel_main = (directory / main_name).relative_to(settings.media_root).as_posix()
@@ -150,6 +185,57 @@ def delete_paths(*relative_paths: str | None) -> None:
             media_sync.enqueue_delete(rel)
         except Exception:
             logger.exception("Gagal memasukkan media ke antrean hapus HF S3: %s", rel)
+
+
+def delete_image(relative_path: str | None) -> None:
+    """Hapus gambar utama beserta thumbnail pendampingnya."""
+    if not relative_path:
+        return
+    delete_paths(full_path(relative_path), thumb_path(relative_path))
+
+
+def ensure_thumbnail(relative_path: str, *, thumb_dimension: int = 760) -> str | None:
+    """Pastikan thumbnail pendamping ada; buat dari gambar utama bila perlu."""
+    main = full_path(relative_path) or relative_path
+    thumb = thumb_path(main)
+    if not thumb:
+        return None
+    destination = absolute_path(thumb)
+    if destination.is_file():
+        return thumb
+
+    source = absolute_path(main)
+    if not source.is_file():
+        try:
+            from . import media_sync
+
+            if not media_sync.download_to_cache(main):
+                return None
+        except Exception:
+            logger.exception("Gagal mengunduh gambar utama %s", main)
+            return None
+
+    try:
+        with Image.open(source) as img:
+            img = ImageOps.exif_transpose(img)
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img.thumbnail((thumb_dimension, thumb_dimension), Image.Resampling.LANCZOS)
+            buffer = io.BytesIO()
+            img.save(buffer, format="JPEG", quality=82, optimize=True, progressive=True)
+    except Exception:
+        logger.exception("Gagal membuat thumbnail untuk %s", main)
+        return None
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(buffer.getvalue())
+    try:
+        from . import media_sync
+
+        media_sync.enqueue_upload(thumb)
+    except Exception:
+        logger.exception("Gagal memasukkan thumbnail %s ke antrean HF S3", thumb)
+    return thumb
 
 
 def copy_seed_image(source: Path, kind: str) -> tuple[str, str, int, int]:

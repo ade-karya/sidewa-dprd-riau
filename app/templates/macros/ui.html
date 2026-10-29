@@ -4,7 +4,7 @@
 
 {% macro avatar(name, path=None, size='md', cls='') -%}
 <span class="avatar avatar-{{ size }} {{ cls }}">
-  {% if path %}<img src="/media/{{ path }}" alt="{{ name }}" loading="lazy">{% else %}<span>{{ name|initials }}</span>{% endif %}
+  {% if path %}<img src="/media/{{ path|media_thumb }}" alt="{{ name }}" loading="lazy">{% else %}<span>{{ name|initials }}</span>{% endif %}
 </span>
 {%- endmacro %}
 
@@ -74,7 +74,7 @@
 <a class="member-card" href="/anggota/{{ member.id }}">
   <div class="member-portrait">
     {% if member.portrait_path %}
-      <img src="/media/{{ member.portrait_path }}" alt="{{ member.full_name }}" loading="lazy">
+      <img src="/media/{{ member.portrait_path|media_thumb }}" alt="{{ member.full_name }}" loading="lazy">
     {% else %}
       <span class="portrait-initials">{{ member.full_name|initials }}</span>
     {% endif %}

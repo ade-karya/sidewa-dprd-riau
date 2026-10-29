@@ -13,7 +13,7 @@
 <section class="member-detail-hero">
   <div class="member-photo-large">
     {% if member.portrait_path %}
-    <img src="/media/{{ member.portrait_path }}" alt="{{ member.full_name }}">
+    <img src="/media/{{ member.portrait_path|media_full }}" alt="{{ member.full_name }}">
     {% else %}
     <span class="portrait-initials">{{ member.full_name|initials }}</span>
     {% endif %}

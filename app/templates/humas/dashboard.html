@@ -14,7 +14,7 @@
 <section class="member-dash-hero staff-dash-hero">
   <div class="member-dash-photo">
     {% if staff.portrait_path %}
-    <img src="/media/{{ staff.portrait_path }}" alt="{{ staff.full_name }}">
+    <img src="/media/{{ staff.portrait_path|media_full }}" alt="{{ staff.full_name }}">
     {% else %}
     <span class="portrait-initials">{{ staff.full_name|initials }}</span>
     {% endif %}
@@ -266,7 +266,7 @@
     <section class="section-card">
       <h2>{{ icon('image') }} Foto profil</h2>
       {% if staff.portrait_path %}
-      <img class="staff-portrait-preview" src="/media/{{ staff.portrait_path }}" alt="{{ staff.full_name }}">
+      <img class="staff-portrait-preview" src="/media/{{ staff.portrait_path|media_full }}" alt="{{ staff.full_name }}">
       {% else %}
       <div class="staff-portrait-preview staff-portrait-empty">
         <span>{{ staff.full_name|initials }}</span>
@@ -322,4 +322,10 @@
     </section>
   </aside>
 </div>
+
+{% include "partials/app_guide.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/app-guide.js?v={{ app_version }}" defer></script>
 {% endblock %}

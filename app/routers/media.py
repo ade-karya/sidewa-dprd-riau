@@ -20,7 +20,7 @@ from ..models import (
     MemberFaceLogin,
     User,
 )
-from ..services.images import absolute_path
+from ..services.images import absolute_path, path_variants
 
 router = APIRouter()
 
@@ -40,9 +40,14 @@ def serve_media(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Media tidak ditemukan.") from exc
 
+    variants = path_variants(path)
+
     photo = (
         db.query(ActivityPhoto)
-        .filter((ActivityPhoto.file_path == path) | (ActivityPhoto.thumb_path == path))
+        .filter(
+            (ActivityPhoto.file_path.in_(variants))
+            | (ActivityPhoto.thumb_path.in_(variants))
+        )
         .first()
     )
     if photo:
@@ -52,21 +57,37 @@ def serve_media(
             raise HTTPException(status_code=403, detail="Anda tidak dapat mengakses media draf.")
     else:
         member_media = (
-            db.query(MemberFace).filter(MemberFace.image_path == path).first()
-            or db.query(MemberFaceLogin).filter(MemberFaceLogin.image_path == path).first()
-            or db.query(Member).filter(Member.portrait_path == path).first()
-            or db.query(HumasStaff).filter(HumasStaff.portrait_path == path).first()
+            db.query(MemberFace).filter(MemberFace.image_path.in_(variants)).first()
+            or db.query(MemberFaceLogin)
+            .filter(MemberFaceLogin.image_path.in_(variants))
+            .first()
+            or db.query(Member).filter(Member.portrait_path.in_(variants)).first()
+            or db.query(HumasStaff).filter(HumasStaff.portrait_path.in_(variants)).first()
         )
         if not member_media:
             raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
 
     if not file_path.is_file():
-        from ..services import media_sync
+        # Path utama/thumbnail bisa saja belum ada di cache lokal; coba
+        # pasangannya sebelum meminta unduhan on-demand.
+        for variant in variants:
+            try:
+                candidate = absolute_path(variant)
+            except ValueError:
+                continue
+            if candidate.is_file():
+                file_path = candidate
+                break
+        else:
+            from ..services import media_sync
 
-        if not (
-            settings.media_cache_on_demand and media_sync.download_to_cache(path)
-        ):
-            raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
+            if settings.media_cache_on_demand:
+                for variant in variants:
+                    if media_sync.download_to_cache(variant):
+                        file_path = absolute_path(variant)
+                        break
+            if not file_path.is_file():
+                raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
 
     media_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
     if media_type not in IMAGE_TYPES:

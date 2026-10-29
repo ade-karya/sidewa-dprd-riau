@@ -100,7 +100,7 @@
         <div class="upload-previews" id="portrait-preview" style="grid-template-columns: 1fr; margin-top: 12px;">
           {% if mode == 'edit' and member.portrait_path %}
           <div class="upload-preview" style="aspect-ratio: 4/4.6;">
-            <img src="/media/{{ member.portrait_path }}" alt="{{ member.full_name }}">
+            <img src="/media/{{ member.portrait_path|media_thumb }}" alt="{{ member.full_name }}">
             <span>Potret saat ini</span>
           </div>
           {% endif %}

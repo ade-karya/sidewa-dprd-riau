@@ -50,8 +50,35 @@ logging.basicConfig(
 logger = logging.getLogger("sidewa")
 
 
+def _client_scheme(request: Request) -> str:
+    """Skema yang dipakai klien, dengan menghormati header Cloudflare/proxy."""
+    visitor = request.headers.get("cf-visitor", "")
+    marker = '"scheme":"'
+    if marker in visitor:
+        value = visitor.split(marker, 1)[1].split('"', 1)[0].strip().lower()
+        if value in {"http", "https"}:
+            return value
+    return (
+        request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    )
+
+
 class RequestContextMiddleware(BaseHTTPMiddleware):
+    HTTPS_EXEMPT_PATHS = {
+        "/healthz",
+        "/readyz",
+        "/metrics",
+        "/robots.txt",
+        "/manifest.webmanifest",
+        "/favicon.ico",
+    }
+
     async def dispatch(self, request: Request, call_next):
+        if settings.is_production:
+            scheme = _client_scheme(request)
+            if scheme == "http" and request.url.path not in self.HTTPS_EXEMPT_PATHS:
+                secure_url = str(request.url).replace("http://", "https://", 1)
+                return RedirectResponse(secure_url, status_code=308)
         request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:16]
         request.state.request_id = request_id
         started = time.perf_counter()
@@ -76,12 +103,13 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; "
             "img-src 'self' data: blob:; "
             "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self'; "
+            "script-src 'self' https://static.cloudflareinsights.com; "
             "font-src 'self'; "
-            "connect-src 'self'; "
+            "connect-src 'self' https://cloudflareinsights.com; "
             "frame-src https://www.openstreetmap.org https://www.google.com; "
             "form-action 'self'; "
             "base-uri 'self'; "
+            "object-src 'none'; "
             "frame-ancestors 'none'"
         )
         if settings.is_production:

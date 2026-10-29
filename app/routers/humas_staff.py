@@ -23,9 +23,11 @@ from ..models import (
     User,
 )
 from ..services import face_engine
+from ..services.analytics import dashboard_stats
 from ..services.humas_analytics import staff_dashboard_data, staff_overview
 from ..services.images import (
     ImageValidationError,
+    delete_image,
     delete_paths,
     save_image,
 )
@@ -142,6 +144,7 @@ def staff_dashboard(
         user=user,
         staff=staff,
         data=data,
+        stats=dashboard_stats(db, user),
         face_available=face_engine.engine.available,
     )
 
@@ -167,7 +170,7 @@ async def upload_staff_portrait(
         flash(request, str(exc), "danger")
         return RedirectResponse(f"/dashboard-staf/{staff.id}", status_code=303)
     old = staff.portrait_path
-    staff.portrait_path = rel_thumb
+    staff.portrait_path = rel_main
     audit(
         db,
         request,
@@ -178,7 +181,7 @@ async def upload_staff_portrait(
         summary=f"Memperbarui foto staf Humas {staff.full_name}",
     )
     db.commit()
-    delete_paths(old, rel_main)
+    delete_image(old)
     flash(request, f"Foto {staff.full_name} berhasil diperbarui.", "success")
     return RedirectResponse(f"/dashboard-staf/{staff.id}", status_code=303)
 

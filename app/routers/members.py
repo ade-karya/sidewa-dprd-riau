@@ -26,6 +26,7 @@ from ..services import face_engine
 from ..services.images import (
     ImageValidationError,
     absolute_path,
+    delete_image,
     delete_paths,
     save_image,
 )
@@ -262,7 +263,7 @@ async def create_member(
             raw = await portrait.read(15 * 1024 * 1024 + 1)
             rel_main, rel_thumb, _, _ = save_image(raw, "members", max_dimension=1400)
             saved.extend([rel_main, rel_thumb])
-            member.portrait_path = rel_thumb
+            member.portrait_path = rel_main
             _, warning = _enroll_from_path(db, member, rel_main, created_by=user)
         except ImageValidationError as exc:
             db.rollback()
@@ -409,11 +410,12 @@ async def update_member(
     member.bio = bio.strip()
 
     warning = None
+    old_portrait = member.portrait_path
     if portrait and portrait.filename:
         try:
             raw = await portrait.read(15 * 1024 * 1024 + 1)
             rel_main, rel_thumb, _, _ = save_image(raw, "members", max_dimension=1400)
-            member.portrait_path = rel_thumb
+            member.portrait_path = rel_main
             _, warning = _enroll_from_path(db, member, rel_main, created_by=user)
         except ImageValidationError as exc:
             flash(request, f"Potret baru gagal disimpan: {exc}", "warning")
@@ -427,6 +429,8 @@ async def update_member(
         summary=f"Memperbarui data anggota {member.full_name}",
     )
     db.commit()
+    if member.portrait_path != old_portrait:
+        delete_image(old_portrait)
     flash(request, "Data anggota berhasil diperbarui.", "success")
     if warning:
         flash(request, f"Potret tersimpan, tetapi wajah belum terdaftar: {warning}", "warning")
@@ -534,7 +538,7 @@ async def enroll_face(
             flash(request, error, "danger")
             return RedirectResponse(f"/anggota/{member.id}#wajah", status_code=303)
         if not member.portrait_path:
-            member.portrait_path = rel_thumb
+            member.portrait_path = rel_main
         audit(
             db,
             request,

@@ -5,7 +5,7 @@ HOST ?= 127.0.0.1
 PORT ?= 8000
 PYTEST ?= $(PYTHON) -m pytest
 
-.PHONY: help install install-dev init seed run run-prod test lint fmt cov docker-build docker-up docker-down clean
+.PHONY: help install install-dev init seed seed-staff run run-prod test lint fmt cov docker-build docker-up docker-down clean
 
 help: ## Tampilkan daftar perintah
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -21,6 +21,9 @@ init: ## Buat tabel database dan direktori media
 
 seed: ## Isi database dengan data demo (hapus data lama)
 	$(PYTHON) -m app.cli seed --force
+
+seed-staff: ## Pasang daftar & foto staf Humas (idempoten, foto resolusi penuh)
+	$(PYTHON) -m app.cli seed-staff
 
 run: ## Jalankan server pengembangan dengan reload
 	$(PYTHON) -m uvicorn $(APP) --reload --host $(HOST) --port $(PORT)

@@ -26,6 +26,11 @@ Administrator dapat mengunggah foto satu per satu melalui halaman
 ## Catatan
 
 - Foto akan dinormalisasi (dipangkas metadata EXIF, dikonversi ke JPEG, dan
-  dibuat versi thumbnail) sebelum disimpan di `media/staff/`. Thumbnail foto
-  staf disimpan hingga 1200 px agar tetap tajam pada layar beresolusi tinggi.
+  dibuat versi thumbnail) sebelum disimpan di `media/staff/`.
+- Aplikasi menyimpan **gambar utama** (hingga 2000 px) sebagai default dan
+  memakainya pada kartu besar, hero, serta pratinjau. Thumbnail (hingga 1200 px)
+  hanya dipakai untuk avatar dan daftar kecil agar hemat bandwidth.
+- Saat deploy Docker, `deploy/entrypoint.sh` menjalankan `seed-staff` secara
+  idempoten sehingga foto di folder ini otomatis terpasang di server baru.
+  Nonaktifkan dengan `SIDEWA_SEED_STAFF=false`.
 - Gunakan foto resmi dengan izin dari yang bersangkutan.

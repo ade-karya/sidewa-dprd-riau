@@ -140,6 +140,20 @@ Media akan diunduh kembali dari HF S3 saat pertama kali diakses.
 - Backup: Supabase menangani backup database; media ada di HF S3. Simpan `.env`
   di tempat aman dan jangan commit.
 
+### Migrasi potret lama ke resolusi penuh
+
+Instalasi lama menyimpan path thumbnail (`*_thumb.jpg`) sebagai potret. Setelah
+pembaruan, jalankan sekali (idempoten) agar potret memakai gambar utama:
+
+```bash
+python -m app.cli upgrade-portraits --dry-run   # ringkasan tanpa mengubah data
+python -m app.cli upgrade-portraits             # terapkan + unggah ke HF S3
+```
+
+Perintah ini memakai kembali gambar utama yang sudah ada (misalnya dari data
+wajah anggota) lalu membuat thumbnail pendamping; foto staf dibuat ulang dari
+`seed_assets/staff_portraits/`. Berkas lama tidak dihapus.
+
 ---
 
 ## 2. Docker Compose mandiri
@@ -152,6 +166,12 @@ docker compose up -d --build
 
 Stack: PostgreSQL 17, aplikasi FastAPI (4 worker), Nginx reverse proxy. Volume
 `media_data` dan `postgres_data`.
+
+Saat container mulai, aplikasi otomatis menjalankan `seed-staff` (idempoten)
+sehingga daftar 33 staf Humas beserta **foto resolusi penuh** dari
+`seed_assets/staff_portraits/` langsung tersedia di server baru — tanpa unggah
+manual. Nonaktifkan dengan `SIDEWA_SEED_STAFF=false` bila data staf dikelola
+sepenuhnya dari database lain.
 
 Muat data demo (opsional, hanya non-produksi):
 
@@ -166,6 +186,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env  # edit
 python -m app.cli init-db
+python -m app.cli seed-staff   # daftar + foto staf Humas (idempoten)
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers
 ```
 

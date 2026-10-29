@@ -63,6 +63,7 @@ make install-dev
 cp .env.example .env   # sesuaikan bila perlu
 make init
 make seed              # data demo (opsional)
+make seed-staff        # daftar + foto staf Humas resolusi penuh (idempoten)
 make run               # http://127.0.0.1:8000
 ```
 

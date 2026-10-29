@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 
 from .. import __version__
 from ..config import settings
@@ -59,6 +59,12 @@ def metrics(request: Request):
 @router.get("/robots.txt")
 def robots():
     return PlainTextResponse("User-agent: *\nDisallow: /\n")
+
+
+@router.get("/favicon.ico")
+def favicon():
+    # Browser lama tetap meminta /favicon.ico meski <link rel="icon"> sudah ada.
+    return RedirectResponse("/static/img/logo.svg", status_code=308)
 
 
 @router.get("/manifest.webmanifest")

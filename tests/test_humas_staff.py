@@ -59,6 +59,8 @@ def test_seeded_staff_directory_and_dashboard(seeded_client):
     assert "Ruang kerja saya" in response.text
     assert "Face ID login" in response.text
     assert "Tugas &amp; fungsi Humas" in response.text
+    assert "Kenali SIDEWA" in response.text
+    assert "app-guide.js" in response.text
 
 
 def test_staff_portrait_media_is_served(seeded_client):
@@ -78,11 +80,16 @@ def test_staff_portrait_media_is_served(seeded_client):
         db.close()
 
     assert portrait_path
+    assert not portrait_path.endswith("_thumb.jpg"), "default harus gambar utama"
     response = test_client.get(f"/media/{portrait_path}")
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/jpeg"
     image = Image.open(BytesIO(response.content))
     assert max(image.size) >= 1000
+
+    thumb_response = test_client.get(f"/media/{portrait_path.removesuffix('.jpg')}_thumb.jpg")
+    assert thumb_response.status_code == 200
+    assert Image.open(BytesIO(thumb_response.content)).size <= image.size
 
 
 def test_staff_face_enrollment_and_login(seeded_client):
