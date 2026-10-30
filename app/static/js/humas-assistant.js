@@ -22,11 +22,18 @@
   const nextLabel = root.querySelector("[data-tour-next-label]");
   const liveEl = root.querySelector("[data-tour-live]");
   const voiceBtn = root.querySelector("[data-tour-voice]");
+  const expandBtn = root.querySelector("[data-tour-expand]");
   const statusEl = root.querySelector("[data-tour-status]");
+  const headTitleEl = root.querySelector(".tour-id strong");
+  const sidebarEl = document.getElementById("sidebar");
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const supportsVoice = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  const supportsSpeech =
+    "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  const supportsAudio = Boolean(window.AudioContext || window.webkitAudioContext);
+  const supportsVoice = supportsAudio || supportsSpeech;
   const isSmall = () => window.matchMedia("(max-width: 760px)").matches;
+  const isOffcanvasSidebar = () => window.matchMedia("(max-width: 900px)").matches;
 
   const PAGE_INFO = {
     "/": {
@@ -445,6 +452,9 @@
   let index = 0;
   let lastFocus = null;
   let voiceOn = false;
+  let voiceAutoStarted = false;
+  let expanded = false;
+  let sidebarOpenedByTour = false;
   let raf = 0;
 
   const isOpen = () => !root.hidden;
@@ -469,8 +479,8 @@
     return Math.min(Math.max(value, min), max);
   }
 
-  function stopVoice() {
-    if (!supportsVoice) return;
+  function stopSpeech() {
+    if (!supportsSpeech) return;
     try {
       window.speechSynthesis.cancel();
     } catch {
@@ -478,12 +488,117 @@
     }
   }
 
-  function speakStep() {
-    if (!voiceOn || !supportsVoice) return;
+  const Live = {
+    socket: null,
+    ready: false,
+    connecting: false,
+    muted: false,
+    failed: false,
+    pending: false,
+    speaking: false,
+    fallbackSpoken: false,
+    fallbackTimer: 0,
+    audioCtx: null,
+    sources: new Set(),
+    playbackTime: 0,
+  };
+
+  function stopPlayback() {
+    Live.sources.forEach((source) => {
+      try {
+        source.stop();
+      } catch {
+        /* sudah berhenti */
+      }
+    });
+    Live.sources.clear();
+    Live.playbackTime = 0;
+  }
+
+  function ensureAudioContext() {
+    if (!supportsAudio) return null;
+    if (!Live.audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      Live.audioCtx = new Ctx();
+    }
+    if (Live.audioCtx.state === "suspended") {
+      Live.audioCtx.resume().catch(() => {});
+    }
+    return Live.audioCtx;
+  }
+
+  function playPcm(base64, rate) {
+    if (!voiceOn || Live.muted || !base64) return;
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    try {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const samples = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2));
+      if (!samples.length) return;
+      const buffer = ctx.createBuffer(1, samples.length, rate || 24000);
+      const channel = buffer.getChannelData(0);
+      for (let i = 0; i < samples.length; i += 1) channel[i] = samples[i] / 32768;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      const now = ctx.currentTime;
+      if (Live.playbackTime < now + 0.05) Live.playbackTime = now + 0.05;
+      source.start(Live.playbackTime);
+      Live.playbackTime += buffer.duration;
+      Live.sources.add(source);
+      source.onended = () => Live.sources.delete(source);
+    } catch {
+      /* chunk audio rusak — abaikan */
+    }
+  }
+
+  function stepLabel() {
+    const step = steps[index];
+    return step && step.nav ? "Peta halaman SIDEWA" : "Pemandu halaman Humas";
+  }
+
+  function updateStatus() {
+    if (!statusEl) return;
+    let label = stepLabel();
+    if (voiceOn) {
+      if (Live.ready) label = Live.speaking ? "Gemini 3.8 Live · menjelaskan…" : "Gemini 3.8 Live · siap";
+      else if (Live.connecting) label = "Gemini 3.8 Live · menghubungkan…";
+      else if (Live.failed) label = "Suara perangkat · Gemini Live tidak tersedia";
+      else label = "Suara panduan · Gemini 3.8 Live";
+    }
+    statusEl.textContent = label;
+    const wrap = statusEl.closest(".tour-status");
+    if (wrap) {
+      wrap.title = label;
+      wrap.classList.toggle("is-busy", voiceOn && (Live.connecting || Live.speaking));
+      wrap.classList.toggle("is-error", voiceOn && Live.failed);
+    }
+  }
+
+  function sendLiveContext() {
+    if (Live.socket && Live.socket.readyState === WebSocket.OPEN) {
+      const step = steps[index];
+      Live.socket.send(
+        JSON.stringify({ type: "context", index: index + 1, title: step ? step.title : "" })
+      );
+    }
+  }
+
+  function narrationText(step) {
+    const tips = (step.tips || []).slice(0, 2).join(" ");
+    return [step.title, step.body, tips].filter(Boolean).join(". ").slice(0, 900);
+  }
+
+  function speakFallback() {
+    if (!voiceOn || !supportsSpeech) return;
     const step = steps[index];
     if (!step) return;
-    stopVoice();
-    const text = [step.title, step.body, ...(step.tips || [])].join(". ");
+    stopSpeech();
+    Live.fallbackSpoken = true;
+    Live.speaking = true;
+    const text = [step.title, step.body, ...(step.tips || []).slice(0, 2)].join(". ");
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "id-ID";
     utterance.rate = 0.98;
@@ -491,7 +606,198 @@
     const voices = window.speechSynthesis.getVoices();
     const indonesian = voices.find((voice) => /^id(-|_)/i.test(voice.lang));
     if (indonesian) utterance.voice = indonesian;
+    utterance.onend = () => {
+      Live.speaking = false;
+      updateStatus();
+    };
     window.speechSynthesis.speak(utterance);
+    updateStatus();
+  }
+
+  function narrateCurrent() {
+    if (!voiceOn) return;
+    const step = steps[index];
+    if (!step) return;
+    window.clearTimeout(Live.fallbackTimer);
+    Live.fallbackTimer = 0;
+    if (Live.ready && Live.socket && Live.socket.readyState === WebSocket.OPEN) {
+      if (Live.speaking) {
+        try {
+          Live.socket.send(JSON.stringify({ type: "cancel" }));
+        } catch {
+          /* abaikan */
+        }
+      }
+      Live.pending = false;
+      Live.fallbackSpoken = false;
+      stopSpeech();
+      stopPlayback();
+      Live.speaking = true;
+      updateStatus();
+      Live.socket.send(
+        JSON.stringify({
+          type: "narrate",
+          text: narrationText(step),
+          index: index + 1,
+          title: step.title,
+        })
+      );
+      return;
+    }
+    Live.pending = true;
+    if (Live.connecting) return;
+    if (Live.failed) {
+      speakFallback();
+      return;
+    }
+    connectLive();
+  }
+
+  function handleLivePayload(payload) {
+    switch (payload.type) {
+      case "ready":
+        Live.connecting = false;
+        Live.ready = true;
+        Live.failed = false;
+        window.clearTimeout(Live.fallbackTimer);
+        Live.fallbackTimer = 0;
+        updateStatus();
+        if (Live.pending && voiceOn && !Live.fallbackSpoken) {
+          Live.pending = false;
+          narrateCurrent();
+        }
+        break;
+      case "audio":
+        if (voiceOn) {
+          Live.speaking = true;
+          playPcm(payload.data, 24000);
+          updateStatus();
+        }
+        break;
+      case "output":
+        if (voiceOn) {
+          Live.speaking = true;
+          updateStatus();
+        }
+        break;
+      case "interrupted":
+        stopPlayback();
+        Live.speaking = false;
+        updateStatus();
+        break;
+      case "turn_complete":
+        Live.speaking = false;
+        Live.pending = false;
+        updateStatus();
+        break;
+      case "notice":
+        if (payload.level && payload.level !== "info") {
+          Live.failed = true;
+          if (voiceOn) speakFallback();
+        }
+        updateStatus();
+        break;
+      case "error":
+        Live.speaking = false;
+        if (voiceOn) {
+          Live.failed = true;
+          speakFallback();
+        }
+        updateStatus();
+        break;
+      case "upstream_closed":
+        Live.speaking = false;
+        updateStatus();
+        break;
+      default:
+        break;
+    }
+  }
+
+  function connectLive() {
+    if (!supportsAudio) {
+      Live.failed = true;
+      speakFallback();
+      return;
+    }
+    if (
+      Live.socket &&
+      (Live.socket.readyState === WebSocket.OPEN || Live.socket.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
+    Live.connecting = true;
+    Live.failed = false;
+    Live.fallbackSpoken = false;
+    updateStatus();
+    let socket;
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      socket = new WebSocket(`${protocol}//${window.location.host}/panduan/live`);
+    } catch {
+      Live.connecting = false;
+      Live.failed = true;
+      speakFallback();
+      return;
+    }
+    Live.socket = socket;
+
+    socket.addEventListener("open", () => {
+      sendLiveContext();
+    });
+
+    socket.addEventListener("message", (event) => {
+      if (Live.socket !== socket) return;
+      let payload;
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      handleLivePayload(payload);
+    });
+
+    socket.addEventListener("error", () => {
+      if (Live.socket === socket) Live.failed = true;
+    });
+
+    socket.addEventListener("close", (event) => {
+      if (Live.socket !== socket) return;
+      Live.socket = null;
+      Live.connecting = false;
+      Live.ready = false;
+      Live.speaking = false;
+      stopPlayback();
+      if (voiceOn) {
+        if (event.code === 4003 || event.code === 4401 || event.code === 4403 || !event.wasClean) {
+          Live.failed = true;
+          speakFallback();
+        }
+      }
+      updateStatus();
+    });
+
+    Live.fallbackTimer = window.setTimeout(() => {
+      if (!voiceOn || Live.ready) return;
+      Live.failed = true;
+      speakFallback();
+    }, 9000);
+  }
+
+  function disconnectLive() {
+    window.clearTimeout(Live.fallbackTimer);
+    Live.fallbackTimer = 0;
+    Live.pending = false;
+    if (!Live.socket) return;
+    const socket = Live.socket;
+    Live.socket = null;
+    Live.ready = false;
+    Live.connecting = false;
+    try {
+      socket.close(1000, "tour closed");
+    } catch {
+      /* abaikan */
+    }
   }
 
   function setVoice(on) {
@@ -503,8 +809,18 @@
     voiceBtn.title = voiceOn ? "Matikan narasi" : "Narasi suara";
     const use = voiceBtn.querySelector("use");
     if (use) use.setAttribute("href", voiceOn ? "#i-volume" : "#i-volume-off");
-    if (voiceOn) speakStep();
-    else stopVoice();
+    if (voiceOn) {
+      ensureAudioContext();
+      Live.failed = false;
+      Live.fallbackSpoken = false;
+      narrateCurrent();
+    } else {
+      stopSpeech();
+      stopPlayback();
+      disconnectLive();
+      Live.speaking = false;
+    }
+    updateStatus();
   }
 
   function renderContent() {
@@ -517,6 +833,10 @@
       ).padStart(2, "0")}`;
     }
     if (titleEl) titleEl.textContent = step.title;
+    if (headTitleEl) {
+      headTitleEl.textContent = isSmall() ? step.title : "Asisten SIDEWA";
+      headTitleEl.title = step.title;
+    }
     if (bodyEl) bodyEl.textContent = step.body || "";
     if (tipsEl) {
       tipsEl.replaceChildren();
@@ -537,9 +857,7 @@
       }
     }
     if (progressEl) progressEl.style.width = `${((index + 1) / total) * 100}%`;
-    if (statusEl) {
-      statusEl.textContent = step.nav ? "Peta halaman SIDEWA" : "Pemandu halaman Humas";
-    }
+    updateStatus();
     dotEls.forEach((dot, i) => {
       dot.classList.toggle("is-active", i === index);
       if (i === index) dot.setAttribute("aria-current", "true");
@@ -557,6 +875,114 @@
     }
     if (nextLabel) nextLabel.textContent = index === total - 1 ? "Selesai" : "Berikutnya";
     if (liveEl) liveEl.textContent = `Langkah ${index + 1} dari ${total}: ${step.title}`;
+  }
+
+  function setExpanded(value) {
+    expanded = Boolean(value);
+    if (!card) return;
+    card.classList.toggle("is-expanded", expanded);
+    if (expandBtn) {
+      expandBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      expandBtn.setAttribute(
+        "aria-label",
+        expanded ? "Sembunyikan penjelasan langkah" : "Tampilkan penjelasan langkah"
+      );
+      expandBtn.title = expanded ? "Sembunyikan penjelasan" : "Tampilkan penjelasan";
+      const use = expandBtn.querySelector("use");
+      if (use) use.setAttribute("href", expanded ? "#i-chevron-down" : "#i-chevron-up");
+    }
+    window.setTimeout(() => {
+      place();
+      const target = resolveTarget();
+      if (expanded && target) scrollPageTarget(target);
+    }, 30);
+  }
+
+  function scrollWithinSidebar(target) {
+    const sidebar = target.closest(".sidebar");
+    if (!sidebar) return;
+    const sr = sidebar.getBoundingClientRect();
+    const tr = target.getBoundingClientRect();
+    const pad = 14;
+    if (tr.top < sr.top + pad || tr.bottom > sr.bottom - pad) {
+      const desired = sr.top + (sr.height - tr.height) / 2;
+      sidebar.scrollTop += tr.top - desired;
+    }
+  }
+
+  function scrollableAncestor(target) {
+    let el = target.parentElement;
+    while (el && el !== document.body && el !== document.documentElement) {
+      const style = window.getComputedStyle(el);
+      const scrollable = /(auto|scroll|overlay)/.test(style.overflowY);
+      if (scrollable && el.scrollHeight > el.clientHeight + 2) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function scrollPageTarget(target) {
+    let rect = target.getBoundingClientRect();
+    const scroller = scrollableAncestor(target);
+    if (scroller) {
+      const sr = scroller.getBoundingClientRect();
+      if (rect.top < sr.top + 8 || rect.bottom > sr.bottom - 8) {
+        scroller.scrollTop += rect.top - (sr.top + (sr.height - rect.height) / 2);
+        rect = target.getBoundingClientRect();
+      }
+    }
+    const topbar = document.querySelector(".topbar");
+    let topLimit = 14;
+    if (topbar) {
+      const style = window.getComputedStyle(topbar);
+      if (style.position === "sticky" || style.position === "fixed") {
+        topLimit = topbar.getBoundingClientRect().bottom + 14;
+      }
+    }
+    let bottomLimit = window.innerHeight - 14;
+    if (isSmall() && card) {
+      const cr = card.getBoundingClientRect();
+      if (cr.height && cr.top < window.innerHeight) bottomLimit = Math.min(bottomLimit, cr.top - 14);
+    }
+    if (bottomLimit <= topLimit + 64) bottomLimit = window.innerHeight - 14;
+
+    const behavior = reducedMotion ? "auto" : "smooth";
+    if (rect.height >= bottomLimit - topLimit) {
+      if (rect.top < topLimit || rect.top > bottomLimit - 48) {
+        window.scrollBy({ top: rect.top - topLimit, behavior });
+      }
+      return;
+    }
+    if (rect.top >= topLimit && rect.bottom <= bottomLimit) return;
+    const desired = topLimit + (bottomLimit - topLimit) / 2;
+    window.scrollBy({ top: rect.top + rect.height / 2 - desired, behavior });
+  }
+
+  function revealTarget(target) {
+    if (!target) return;
+    if (target.closest(".sidebar")) {
+      const wasOpen = document.body.classList.contains("sidebar-open");
+      if (isOffcanvasSidebar() && !wasOpen) {
+        sidebarOpenedByTour = true;
+        document.body.classList.add("sidebar-open");
+      }
+      const delay = isOffcanvasSidebar() && !wasOpen && !reducedMotion ? 240 : 0;
+      if (delay) {
+        window.setTimeout(() => {
+          scrollWithinSidebar(target);
+          schedulePlace();
+        }, delay);
+      } else {
+        scrollWithinSidebar(target);
+        schedulePlace();
+      }
+      return;
+    }
+    if (sidebarOpenedByTour) {
+      document.body.classList.remove("sidebar-open");
+      sidebarOpenedByTour = false;
+    }
+    scrollPageTarget(target);
   }
 
   function placeCard(target) {
@@ -619,12 +1045,22 @@
     }
     const step = steps[index];
     const pad = step && step.nav ? 6 : 9;
-    const rect = target.getBoundingClientRect();
+    const raw = target.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (raw.bottom < 0 || raw.top > vh || raw.right < 0 || raw.left > vw) {
+      spotlight.hidden = true;
+      return;
+    }
+    const left = Math.max(0, Math.min(raw.left, vw - 1));
+    const top = Math.max(0, Math.min(raw.top, vh - 1));
+    const right = Math.max(left + 1, Math.min(raw.right, vw));
+    const bottom = Math.max(top + 1, Math.min(raw.bottom, vh));
     spotlight.hidden = false;
-    spotlight.style.left = `${Math.round(rect.left - pad)}px`;
-    spotlight.style.top = `${Math.round(rect.top - pad)}px`;
-    spotlight.style.width = `${Math.round(rect.width + pad * 2)}px`;
-    spotlight.style.height = `${Math.round(rect.height + pad * 2)}px`;
+    spotlight.style.left = `${Math.round(left - pad)}px`;
+    spotlight.style.top = `${Math.round(top - pad)}px`;
+    spotlight.style.width = `${Math.round(right - left + pad * 2)}px`;
+    spotlight.style.height = `${Math.round(bottom - top + pad * 2)}px`;
   }
 
   function resolveTarget() {
@@ -651,21 +1087,19 @@
 
   function show(target) {
     index = clamp(target, 0, total - 1);
+    if (isSmall() && expanded) setExpanded(false);
     renderContent();
     place();
-    const step = steps[index];
     const el = resolveTarget();
-    if (el && step && !step.nav) {
-      const behavior = reducedMotion ? "auto" : "smooth";
-      if (isSmall()) {
-        const top = el.getBoundingClientRect().top + window.scrollY - 96;
-        window.scrollTo({ top: Math.max(0, top), behavior });
-      } else {
-        el.scrollIntoView({ block: "center", inline: "nearest", behavior });
-      }
-      window.setTimeout(place, reducedMotion ? 20 : 360);
+    if (el) {
+      revealTarget(el);
+      window.setTimeout(place, reducedMotion ? 30 : 380);
+      if (isSmall()) window.setTimeout(place, 140);
+    } else if (sidebarOpenedByTour) {
+      document.body.classList.remove("sidebar-open");
+      sidebarOpenedByTour = false;
     }
-    speakStep();
+    if (isOpen()) narrateCurrent();
     if (nextBtn) {
       window.setTimeout(() => {
         if (isOpen()) nextBtn.focus({ preventScroll: true });
@@ -687,15 +1121,27 @@
       lastFocus = document.activeElement;
       root.hidden = false;
       document.body.classList.add("tour-open");
+      if (isSmall() && supportsVoice) ensureAudioContext();
     }
     show(start);
+    if (isSmall() && supportsVoice && !voiceAutoStarted) {
+      voiceAutoStarted = true;
+      if (!voiceOn) setVoice(true);
+    }
   }
 
   function closeTour() {
     if (!isOpen()) return;
-    stopVoice();
+    stopSpeech();
+    stopPlayback();
+    disconnectLive();
+    if (isSmall()) setExpanded(false);
     root.hidden = true;
     document.body.classList.remove("tour-open");
+    if (sidebarOpenedByTour) {
+      document.body.classList.remove("sidebar-open");
+      sidebarOpenedByTour = false;
+    }
     if (spotlight) spotlight.hidden = true;
     if (lastFocus && typeof lastFocus.focus === "function") {
       lastFocus.focus({ preventScroll: true });
@@ -738,6 +1184,14 @@
       voiceBtn.addEventListener("click", () => setVoice(!voiceOn));
     }
   }
+  if (expandBtn) {
+    expandBtn.addEventListener("click", () => setExpanded(!expanded));
+  }
+  if (sidebarEl) {
+    sidebarEl.addEventListener("transitionend", (event) => {
+      if (event.target === sidebarEl && event.propertyName === "transform") schedulePlace();
+    });
+  }
   if (blocker) {
     blocker.addEventListener("click", () => {
       /* Klik di luar kartu tidak menutup otomatis agar tur tidak terhenti. */
@@ -774,9 +1228,9 @@
   window.addEventListener("resize", schedulePlace);
   window.addEventListener("scroll", schedulePlace, { passive: true });
 
-  if (supportsVoice) {
+  if (supportsSpeech) {
     window.speechSynthesis.addEventListener?.("voiceschanged", () => {
-      if (voiceOn) speakStep();
+      if (voiceOn && Live.failed) speakFallback();
     });
   }
 

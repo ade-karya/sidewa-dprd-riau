@@ -1040,6 +1040,62 @@ class LiveGuide:
         prompt = "\n\n".join(parts)
         await self._send_upstream(technical, {"realtimeInput": {"text": prompt}})
 
+    async def _cancel_generation(self) -> None:
+        """Hentikan jawaban teks yang masih berjalan sebelum langkah berikutnya."""
+        kind = self.text_target
+        if not kind:
+            return
+        self.text_target = None
+        self.pending_output = []
+        self.question = ""
+        self.answer = ""
+        upstream = self.sessions.get(kind)
+        if upstream and upstream.open:
+            await self._close_upstream(upstream)
+        await self.send({"type": "interrupted"})
+
+    # ------------------------------------------------------------- narration
+    async def _handle_narration(self, payload: dict) -> None:
+        """Bacakan narasi langkah tur halaman tanpa mengubah mode percakapan."""
+        text = str(payload.get("text") or "").strip()
+        if not text:
+            return
+        text = text[:900]
+        try:
+            index = int(payload.get("index") or self.context["index"])
+        except (TypeError, ValueError):
+            index = self.context["index"]
+        title = str(payload.get("title") or self.context["title"])[:90]
+
+        self.voice_phase = "idle"
+        self.voice_started = False
+        self.text_target = STANDARD
+        self.question = ""
+        self.answer = ""
+        self.pending_output = []
+        self.interaction_status = None
+        self.saw_interaction_status = False
+        await self.send({"type": "mode", "mode": STANDARD})
+
+        try:
+            upstream = await self.connect(STANDARD)
+        except Exception:
+            await self.notify(
+                "Asisten suara belum dapat terhubung. Panduan tetap dapat dibaca di layar."
+            )
+            self.text_target = None
+            return
+
+        prompt = "\n\n".join(
+            [
+                f"[Konteks panduan: pengguna sedang di {_context_label(index, title)}.]",
+                "[Narasi panduan: bacakan teks berikut sebagai pemandu suara. "
+                "Jangan menambah pembuka, penutup, atau pertanyaan.]",
+                text,
+            ]
+        )
+        await self._send_upstream(upstream, {"realtimeInput": {"text": prompt}})
+
     # ------------------------------------------------------------------- text
     async def _handle_text(self, payload: dict) -> None:
         text = str(payload.get("text") or "").strip()
@@ -1126,6 +1182,10 @@ class LiveGuide:
                 self.context["title"] = str(payload.get("title") or self.context["title"])[:90]
             elif kind == "text":
                 await self._handle_text(payload)
+            elif kind == "narrate":
+                await self._handle_narration(payload)
+            elif kind == "cancel":
+                await self._cancel_generation()
             elif kind == "audio_start":
                 await self._start_voice()
             elif kind == "audio":
