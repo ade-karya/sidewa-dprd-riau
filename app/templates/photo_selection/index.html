@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<nav class="ps-subnav mb-3">
+<nav class="ps-subnav mb-3" data-tour="ps-subnav">
   <a href="/seleksi-foto" class="{{ 'active' if view == 'dashboard' }}">Ringkasan</a>
   <a href="/seleksi-foto/mulai" class="{{ 'active' if view == 'start' }}">Mulai seleksi</a>
   <a href="/seleksi-foto/skill" class="{{ 'active' if view == 'skills' }}">Skill</a>
@@ -19,7 +19,7 @@
 </nav>
 
 {% if view == 'dashboard' %}
-<section class="ps-hero">
+<section class="ps-hero" data-tour="ps-hero">
   <div class="ps-hero-copy">
     <span class="hero-eyebrow">{{ icon('sparkles') }} Kurasi foto cerdas</span>
     <h2>Pilih foto terbaik tanpa menghabiskan kuota.</h2>
@@ -85,7 +85,7 @@
 <div class="ps-layout mt-3">
   <div class="ps-main">
     {% if view == 'start' %}
-    <section class="section-card" id="mulai">
+    <section class="section-card" id="mulai" data-tour="ps-start">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('upload') }} Mulai sesi seleksi</h2>
         <span class="badge badge-purple">Maks. {{ max_photos }} foto</span>
@@ -574,10 +574,10 @@
 </section>
 {% endif %}
 
-{% include "partials/app_guide.html" %}
+{% include "partials/humas_assistant.html" %}
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/app-guide.js?v={{ app_version }}" defer></script>
+<script src="/static/js/humas-assistant.js?v={{ app_version }}" defer></script>
 <script src="/static/js/photo-selection.js?v={{ app_version }}" defer></script>
 {% endblock %}

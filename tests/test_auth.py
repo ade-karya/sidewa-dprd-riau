@@ -3,6 +3,14 @@
 from tests.conftest import get_csrf, login
 
 
+def test_login_page_has_sidewa_guide(client):
+    test_client, _ = client
+    response = test_client.get("/login")
+    assert response.status_code == 200
+    assert "Kenali SIDEWA" in response.text
+    assert "app-guide.js" in response.text
+
+
 def test_login_success_sets_session(client):
     test_client, _ = client
     login(test_client, "superadmin", "Super#Test2026")

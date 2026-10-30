@@ -19,7 +19,7 @@
      data-status="{{ run.status }}"
      data-wait="{{ wait_seconds }}">
 
-  <section class="ps-run-hero">
+  <section class="ps-run-hero" data-tour="ps-run-hero">
     <div class="ps-run-hero-main">
       <div class="chip-row">
         <span class="badge badge-{{ status_tones.get(run.status, 'gray') }}" data-ps-status-badge>
@@ -128,7 +128,7 @@
 
   <div class="ps-detail-layout mt-3">
     <div class="ps-detail-main">
-      <section class="section-card" id="hasil">
+      <section class="section-card" id="hasil" data-tour="ps-results">
         <div class="flex-between mb-2">
           <h2 style="margin-bottom: 0;">{{ icon('grid') }} Tinjau hasil</h2>
           <span class="muted-small">{{ items|length }} foto</span>
@@ -221,7 +221,7 @@
       </section>
     </div>
 
-    <aside class="ps-detail-side">
+    <aside class="ps-detail-side" data-tour="ps-apply">
       <section class="section-card">
         <h2 style="font-size: 16px;">{{ icon('check') }} Terapkan ke kegiatan</h2>
         <p class="muted-small mb-2">
@@ -314,10 +314,10 @@
   </div>
 </div>
 
-{% include "partials/app_guide.html" %}
+{% include "partials/humas_assistant.html" %}
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/app-guide.js?v={{ app_version }}" defer></script>
+<script src="/static/js/humas-assistant.js?v={{ app_version }}" defer></script>
 <script src="/static/js/photo-selection.js?v={{ app_version }}" defer></script>
 {% endblock %}

@@ -36,6 +36,7 @@ from .routers import (
     member_dashboard,
     members,
     photo_selection,
+    releases,
     search,
     system,
     users,
@@ -149,6 +150,11 @@ def _bootstrap_admin() -> None:
     try:
         if db.query(User).filter(User.username == username).first():
             return
+        # Jangan buat superadmin bootstrap baru bila sudah ada superadmin lain.
+        # Ini mencegah akun demo lama muncul kembali saat environment masih
+        # mengekspor username bootstrap lama.
+        if db.query(User).filter(User.role == "superadmin", User.is_active.is_(True)).first():
+            return
         validate_password_strength(password)
         db.add(
             User(
@@ -244,6 +250,7 @@ def create_app() -> FastAPI:
     application.include_router(humas_staff.router)
     application.include_router(photo_selection.router)
     application.include_router(activities.router)
+    application.include_router(releases.router)
     application.include_router(search.router)
     application.include_router(members.router)
     application.include_router(commissions.router)

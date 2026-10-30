@@ -604,6 +604,9 @@ class Activity(Base, TimestampMixin):
         viewonly=True,
         order_by="FaceDetection.id",
     )
+    press_releases: Mapped[list[PressRelease]] = relationship(
+        back_populates="activity", order_by="PressRelease.release_date.desc()"
+    )
 
     __table_args__ = (Index("ix_activities_date_status", "activity_date", "status"),)
 
@@ -626,6 +629,48 @@ class Activity(Base, TimestampMixin):
         if self.commission_id:
             ids.add(self.commission_id)
         return sorted(ids)
+
+
+class PressRelease(Base, TimestampMixin):
+    """Siaran pers (rilis) Humas yang dapat ditautkan ke kegiatan."""
+
+    __tablename__ = "press_releases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(200), unique=True, index=True, nullable=False)
+    summary: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    body: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), default=STATUS_DRAFT, index=True, nullable=False
+    )
+    release_date: Mapped[date] = mapped_column(Date, index=True, nullable=False)
+    activity_id: Mapped[int | None] = mapped_column(
+        ForeignKey("activities.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    author_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+
+    activity: Mapped[Activity | None] = relationship(back_populates="press_releases")
+    author: Mapped[User | None] = relationship()
+
+    @property
+    def tag_list(self) -> list[str]:
+        return [str(tag) for tag in (self.tags or []) if str(tag).strip()]
+
+    @property
+    def reading_minutes(self) -> int:
+        words = len((self.body or "").split())
+        return max(1, round(words / 200))
+
+    __table_args__ = (
+        Index("ix_press_releases_date_status", "release_date", "status"),
+    )
 
 
 class ActivityPhoto(Base):

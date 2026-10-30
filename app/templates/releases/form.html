@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, status_badge %}
+
+{% block title %}{{ 'Sunting rilis' if mode == 'edit' else 'Tulis rilis' }}{% endblock %}
+{% block page_title %}{{ 'Sunting rilis' if mode == 'edit' else 'Tulis rilis Humas' }}{% endblock %}
+{% block page_subtitle %}{{ release.code if mode == 'edit' else 'Susun siaran pers yang informatif dan mudah dikutip media' }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="{{ '/rilis/' ~ release.id if mode == 'edit' else '/rilis' }}">
+  {{ icon('arrow-left') }}<span>{{ 'Kembali ke rilis' if mode == 'edit' else 'Daftar rilis' }}</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<form method="post"
+      action="{{ '/rilis/' ~ release.id ~ '/edit' if mode == 'edit' else '/rilis' }}"
+      data-loading>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  {% if error %}
+  <div class="global-error">{{ icon('alert') }}<span>{{ error }}</span></div>
+  {% endif %}
+
+  <div class="release-form-layout">
+    <div class="release-form-main">
+      <div class="card card-pad">
+        <div class="flex-between mb-2">
+          <div>
+            <div class="form-section-title">Isi rilis</div>
+            <p class="muted-small">Tulis dengan prinsip 5W1H. Ringkasan tampil di daftar rilis, isi lengkap tampil di halaman detail.</p>
+          </div>
+          {% if mode == 'edit' %}{{ status_badge(release.status) }}{% endif %}
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label" for="title">Judul rilis <span class="required">*</span></label>
+            <input class="input" id="title" name="title" type="text" required maxlength="255"
+                   value="{{ form.title }}" placeholder="Contoh: DPRD Riau Sahkan APBD 2026, Fokus pada Infrastruktur dan Kesejahteraan">
+            <span class="form-hint">Minimal 8 karakter. Gunakan kalimat aktif yang ringkas dan faktual.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="release_date">Tanggal rilis <span class="required">*</span></label>
+            <input class="input" id="release_date" name="release_date" type="date" required value="{{ form.release_date }}">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="activity_id">Kegiatan terkait</label>
+            <select class="select" id="activity_id" name="activity_id">
+              <option value="">Tidak ditautkan</option>
+              {% for activity in activities %}
+              <option value="{{ activity.id }}" {{ 'selected' if form.activity_id|string == activity.id|string }}>
+                {{ activity.code }} — {{ activity.title|truncate(70) }}
+              </option>
+              {% endfor %}
+            </select>
+            <span class="form-hint">Menautkan rilis memudahkan pembaca membuka dokumentasi foto kegiatan.</span>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label" for="summary">Ringkasan / teras berita</label>
+            <textarea class="textarea" id="summary" name="summary" rows="3" maxlength="500"
+                      placeholder="Satu atau dua kalimat yang merangkum inti rilis…">{{ form.summary }}</textarea>
+            <span class="form-hint">Maksimal 500 karakter. Tampil sebagai cuplikan pada daftar rilis.</span>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label" for="body">Isi rilis <span class="required">*</span></label>
+            <textarea class="textarea release-body-input" id="body" name="body" rows="16" required
+                      placeholder="PEKANBARU — Tulis paragraf pembuka yang memuat inti peristiwa, siapa, apa, kapan, di mana, dan mengapa…">{{ form.body }}</textarea>
+            <span class="form-hint">Minimal 40 karakter. Pisahkan paragraf dengan satu baris kosong agar mudah dibaca.</span>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label" for="tags">Tag</label>
+            <input class="input" id="tags" name="tags" type="text" maxlength="400"
+                   value="{{ form.tags }}" placeholder="APBD, Infrastruktur, Kesejahteraan">
+            <span class="form-hint">Pisahkan dengan koma. Maksimal 12 tag.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">{{ icon('check') }} {{ 'Simpan perubahan' if mode == 'edit' else 'Simpan sebagai draf' }}</button>
+        <a class="btn btn-outline" href="{{ '/rilis/' ~ release.id if mode == 'edit' else '/rilis' }}">Batal</a>
+        {% if mode == 'edit' and release.status == 'draft' %}
+        <span class="muted-small">Setelah tersimpan, terbitkan rilis dari halaman detail.</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <aside class="release-form-side">
+      <section class="section-card">
+        <h2>{{ icon('send') }} Panduan singkat</h2>
+        <div class="duty-list">
+          <div class="duty-item">
+            <span class="duty-index">1</span>
+            <div class="duty-copy"><strong>Judul yang jelas</strong><span>Awali dengan subjek utama, hindari singkatan yang tidak umum.</span></div>
+          </div>
+          <div class="duty-item">
+            <span class="duty-index">2</span>
+            <div class="duty-copy"><strong>Teras berita</strong><span>Ringkasan harus bisa berdiri sendiri sebagai inti informasi.</span></div>
+          </div>
+          <div class="duty-item">
+            <span class="duty-index">3</span>
+            <div class="duty-copy"><strong>Kutipan dan fakta</strong><span>Sertakan nama, jabatan, angka, dan lokasi secara akurat.</span></div>
+          </div>
+          <div class="duty-item">
+            <span class="duty-index">4</span>
+            <div class="duty-copy"><strong>Tautkan kegiatan</strong><span>Hubungkan rilis dengan dokumentasi foto agar konteksnya lengkap.</span></div>
+          </div>
+        </div>
+      </section>
+
+      {% if mode == 'edit' %}
+      <section class="section-card">
+        <h2>{{ icon('calendar') }} Informasi naskah</h2>
+        <div class="side-list">
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('file-text') }}</span>
+            <div class="side-copy"><span>Kode rilis</span><strong>{{ release.code }}</strong></div>
+          </div>
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('user') }}</span>
+            <div class="side-copy"><span>Penulis</span><strong>{{ release.author.full_name if release.author else '—' }}</strong></div>
+          </div>
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('clock') }}</span>
+            <div class="side-copy"><span>Terakhir diubah</span><strong>{{ release.updated_at|datetime_id }}</strong></div>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+    </aside>
+  </div>
+</form>
+{% endblock %}

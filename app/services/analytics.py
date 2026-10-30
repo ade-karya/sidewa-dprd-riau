@@ -153,6 +153,24 @@ def dashboard_stats(db: Session, user: User) -> dict:
     }
 
 
+def public_guide_stats(db: Session) -> dict:
+    """Angka ringkas untuk sampul panduan di halaman login (tanpa data privat)."""
+    return {
+        "total_activities": db.query(Activity)
+        .filter(Activity.status == STATUS_PUBLISHED)
+        .count(),
+        "total_photos": db.query(ActivityPhoto)
+        .join(Activity, ActivityPhoto.activity_id == Activity.id)
+        .filter(Activity.status == STATUS_PUBLISHED)
+        .count(),
+        "total_members": db.query(Member).filter(Member.is_active.is_(True)).count(),
+        "commission_stats": db.query(Commission)
+        .filter(Commission.is_active.is_(True))
+        .order_by(Commission.sort_order)
+        .all(),
+    }
+
+
 def user_stats(db: Session) -> dict:
     return {
         "users": db.query(User).count(),

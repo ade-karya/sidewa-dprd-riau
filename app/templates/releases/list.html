@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, empty_state, pagination, status_badge %}
+
+{% block title %}Rilis Humas{% endblock %}
+{% block page_title %}Rilis &amp; siaran pers{% endblock %}
+{% block page_subtitle %}{{ result.total }} rilis ditemukan{% endblock %}
+
+{% block topbar_actions %}
+{% if can_manage_content %}
+<a class="btn btn-primary btn-sm" href="/rilis/baru">{{ icon('plus') }}<span>Tulis rilis</span></a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card filter-card">
+  <form class="filter-form" method="get" action="/rilis">
+    <div class="filter-row">
+      <div class="input-icon-wrap filter-search">
+        {{ icon('search') }}
+        <input class="input search-pill" type="search" name="q" value="{{ q }}"
+               placeholder="Cari judul, isi rilis, kode, atau kegiatan terkait…" aria-label="Kata kunci">
+      </div>
+      {% if can_manage_content %}
+      <select class="select" name="status" aria-label="Status rilis">
+        <option value="">Semua status</option>
+        {% for value in statuses %}
+        <option value="{{ value }}" {{ 'selected' if status == value }}>{{ status_labels.get(value, value) }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      <label class="check-inline">
+        <input type="checkbox" name="saya" value="1" {{ 'checked' if saya == '1' }}>
+        <span>Rilis saya</span>
+      </label>
+      <button class="btn btn-primary" type="submit">{{ icon('filter') }} Terapkan</button>
+      {% if query_string %}<a class="btn btn-ghost" href="/rilis">Reset</a>{% endif %}
+    </div>
+
+    <details class="filter-details" style="margin-top: 2px;" {{ 'open' if date_from or date_to }}>
+      <summary>{{ icon('settings') }} Filter lanjutan</summary>
+      <div class="filter-advanced mt-1">
+        <div class="form-group">
+          <label class="form-label" for="f-from">Rilis dari tanggal</label>
+          <input class="input" id="f-from" type="date" name="date_from" value="{{ date_from }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-to">Sampai tanggal</label>
+          <input class="input" id="f-to" type="date" name="date_to" value="{{ date_to }}">
+        </div>
+        <div class="form-group">
+          <span class="form-label">&nbsp;</span>
+          <button class="btn btn-soft" type="submit">{{ icon('search') }} Terapkan filter</button>
+        </div>
+      </div>
+    </details>
+  </form>
+</div>
+
+<div class="release-stats">
+  <div class="publication-stat"><b>{{ counts.get('published', 0) }}</b><span>Rilis terbit</span></div>
+  {% if can_manage_content %}
+  <div class="publication-stat"><b>{{ counts.get('draft', 0) }}</b><span>Draf rilis</span></div>
+  <div class="publication-stat"><b>{{ counts.get('archived', 0) }}</b><span>Diarsipkan</span></div>
+  {% endif %}
+  <div class="publication-stat"><b>{{ result.total }}</b><span>Hasil filter</span></div>
+</div>
+
+<div class="filter-meta">
+  <span class="result-count">
+    {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> rilis{% else %}Tidak ada rilis{% endif %}
+  </span>
+  <div class="active-filters">
+    {% if q %}<span class="active-filter">“{{ q }}” <a href="/rilis" aria-label="Hapus filter kata kunci">{{ icon('x') }}</a></span>{% endif %}
+    {% if status %}<span class="active-filter">{{ status_labels.get(status, status) }}</span>{% endif %}
+    {% if saya == '1' %}<span class="active-filter">Rilis saya</span>{% endif %}
+    {% if date_from %}<span class="active-filter">Dari {{ date_from }}</span>{% endif %}
+    {% if date_to %}<span class="active-filter">Sampai {{ date_to }}</span>{% endif %}
+  </div>
+</div>
+
+{% if result.items %}
+<div class="release-grid">
+  {% for release in result.items %}
+  <article class="release-card">
+    <div class="release-top">
+      {{ status_badge(release.status) }}
+      <span class="release-code">{{ release.code }}</span>
+    </div>
+    <a class="release-title" href="/rilis/{{ release.id }}">{{ release.title }}</a>
+    <p class="release-summary">{{ (release.summary or release.body)|truncate(190) }}</p>
+    {% if release.tag_list %}
+    <div class="chip-row release-tags">
+      {% for tag in release.tag_list[:4] %}<span class="chip chip-purple">{{ tag }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="release-meta">
+      <span>{{ icon('calendar') }} {{ release.release_date|date_short }}</span>
+      <span>{{ icon('user') }} {{ release.author.full_name if release.author else 'Tim Humas' }}</span>
+      {% if release.activity %}<span>{{ icon('link') }} {{ release.activity.code }}</span>{% endif %}
+      <span>{{ icon('eye') }} {{ release.view_count }}</span>
+    </div>
+    <div class="release-foot">
+      <a class="section-link" href="/rilis/{{ release.id }}">Baca rilis {{ icon('arrow-right') }}</a>
+      {% if can_manage_content and release.status == 'draft' %}
+      <a class="btn btn-soft btn-sm" href="/rilis/{{ release.id }}/edit">{{ icon('edit') }} Sunting</a>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{{ pagination(result, request) }}
+{% else %}
+{{ empty_state('send', 'Belum ada rilis', 'Rilis yang diterbitkan tim Humas akan tampil di sini. Tulis siaran pers pertama untuk mendampingi dokumentasi kegiatan.', '/rilis/baru' if can_manage_content else None, 'Tulis rilis' if can_manage_content else None) }}
+{% endif %}
+{% endblock %}

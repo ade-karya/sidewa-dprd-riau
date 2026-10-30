@@ -13,10 +13,12 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
   Tavily mencari berita, Gemini menilai relevansi dan sentimen, lalu hasilnya
   dipadukan dengan leksikon sentimen Bahasa Indonesia.
 - Unggah dokumentasi kegiatan: metadata, komisi terkait, lokasi, tanggal, foto; deteksi wajah otomatis.
+- **Rilis & siaran pers Humas**: susun draf, tautkan ke kegiatan, terbitkan, arsipkan, dan pantau rilis terbaru langsung dari ruang kerja staf Humas (`/rilis`).
 - Pencarian berdasarkan wajah (unggah foto), nama/jabatan, kategori, komisi, lokasi, dan rentang tanggal.
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
 - Dashboard statistik, log audit, ekspor CSV, health/metrics, API v1 + token Bearer.
 - Antarmuka bergaya fotoyu.com: sidebar ramping, aksen lavender, pill button, kartu rounded, tipografi Roboto/Quicksand.
+- **Panduan visual**: tombol **Kenali SIDEWA** di halaman login untuk presentasi aplikasi, serta **Asisten SIDEWA** di halaman Humas yang menjelaskan setiap menu sambil menyorot elemen terkait.
 
 ## Tumpukan teknologi
 

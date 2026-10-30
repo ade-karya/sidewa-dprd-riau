@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, status_badge %}
+
+{% block title %}{{ release.title }}{% endblock %}
+{% block page_title %}Rilis Humas{% endblock %}
+{% block page_subtitle %}{{ release.code }} · {{ release.release_date|date_id }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/rilis">{{ icon('arrow-left') }}<span>Daftar rilis</span></a>
+{% if can_manage_content %}
+<a class="btn btn-primary btn-sm" href="/rilis/{{ release.id }}/edit">{{ icon('edit') }}<span>Sunting</span></a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/">Beranda</a>
+  <span>/</span>
+  <a href="/rilis">Rilis</a>
+  <span>/</span>
+  <span class="nowrap">{{ release.code }}</span>
+</nav>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    <article class="section-card release-detail">
+      <div class="chip-row mb-2">
+        {{ status_badge(release.status) }}
+        <span class="chip chip-gray">{{ icon('file-text') }} {{ release.code }}</span>
+        {% if release.activity %}<a class="chip chip-purple" href="/kegiatan/{{ release.activity.id }}">{{ icon('calendar') }} {{ release.activity.code }}</a>{% endif %}
+      </div>
+      <h1 class="release-detail-title">{{ release.title }}</h1>
+      {% if release.summary %}
+      <p class="release-lead">{{ release.summary }}</p>
+      {% endif %}
+      <div class="release-byline">
+        <span>{{ icon('user') }} {{ release.author.full_name if release.author else 'Tim Humas Sekretariat DPRD' }}</span>
+        <span>{{ icon('calendar') }} {{ release.release_date|date_id(true) }}</span>
+        <span>{{ icon('clock') }} {{ release.reading_minutes }} menit baca</span>
+        {% if release.status == 'published' %}<span>{{ icon('eye') }} {{ release.view_count }} dilihat</span>{% endif %}
+      </div>
+
+      <div class="prose release-prose">
+        {% for paragraph in release.body.split('\n\n') if paragraph.strip() %}
+        <p>{{ paragraph }}</p>
+        {% else %}
+        <p class="muted">Isi rilis belum tersedia.</p>
+        {% endfor %}
+      </div>
+
+      {% if release.tag_list %}
+      <div class="chip-row mt-3">
+        {% for tag in release.tag_list %}<span class="chip chip-purple">#{{ tag }}</span>{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="release-actions">
+        <button class="btn btn-outline btn-sm" type="button" data-print>{{ icon('printer') }} Cetak</button>
+        <button class="btn btn-outline btn-sm" type="button" data-copy="{{ request.url }}">{{ icon('link') }} Salin tautan</button>
+        {% if can_manage_content and release.status == 'draft' %}
+        <form method="post" action="/rilis/{{ release.id }}/terbit">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-primary btn-sm" type="submit">{{ icon('check') }} Terbitkan rilis</button>
+        </form>
+        {% endif %}
+        {% if can_manage_content and release.status == 'published' %}
+        <form method="post" action="/rilis/{{ release.id }}/arsip" data-confirm="Arsipkan rilis ini? Rilis tidak lagi tampil untuk pengguna umum.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-outline btn-sm" type="submit">{{ icon('database') }} Arsipkan</button>
+        </form>
+        {% endif %}
+        {% if can_manage_content and release.status == 'archived' %}
+        <form method="post" action="/rilis/{{ release.id }}/pulihkan">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-outline btn-sm" type="submit">{{ icon('refresh') }} Pulihkan ke draf</button>
+        </form>
+        {% endif %}
+        {% if can_manage_users %}
+        <form method="post" action="/rilis/{{ release.id }}/hapus" data-confirm="Hapus rilis ini secara permanen?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-danger btn-sm" type="submit">{{ icon('trash') }} Hapus</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <aside class="detail-side">
+    <section class="section-card">
+      <h2>{{ icon('file-text') }} Informasi rilis</h2>
+      <div class="side-list">
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('user') }}</span>
+          <div class="side-copy"><span>Penulis</span><strong>{{ release.author.full_name if release.author else '—' }}</strong></div>
+        </div>
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('calendar') }}</span>
+          <div class="side-copy"><span>Tanggal rilis</span><strong>{{ release.release_date|date_id }}</strong></div>
+        </div>
+        {% if release.published_at %}
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('check') }}</span>
+          <div class="side-copy"><span>Diterbitkan</span><strong>{{ release.published_at|datetime_id }}</strong></div>
+        </div>
+        {% endif %}
+        <div class="side-item">
+          <span class="meta-icon">{{ icon('clock') }}</span>
+          <div class="side-copy"><span>Diperbarui</span><strong>{{ release.updated_at|datetime_id }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    {% if release.activity %}
+    <section class="section-card">
+      <h2>{{ icon('calendar') }} Kegiatan terkait</h2>
+      <a class="humas-item" href="/kegiatan/{{ release.activity.id }}">
+        <span class="humas-thumb">
+          {% if release.activity.cover and release.activity.cover.thumb_path %}
+          <img src="/media/{{ release.activity.cover.thumb_path }}" alt="" loading="lazy">
+          {% endif %}
+        </span>
+        <span class="humas-copy">
+          <strong>{{ release.activity.title }}</strong>
+          <span>{{ release.activity.activity_date|date_short }} · {{ release.activity.category }}</span>
+        </span>
+        <span class="humas-arrow">{{ icon('arrow-right') }}</span>
+      </a>
+    </section>
+    {% endif %}
+
+    {% if related %}
+    <section class="section-card">
+      <h2>{{ icon('send') }} Rilis lainnya</h2>
+      <div class="humas-list">
+        {% for item in related %}
+        <a class="humas-item" href="/rilis/{{ item.id }}">
+          <span class="meta-icon">{{ icon('file-text') }}</span>
+          <span class="humas-copy">
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.release_date|date_short }}</span>
+          </span>
+          <span class="humas-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="section-card">
+      <h2>{{ icon('target') }} Alur rilis</h2>
+      <div class="duty-list">
+        <div class="duty-item">
+          <span class="duty-index">1</span>
+          <div class="duty-copy"><strong>Draf</strong><span>Naskah disusun dan dapat disunting tim Humas.</span></div>
+        </div>
+        <div class="duty-item">
+          <span class="duty-index">2</span>
+          <div class="duty-copy"><strong>Terbit</strong><span>Rilis dapat dibaca seluruh pengguna SIDEWA.</span></div>
+        </div>
+        <div class="duty-item">
+          <span class="duty-index">3</span>
+          <div class="duty-copy"><strong>Arsip</strong><span>Disimpan sebagai referensi tanpa tampil sebagai rilis aktif.</span></div>
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

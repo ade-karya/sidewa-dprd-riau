@@ -6,7 +6,7 @@
 {% block page_subtitle %}{{ total_active }} staf aktif · {{ total_faces }} Face ID terdaftar{% endblock %}
 
 {% block content %}
-<div class="card filter-card">
+<div class="card filter-card" data-tour="humas-filter">
   <form class="filter-form" method="get" action="/staf-humas">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -25,13 +25,13 @@
   </form>
 </div>
 
-<div class="filter-meta">
+<div class="filter-meta" data-tour="humas-filter-meta">
   <span class="result-count"><b>{{ rows|length }}</b> staf Humas ditampilkan</span>
   <span class="muted-small">{{ icon('fingerprint') }} Setiap staf memiliki ruang kerja pribadi dan dapat masuk dengan Face ID</span>
 </div>
 
 {% if rows %}
-<div class="member-grid">
+<div class="member-grid" data-tour="humas-directory">
   {% for row in rows %}
   {% set staff = row.staff %}
   {% set can_open = not own_staff_id or staff.id == own_staff_id %}
@@ -72,4 +72,10 @@
 {% else %}
 {{ empty_state('book-open', 'Staf Humas tidak ditemukan', 'Ubah kata kunci pencarian atau tambahkan data staf Humas.') }}
 {% endif %}
+
+{% include "partials/humas_assistant.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/humas-assistant.js?v={{ app_version }}" defer></script>
 {% endblock %}

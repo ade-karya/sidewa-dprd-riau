@@ -25,6 +25,7 @@ from ..models import (
     HumasStaff,
     HumasStaffAccount,
     HumasStaffFaceLogin,
+    PressRelease,
     User,
 )
 from ..utils import date_range_last_months, local_now, month_label, utc_naive_now
@@ -69,17 +70,24 @@ WORKSPACE_SHORTCUTS = [
         "tone": "purple",
     },
     {
+        "label": "Tulis rilis",
+        "description": "Susun siaran pers kegiatan DPRD.",
+        "href": "/rilis/baru",
+        "icon": "send",
+        "tone": "blue",
+    },
+    {
+        "label": "Masuk ke kegiatan",
+        "description": "Kelola dokumentasi dan foto kegiatan.",
+        "href": "/kegiatan",
+        "icon": "calendar",
+        "tone": "purple",
+    },
+    {
         "label": "Unggah dokumentasi",
         "description": "Tambahkan kegiatan dan foto baru.",
         "href": "/kegiatan/baru",
         "icon": "upload",
-        "tone": "purple",
-    },
-    {
-        "label": "Kelola kegiatan",
-        "description": "Sunting draf dan publikasi tim.",
-        "href": "/kegiatan",
-        "icon": "calendar",
         "tone": "blue",
     },
     {
@@ -203,6 +211,40 @@ def staff_dashboard_data(db: Session, staff: HumasStaff, viewer: User) -> dict:
         .all()
     )
 
+    release_base = db.query(PressRelease)
+    if user:
+        release_base = release_base.filter(PressRelease.author_id == user.id)
+    else:
+        release_base = release_base.filter(PressRelease.id < 0)
+    release_count = release_base.count()
+    release_published = release_base.filter(
+        PressRelease.status == STATUS_PUBLISHED
+    ).count()
+    release_drafts = release_base.filter(PressRelease.status == STATUS_DRAFT).count()
+    release_this_month = release_base.filter(
+        PressRelease.release_date >= local_now().date().replace(day=1)
+    ).count()
+    release_recent = (
+        release_base.order_by(PressRelease.release_date.desc(), PressRelease.id.desc())
+        .limit(4)
+        .all()
+    )
+    release_draft_items = (
+        release_base.filter(PressRelease.status == STATUS_DRAFT)
+        .order_by(PressRelease.updated_at.desc(), PressRelease.id.desc())
+        .limit(4)
+        .all()
+    )
+
+    team_release_base = (
+        db.query(PressRelease)
+        .join(User, PressRelease.author_id == User.id)
+        .filter(User.role.in_([ROLE_HUMAS, ROLE_STAF_HUMAS]))
+    )
+    team_release_published = team_release_base.filter(
+        PressRelease.status == STATUS_PUBLISHED
+    ).count()
+
     staff_total = db.query(HumasStaff).filter(HumasStaff.is_active.is_(True)).count()
     staff_with_face = (
         db.query(func.count(func.distinct(HumasStaffFaceLogin.staff_id)))
@@ -232,6 +274,13 @@ def staff_dashboard_data(db: Session, staff: HumasStaff, viewer: User) -> dict:
         "team_total": team_total,
         "team_published": team_published,
         "team_recent": team_recent,
+        "release_count": release_count,
+        "release_published": release_published,
+        "release_drafts": release_drafts,
+        "release_this_month": release_this_month,
+        "release_recent": release_recent,
+        "release_draft_items": release_draft_items,
+        "team_release_published": team_release_published,
         "staff_total": staff_total,
         "staff_with_face": staff_with_face,
         "face_login": face_login,

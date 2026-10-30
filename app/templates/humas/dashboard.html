@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros/ui.html" import icon, activity_card, empty_state %}
+{% from "macros/ui.html" import icon, activity_card, empty_state, status_badge %}
 
 {% block title %}Ruang Kerja {{ staff.full_name }}{% endblock %}
 {% block page_title %}Ruang kerja staf Humas{% endblock %}
@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="member-dash-hero staff-dash-hero">
+<section class="member-dash-hero staff-dash-hero" data-tour="humas-hero">
   <div class="member-dash-photo">
     {% if staff.portrait_path %}
     <img src="/media/{{ staff.portrait_path|media_full }}" alt="{{ staff.full_name }}">
@@ -64,7 +64,15 @@
         <h2 style="margin-bottom: 0;">{{ icon('presentation') }} Ruang kerja saya</h2>
         <span class="badge badge-purple">{{ data.today|date_id }}</span>
       </div>
-      <div class="workspace-grid">
+      <div class="workspace-flow">
+        <span class="workspace-flow-label">Alur kerja</span>
+        <a class="workspace-flow-step" href="/seleksi-foto">{{ icon('sparkles') }} Seleksi foto</a>
+        <span class="workspace-flow-arrow">{{ icon('arrow-right') }}</span>
+        <a class="workspace-flow-step" href="/rilis/baru">{{ icon('send') }} Rilis</a>
+        <span class="workspace-flow-arrow">{{ icon('arrow-right') }}</span>
+        <a class="workspace-flow-step" href="/kegiatan">{{ icon('calendar') }} Masuk ke kegiatan</a>
+      </div>
+      <div class="workspace-grid" data-tour="humas-shortcuts">
         {% for item in data.shortcuts %}
         <a class="workspace-tile tone-{{ item.tone }}" href="{{ item.href }}">
           <span class="workspace-icon">{{ icon(item.icon) }}</span>
@@ -77,7 +85,7 @@
         {% endfor %}
       </div>
 
-      <div class="workspace-summary">
+      <div class="workspace-summary" data-tour="humas-summary">
         <div class="workspace-stat">
           <span class="workspace-stat-icon">{{ icon('file-text') }}</span>
           <div><b>{{ data.draft_count }}</b><span>Draf menunggu terbit</span></div>
@@ -97,7 +105,7 @@
       </div>
 
       {% if data.draft_activities %}
-      <div class="workspace-drafts">
+      <div class="workspace-drafts" data-tour="humas-drafts">
         <h3 style="font-size: 13px; margin: 0 0 10px;">Draf yang perlu diselesaikan</h3>
         {% for activity in data.draft_activities %}
         <a class="humas-item" href="/kegiatan/{{ activity.id }}/edit">
@@ -117,12 +125,65 @@
       {% endif %}
     </section>
 
+    <section class="section-card release-workspace-card" data-tour="humas-release">
+      <div class="flex-between mb-2">
+        <div>
+          <h2 style="margin-bottom: 2px;">{{ icon('send') }} Rilis &amp; siaran pers</h2>
+          <p class="muted-small">Naskah siaran pers yang Anda susun untuk publikasi kegiatan.</p>
+        </div>
+        <span class="badge badge-purple">{{ data.release_this_month }} bulan ini</span>
+      </div>
+
+      <div class="publication-stats">
+        <div class="publication-stat"><b>{{ data.release_count }}</b><span>Total rilis</span></div>
+        <div class="publication-stat"><b>{{ data.release_published }}</b><span>Terbit</span></div>
+        <div class="publication-stat"><b>{{ data.release_drafts }}</b><span>Draf</span></div>
+        <div class="publication-stat"><b>{{ data.team_release_published }}</b><span>Rilis tim Humas</span></div>
+      </div>
+
+      {% if data.release_draft_items %}
+      <div class="workspace-drafts" style="margin-top: 4px; padding-top: 0; border-top: 0;">
+        <h3 style="font-size: 13px; margin: 0 0 10px;">Draf rilis yang perlu diselesaikan</h3>
+        {% for release in data.release_draft_items %}
+        <a class="humas-item" href="/rilis/{{ release.id }}/edit">
+          <span class="meta-icon">{{ icon('file-text') }}</span>
+          <span class="humas-copy">
+            <strong>{{ release.title }}</strong>
+            <span>{{ release.code }} · {{ release.release_date|date_short }}</span>
+          </span>
+          {{ status_badge(release.status) }}
+        </a>
+        {% endfor %}
+      </div>
+      {% elif data.release_recent %}
+      <div class="humas-list">
+        {% for release in data.release_recent %}
+        <a class="humas-item" href="/rilis/{{ release.id }}">
+          <span class="meta-icon">{{ icon('file-text') }}</span>
+          <span class="humas-copy">
+            <strong>{{ release.title }}</strong>
+            <span>{{ release.code }} · {{ release.release_date|date_short }} · {{ release.view_count }} dilihat</span>
+          </span>
+          <span class="humas-arrow">{{ icon('arrow-right') }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada rilis. Susun siaran pers pertama untuk mendampingi dokumentasi kegiatan Anda.</p>
+      {% endif %}
+
+      <div class="release-workspace-actions">
+        <a class="btn btn-primary btn-sm" href="/rilis/baru">{{ icon('plus') }} Tulis rilis</a>
+        <a class="btn btn-outline btn-sm" href="/rilis?saya=1">{{ icon('send') }} Semua rilis saya</a>
+      </div>
+    </section>
+
     <section class="section-card">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('upload') }} Unggahan dokumentasi saya</h2>
         <a class="section-link" href="/kegiatan">Lihat semua {{ icon('arrow-right') }}</a>
       </div>
-      <div class="publication-stats">
+      <div class="publication-stats" data-tour="humas-publication">
         <div class="publication-stat"><b>{{ data.activity_count }}</b><span>Total kegiatan</span></div>
         <div class="publication-stat"><b>{{ data.published_count }}</b><span>Sudah terbit</span></div>
         <div class="publication-stat"><b>{{ data.draft_count }}</b><span>Draf</span></div>
@@ -176,7 +237,7 @@
         <h2 style="margin-bottom: 0;">{{ icon('chart') }} Tren unggahan 6 bulan</h2>
         <span class="muted-small">{{ data.today|date_id }}</span>
       </div>
-      <div class="bar-chart" role="img" aria-label="Grafik jumlah unggahan dokumentasi per bulan">
+      <div class="bar-chart" data-tour="humas-trend" role="img" aria-label="Grafik jumlah unggahan dokumentasi per bulan">
         {% for month in data.monthly %}
         <div class="bar-item">
           <div class="bar-wrap">
@@ -212,7 +273,7 @@
   </div>
 
   <aside class="member-dash-side">
-    <section class="section-card face-id-card">
+    <section class="section-card face-id-card" data-tour="humas-faceid">
       <div class="flex-between mb-1">
         <h2 style="margin-bottom: 0;">{{ icon('fingerprint') }} Face ID login</h2>
         {% if data.face_login %}
@@ -286,7 +347,7 @@
 
     <section class="section-card">
       <h2>{{ icon('target') }} Tugas &amp; fungsi Humas</h2>
-      <div class="duty-list">
+      <div class="duty-list" data-tour="humas-duties">
         {% for duty in data.duties %}
         <div class="duty-item">
           <span class="duty-index">{{ loop.index }}</span>
@@ -324,9 +385,9 @@
   </aside>
 </div>
 
-{% include "partials/app_guide.html" %}
+{% include "partials/humas_assistant.html" %}
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/app-guide.js?v={{ app_version }}" defer></script>
+<script src="/static/js/humas-assistant.js?v={{ app_version }}" defer></script>
 {% endblock %}

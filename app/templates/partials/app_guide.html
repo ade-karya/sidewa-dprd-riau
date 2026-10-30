@@ -19,9 +19,11 @@
     </div>
     <span class="guide-counter" data-guide-counter>01 / 10</span>
     <div class="guide-tools">
+      {% if user %}
       <button class="guide-tool guide-tool-ai" type="button" data-guide-ai-toggle aria-expanded="false" aria-controls="guide-ai" aria-label="Buka asisten AI SIDEWA" title="Tanya AI (A)">
         {{ icon('sparkles') }}<span class="guide-ai-chip-label">Tanya AI</span>
       </button>
+      {% endif %}
       <button class="guide-tool" type="button" data-guide-fullscreen aria-label="Tampilkan layar penuh" title="Layar penuh (F)">
         <svg class="icon" aria-hidden="true"><use href="#i-maximize"></use></svg>
       </button>
@@ -365,7 +367,7 @@
               <span class="gs-role-icon gold">{{ icon('upload') }}</span>
               <div>
                 <h3>Tim Humas</h3>
-                <p>Mengunggah, menyunting, dan menerbitkan dokumentasi kegiatan dengan alur yang cepat.</p>
+                <p>Mengunggah dokumentasi, menyusun rilis, dan menerbitkan informasi kegiatan dengan alur yang cepat.</p>
               </div>
             </article>
             <article class="gs-role">
@@ -476,6 +478,7 @@
 
   <p class="sr-only" aria-live="polite" data-guide-live></p>
 
+  {% if user %}
   <aside class="guide-ai" id="guide-ai" data-guide-ai hidden aria-label="Asisten AI SIDEWA">
     <header class="guide-ai-head">
       <div class="guide-ai-id">
@@ -538,4 +541,5 @@
       <button class="link-btn" type="button" data-guide-ai-reconnect hidden>Hubungkan ulang</button>
     </div>
   </aside>
+  {% endif %}
 </div>

@@ -45,6 +45,7 @@ from ..models import (
     MemberAccount,
     MemberFace,
     MemberFaceLogin,
+    PressRelease,
     SentimentRun,
     User,
     activity_commissions,
@@ -976,6 +977,7 @@ def _reset(db: Session) -> None:
         AuditLog,
         MemberFace,
         Member,
+        PressRelease,
         Activity,
         User,
         Commission,
@@ -1219,6 +1221,70 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
         created_activities += 1
         created_objects.append(activity)
 
+    created_releases = 0
+    release_sources = [
+        activity
+        for activity in created_objects
+        if activity.status in (STATUS_PUBLISHED, STATUS_DRAFT)
+    ][:8]
+    for index, activity in enumerate(release_sources, start=1):
+        release_status = (
+            STATUS_DRAFT if activity.status == STATUS_DRAFT else STATUS_PUBLISHED
+        )
+        summary = " ".join(activity.description.split())[:300]
+        body = (
+            f"PEKANBARU — {activity.description.strip()}\n\n"
+            f"Kegiatan ini berlangsung di {activity.location_name} dan menjadi bagian "
+            "dari tugas pengawasan, pembentukan peraturan daerah, serta penyerapan "
+            "aspirasi masyarakat oleh DPRD Provinsi Riau.\n\n"
+            "Dokumentasi lengkap kegiatan dapat diakses melalui kanal SIDEWA Sekretariat "
+            "DPRD Provinsi Riau."
+        )
+        release = PressRelease(
+            code=f"RIL-{activity.activity_date.year}-{index:04d}",
+            title=activity.title,
+            slug=f"rilis-{activity.code.lower()}",
+            summary=summary,
+            body=body,
+            status=release_status,
+            release_date=activity.activity_date,
+            activity_id=activity.id,
+            author_id=activity.created_by_id,
+            published_at=datetime.combine(activity.activity_date, time(11, 0))
+            if release_status == STATUS_PUBLISHED
+            else None,
+            view_count=8 + index * 5 if release_status == STATUS_PUBLISHED else 0,
+            tags=[activity.category]
+            + [commission.short_name for commission in activity.commissions[:2]],
+        )
+        db.add(release)
+        db.flush()
+        created_releases += 1
+        release_actor = activity.creator or users["humas"]
+        db.add(
+            AuditLog(
+                actor_id=release_actor.id,
+                actor_name=release_actor.full_name,
+                action="RELEASE_CREATE",
+                entity_type="release",
+                entity_id=release.id,
+                summary=f"Menyusun rilis {release.code} — {release.title}",
+                created_at=datetime.combine(activity.activity_date, time(10, 45)),
+            )
+        )
+        if release_status == STATUS_PUBLISHED:
+            db.add(
+                AuditLog(
+                    actor_id=release_actor.id,
+                    actor_name=release_actor.full_name,
+                    action="RELEASE_PUBLISH",
+                    entity_type="release",
+                    entity_id=release.id,
+                    summary=f"Menerbitkan rilis {release.code}",
+                    created_at=datetime.combine(activity.activity_date, time(11, 0)),
+                )
+            )
+
     # Jejak audit yang realistis agar halaman riwayat tidak kosong.
     for activity in created_objects:
         uploaded_at = datetime.combine(activity.activity_date, time(10, 0))
@@ -1266,7 +1332,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
             action="USER_CREATE",
             entity_type="system",
             summary="Inisialisasi data demo SIDEWA DPRD Provinsi Riau",
-            detail={"activities": created_activities, "members": len(members)},
+            detail={"activities": created_activities, "releases": created_releases, "members": len(members)},
         )
     )
     db.commit()
@@ -1283,6 +1349,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
         "members": len(members),
         "humas_staff": len(staff_rows),
         "activities": created_activities,
+        "releases": created_releases,
         "photos": len(photos),
     }
 

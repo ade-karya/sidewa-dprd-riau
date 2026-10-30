@@ -1,0 +1,63 @@
+{% from "macros/ui.html" import icon %}
+{# Asisten SIDEWA: tur terpandu yang menyorot elemen halaman Humas. #}
+<button class="tour-fab" type="button" data-tour-open aria-haspopup="dialog" aria-controls="humas-assistant" aria-label="Buka Asisten SIDEWA">
+  <span class="tour-fab-icon">{{ icon('sparkles') }}</span>
+  <span class="tour-fab-text">
+    <strong>Asisten SIDEWA</strong>
+    <small>Panduan halaman · sorotan</small>
+  </span>
+</button>
+
+<div class="tour-root" id="humas-assistant" data-tour-root hidden>
+  <div class="tour-blocker" data-tour-blocker></div>
+  <div class="tour-spotlight" data-tour-spotlight hidden aria-hidden="true"></div>
+
+  <section class="tour-card" data-tour-card role="dialog" aria-modal="true" aria-labelledby="tour-title">
+    <header class="tour-head">
+      <div class="tour-id">
+        <span class="tour-orb">{{ icon('sparkles') }}</span>
+        <div>
+          <strong>Asisten SIDEWA</strong>
+          <small class="tour-status"><i></i><span data-tour-status>Pemandu halaman Humas</span></small>
+        </div>
+      </div>
+      <div class="tour-tools">
+        <button class="tour-tool" type="button" data-tour-voice aria-label="Nyalakan narasi suara" title="Narasi suara" aria-pressed="false">
+          {{ icon('volume-off') }}
+        </button>
+        <button class="tour-tool" type="button" data-tour-close aria-label="Tutup Asisten SIDEWA" title="Tutup (Esc)">
+          {{ icon('x') }}
+        </button>
+      </div>
+    </header>
+
+    <div class="tour-progress" aria-hidden="true"><span data-tour-progress></span></div>
+
+    <div class="tour-body">
+      <div class="tour-meta">
+        <span class="tour-kicker" data-tour-kicker>Selamat datang</span>
+        <span class="tour-counter" data-tour-counter>01 / 01</span>
+      </div>
+      <h2 class="tour-title" id="tour-title" data-tour-title>Mengenal SIDEWA</h2>
+      <p class="tour-copy" data-tour-body></p>
+      <ul class="tour-tips" data-tour-tips></ul>
+      <a class="tour-link" data-tour-link href="#" hidden>
+        <span data-tour-link-label>Buka halaman</span>{{ icon('arrow-right') }}
+      </a>
+    </div>
+
+    <footer class="tour-foot">
+      <div class="tour-dots" data-tour-dots role="group" aria-label="Langkah panduan"></div>
+      <div class="tour-nav">
+        <button class="btn btn-ghost btn-sm" type="button" data-tour-prev aria-label="Langkah sebelumnya">
+          {{ icon('arrow-left') }}<span>Sebelumnya</span>
+        </button>
+        <button class="btn btn-primary btn-sm" type="button" data-tour-next aria-label="Langkah berikutnya">
+          <span data-tour-next-label>Berikutnya</span>{{ icon('arrow-right') }}
+        </button>
+      </div>
+    </footer>
+
+    <p class="sr-only" aria-live="polite" data-tour-live></p>
+  </section>
+</div>

@@ -59,8 +59,8 @@ def test_seeded_staff_directory_and_dashboard(seeded_client):
     assert "Ruang kerja saya" in response.text
     assert "Face ID login" in response.text
     assert "Tugas &amp; fungsi Humas" in response.text
-    assert "Kenali SIDEWA" in response.text
-    assert "app-guide.js" in response.text
+    assert "Asisten SIDEWA" in response.text
+    assert "humas-assistant.js" in response.text
 
 
 def test_staff_portrait_media_is_served(seeded_client):

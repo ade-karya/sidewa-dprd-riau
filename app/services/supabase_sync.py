@@ -49,6 +49,7 @@ TABLE_ORDER = [
     "photo_selection_skills",
     "ai_photo_settings",
     "activities",
+    "press_releases",
     "activity_photos",
     "face_detections",
     "activity_members",

@@ -1,5 +1,12 @@
 # Panduan Pengguna SIDEWA
 
+## Panduan visual
+- Halaman login menyediakan tombol **Kenali SIDEWA** untuk presentasi lengkap
+  tentang tujuan, masalah, fitur, dan manfaat aplikasi.
+- Di ruang kerja Humas, direktori **Staf Humas**, dan **Seleksi Foto**, tombol
+  **Asisten SIDEWA** membuka tur halaman. Asisten menjelaskan setiap menu,
+  menyorot elemen yang sedang dibahas, dan dapat membacakan narasi suara.
+
 ## Anggota Dewan
 1. Buka halaman login, pilih tab **Face ID** → **Daftarkan Face ID**.
 2. Pilih nama Anda pada daftar, nyalakan kamera (atau unggah foto frontal), centang
@@ -17,6 +24,16 @@
 3. Isi metadata kegiatan, pilih komisi terkait, unggah foto (maks. 12, 15 MB per foto).
 4. Sistem mendeteksi wajah otomatis; tinjau hasil pada detail kegiatan.
 5. Terbitkan kegiatan agar terlihat oleh staf komisi. Arsipkan bila perlu.
+6. Buka menu **Rilis** untuk menyusun siaran pers. Tautkan rilis ke kegiatan,
+   simpan sebagai draf, lalu terbitkan agar dapat dibaca seluruh pengguna.
+
+## Rilis & siaran pers
+1. Buka `/rilis` atau pintasan **Tulis rilis** pada ruang kerja staf Humas.
+2. Isi judul, tanggal rilis, ringkasan, isi naskah, tag, dan kegiatan terkait.
+3. Simpan sebagai draf untuk ditinjau kembali. Draf hanya terlihat oleh pengelola konten.
+4. Terbitkan rilis dari halaman detail. Rilis terbit tampil di daftar dan ruang kerja.
+5. Gunakan **Arsipkan** untuk menyimpan rilis sebagai referensi tanpa menampilkannya
+   sebagai rilis aktif. Administrator dapat menghapus rilis secara permanen.
 
 ## Staf Humas Sekretariat
 Setiap staf Humas memiliki **ruang kerja pribadi** di `/dashboard-staf/{id}`.
@@ -25,9 +42,9 @@ Setiap staf Humas memiliki **ruang kerja pribadi** di `/dashboard-staf/{id}`.
    (atau unggah foto), centang persetujuan biometrik, lalu daftarkan.
 3. Setelah terdaftar, masuk cukup dengan **Masuk dengan wajah**. Sistem otomatis
    mengarahkan ke ruang kerja pribadi.
-4. Ruang kerja menampilkan unggahan dokumentasi pribadi, draf yang perlu
-   diselesaikan, tren unggahan enam bulan, aktivitas terbaru tim Humas, status
-   Face ID, dan pintasan tugas harian.
+4. Ruang kerja menampilkan unggahan dokumentasi pribadi, draf kegiatan dan draf
+   rilis yang perlu diselesaikan, tren unggahan enam bulan, aktivitas terbaru tim
+   Humas, status Face ID, serta pintasan tugas harian termasuk **Tulis rilis**.
 5. Administrator dapat membuka direktori **Staf Humas** (`/staf-humas`) untuk
    melihat seluruh staf, mengunggah foto resmi, atau menghapus Face ID.
 

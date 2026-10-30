@@ -40,6 +40,7 @@ from .models import (
     Member,
     utcnow,
     MemberFace,
+    PressRelease,
     User,
 )
 from .security import PasswordPolicyError, hash_password, validate_password_strength
@@ -270,6 +271,7 @@ def cmd_stats(_args) -> int:
             f"({db.query(HumasStaffFaceLogin).count()} Face ID)"
         )
         print(f"Kegiatan      : {db.query(Activity).count()}")
+        print(f"Rilis         : {db.query(PressRelease).count()}")
         print(f"Foto          : {db.query(ActivityPhoto).count()}")
         status_rows = (
             db.query(ActivityPhoto.status, func.count(ActivityPhoto.id))

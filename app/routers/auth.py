@@ -43,6 +43,7 @@ from ..security import (
     verify_password,
 )
 from ..services import face_engine, photo_curator
+from ..services.analytics import public_guide_stats
 from ..services.images import (
     ImageValidationError,
     delete_paths,
@@ -208,6 +209,7 @@ def login_page(request: Request, next: str = "", db: Session = Depends(get_db)):
         face_staff=_face_staff(db),
         face_staff_registered_ids=_face_registered_staff_ids(db),
         face_available=face_engine.engine.available,
+        stats=public_guide_stats(db),
     )
 
 
@@ -266,6 +268,7 @@ def login(
             face_staff=_face_staff(db),
             face_staff_registered_ids=_face_registered_staff_ids(db),
             face_available=face_engine.engine.available,
+            stats=public_guide_stats(db),
         )
 
     user.failed_attempts = 0
