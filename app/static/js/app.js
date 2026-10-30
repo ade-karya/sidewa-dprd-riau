@@ -593,6 +593,39 @@
     }
   });
 
+  /* Drive: ceklist (pilih banyak berkas) */
+  const driveBulkForm = document.getElementById("drive-bulk-form");
+  if (driveBulkForm) {
+    const allHead = document.getElementById("drive-select-all-head");
+    const allBar = document.getElementById("drive-select-all");
+    const boxes = () => Array.from(document.querySelectorAll(".drive-select"));
+    const countEl = document.getElementById("drive-bulk-count");
+    const btn = document.getElementById("drive-bulk-delete");
+    const update = () => {
+      const checked = boxes().filter((b) => b.checked).length;
+      if (countEl) countEl.textContent = checked;
+      if (btn) btn.disabled = checked === 0;
+      const total = boxes().length;
+      const allChecked = total > 0 && checked === total;
+      if (allHead) allHead.checked = allChecked;
+      if (allBar) allBar.checked = allChecked;
+    };
+    const setAll = (state) => {
+      boxes().forEach((b) => { b.checked = state; });
+      update();
+    };
+    if (allHead) allHead.addEventListener("change", (e) => setAll(e.target.checked));
+    if (allBar) allBar.addEventListener("change", (e) => setAll(e.target.checked));
+    boxes().forEach((b) => b.addEventListener("change", update));
+    update();
+    driveBulkForm.addEventListener("submit", (e) => {
+      const checked = boxes().filter((b) => b.checked).length;
+      if (checked === 0) { e.preventDefault(); return; }
+      const msg = driveBulkForm.getAttribute("data-confirm") || "Lanjutkan?";
+      if (!window.confirm(msg)) e.preventDefault();
+    });
+  }
+
   /* Expose tiny helper for templates */
   window.SIDEWA = { toast };
 })();

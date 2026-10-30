@@ -286,45 +286,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-(function () {
-  const form = document.getElementById('drive-bulk-form');
-  const allHead = document.getElementById('drive-select-all-head');
-  const allBar = document.getElementById('drive-select-all');
-  const boxes = () => Array.from(document.querySelectorAll('.drive-select'));
-  const countEl = document.getElementById('drive-bulk-count');
-  const btn = document.getElementById('drive-bulk-delete');
-
-  function update() {
-    const checked = boxes().filter(b => b.checked).length;
-    if (countEl) countEl.textContent = checked;
-    if (btn) btn.disabled = checked === 0;
-    const total = boxes().length;
-    const allChecked = total > 0 && checked === total;
-    if (allHead) allHead.checked = allChecked;
-    if (allBar) allBar.checked = allChecked;
-  }
-
-  function setAll(state) {
-    boxes().forEach(b => { b.checked = state; });
-    update();
-  }
-
-  if (allHead) allHead.addEventListener('change', e => setAll(e.target.checked));
-  if (allBar) allBar.addEventListener('change', e => setAll(e.target.checked));
-  boxes().forEach(b => b.addEventListener('change', update));
-  update();
-
-  if (form) {
-    form.addEventListener('submit', function (e) {
-      const checked = boxes().filter(b => b.checked).length;
-      if (checked === 0) { e.preventDefault(); return; }
-      const msg = form.getAttribute('data-confirm') || 'Lanjutkan?';
-      if (!window.confirm(msg)) e.preventDefault();
-    });
-  }
-})();
-</script>
 <style>
 .drive-bulk-bar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .75rem 0; }
 .drive-bulk-all { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
