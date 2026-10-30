@@ -6,9 +6,9 @@
 {% block page_subtitle %}{{ release.code }} · {{ release.release_date|date_id }}{% endblock %}
 
 {% block topbar_actions %}
-<a class="btn btn-outline btn-sm" href="/rilis">{{ icon('arrow-left') }}<span>Daftar rilis</span></a>
+<a class="btn btn-outline btn-sm release-back" href="/rilis" aria-label="Daftar rilis">{{ icon('arrow-left') }}<span>Daftar rilis</span></a>
 {% if can_manage_content %}
-<a class="btn btn-primary btn-sm" href="/rilis/{{ release.id }}/edit">{{ icon('edit') }}<span>Sunting</span></a>
+<a class="btn btn-primary btn-sm" href="/rilis/{{ release.id }}/edit" aria-label="Sunting rilis">{{ icon('edit') }}<span>Sunting</span></a>
 {% endif %}
 {% endblock %}
 

@@ -6,7 +6,8 @@
 {% block page_subtitle %}{{ release.code if mode == 'edit' else 'Susun siaran pers yang informatif dan mudah dikutip media' }}{% endblock %}
 
 {% block topbar_actions %}
-<a class="btn btn-outline btn-sm" href="{{ '/rilis/' ~ release.id if mode == 'edit' else '/rilis' }}">
+<a class="btn btn-outline btn-sm release-back" href="{{ '/rilis/' ~ release.id if mode == 'edit' else '/rilis' }}"
+   aria-label="{{ 'Kembali ke rilis' if mode == 'edit' else 'Daftar rilis' }}">
   {{ icon('arrow-left') }}<span>{{ 'Kembali ke rilis' if mode == 'edit' else 'Daftar rilis' }}</span>
 </a>
 {% endblock %}

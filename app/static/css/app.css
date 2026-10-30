@@ -374,6 +374,7 @@ ul, ol { margin: 0; padding: 0; }
 .filter-card { padding: 16px 18px; border-radius: 20px; }
 .filter-form { display: flex; flex-direction: column; gap: 12px; }
 .filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filter-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
 .filter-search { flex: 1; min-width: 220px; }
 .filter-search .input { height: 44px; }
 .filter-form .select { width: auto; min-width: 148px; height: 44px; }
@@ -715,7 +716,6 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
   .commission-strip { grid-template-columns: repeat(3, minmax(0,1fr)); }
   .dashboard-split { grid-template-columns: 1fr; }
   .detail-layout { grid-template-columns: minmax(0,1fr) 300px; }
-  .release-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .hero-rings { display: none; }
 }
 @media (max-width: 1080px) {
@@ -724,8 +724,6 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
   .member-layout, .profile-grid, .detail-layout { grid-template-columns: 1fr; }
   .detail-side { position: static; }
   .filter-advanced { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .release-form-layout { grid-template-columns: 1fr; }
-  .release-form-side { position: static; }
 }
 @media (max-width: 900px) {
   :root { --topbar: 70px; }
@@ -812,8 +810,6 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
   .commission-hero .commission-emblem { width: 48px !important; height: 48px !important; }
   .detail-hero-content { padding: 18px 16px; }
   .app-footer { font-size: 10px; }
-  .release-grid { grid-template-columns: 1fr; }
-  .release-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
   .topbar-actions .btn { width: 38px; height: 38px; padding: 0; }
@@ -1286,11 +1282,19 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: -.01em;
+  overflow-wrap: anywhere;
 }
 .release-title:hover { color: var(--purple-700); }
-.release-summary { color: var(--muted); font-size: 11.5px; line-height: 1.6; }
+.release-summary { color: var(--muted); font-size: 11.5px; line-height: 1.6; overflow-wrap: anywhere; }
 .release-tags { gap: 5px; }
 .release-tags .chip { font-size: 9.5px; padding: 3px 7px; }
+.release-card .chip,
+.release-detail .chip { max-width: 100%; }
+.release-tags .chip,
+.release-detail .chip-purple {
+  height: auto; min-height: 24px; padding-top: 3px; padding-bottom: 3px;
+  white-space: normal; overflow-wrap: anywhere;
+}
 .release-meta {
   display: flex; flex-wrap: wrap; gap: 5px 12px;
   margin-top: auto; padding-top: 10px;
@@ -1302,7 +1306,8 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
 .release-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .release-workspace-card .publication-stats { margin-bottom: 14px; }
 .release-workspace-actions { display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); flex-wrap: wrap; }
-.release-detail-title { font-size: clamp(24px, 3vw, 32px); line-height: 1.22; margin-bottom: 12px; }
+.release-workspace-card .flex-between { flex-wrap: wrap; gap: 8px; }
+.release-detail-title { font-size: clamp(24px, 3vw, 32px); line-height: 1.22; margin-bottom: 12px; overflow-wrap: anywhere; }
 .release-lead {
   font-size: 15px; line-height: 1.65; color: var(--text);
   padding-left: 14px; border-left: 3px solid var(--lavender);
@@ -1330,6 +1335,63 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
 .release-form-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .release-form-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: calc(var(--topbar) + 18px); }
 .release-body-input { min-height: 320px; line-height: 1.7; }
+
+/* Rilis — responsif (blok di atas berada setelah media query umum) */
+@media (max-width: 1280px) {
+  .release-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1080px) {
+  .release-form-layout { grid-template-columns: 1fr; }
+  .release-form-side { position: static; top: auto; }
+}
+@media (max-width: 900px) {
+  .topbar-actions .btn.release-back { display: inline-flex; }
+}
+@media (max-width: 680px) {
+  .release-filter { padding: 14px; border-radius: 16px; }
+  .release-filter .filter-row { align-items: stretch; gap: 8px; }
+  .release-filter .filter-search { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .release-filter .filter-form .select { flex: 1 1 100%; width: 100%; min-width: 0; }
+  .release-filter .filter-actions { flex: 1 1 100%; margin-left: 0; gap: 8px; }
+  .release-filter .filter-actions .check-inline { flex: 1 1 100%; }
+  .release-filter .filter-actions .btn { flex: 1 1 130px; }
+  .release-filter details.filter-details summary { padding: 8px 2px; font-size: 12px; }
+  .release-filter .label-spacer { display: none; }
+  .release-filter .filter-advanced { grid-template-columns: 1fr; }
+  .release-filter .filter-advanced .btn { width: 100%; }
+  .filter-meta { flex-direction: column; align-items: flex-start; gap: 8px; margin: 14px 0 12px; }
+  .release-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .release-grid { grid-template-columns: 1fr; gap: 12px; }
+  .release-card { padding: 16px; border-radius: 16px; }
+  .release-top { align-items: flex-start; }
+  .release-code { text-align: right; overflow-wrap: anywhere; }
+  .release-title { font-size: 15.5px; }
+  .release-summary { font-size: 12px; }
+  .release-foot { flex-wrap: wrap; }
+  .release-foot .btn { flex: 1 1 auto; }
+  .release-detail { padding: 20px 16px; }
+  .detail-side .section-card { padding: 18px 16px; }
+  .release-form-side .section-card { padding: 18px 16px; }
+  .release-form-main .flex-between { flex-wrap: wrap; align-items: flex-start; }
+  .release-actions { gap: 8px; }
+  .release-actions > form,
+  .release-actions > .btn { flex: 1 1 140px; }
+  .release-actions > form .btn { width: 100%; }
+  .release-actions .btn { height: 40px; }
+  .release-foot .btn { height: 40px; }
+  .release-form-main .card-pad { padding: 18px 16px; }
+  .release-body-input { min-height: 240px; height: 280px; }
+  .release-form-main .form-actions { flex-wrap: wrap; justify-content: stretch; gap: 8px; }
+  .release-form-main .form-actions .btn { flex: 1 1 150px; }
+  .release-form-main .form-actions .muted-small { flex: 1 1 100%; }
+  .pagination { gap: 4px; margin-top: 18px; }
+  .page-btn { min-width: 34px; height: 34px; }
+}
+@media (max-width: 420px) {
+  .release-detail-title { font-size: 22px; }
+  .release-actions > form,
+  .release-actions > .btn { flex: 1 1 100%; }
+}
 
 /* Tugas & fungsi */
 .duty-list { display: flex; flex-direction: column; gap: 10px; }

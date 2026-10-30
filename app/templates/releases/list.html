@@ -7,12 +7,12 @@
 
 {% block topbar_actions %}
 {% if can_manage_content %}
-<a class="btn btn-primary btn-sm" href="/rilis/baru">{{ icon('plus') }}<span>Tulis rilis</span></a>
+<a class="btn btn-primary btn-sm" href="/rilis/baru" aria-label="Tulis rilis">{{ icon('plus') }}<span>Tulis rilis</span></a>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="card filter-card">
+<div class="card filter-card release-filter">
   <form class="filter-form" method="get" action="/rilis">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -28,12 +28,14 @@
         {% endfor %}
       </select>
       {% endif %}
-      <label class="check-inline">
-        <input type="checkbox" name="saya" value="1" {{ 'checked' if saya == '1' }}>
-        <span>Rilis saya</span>
-      </label>
-      <button class="btn btn-primary" type="submit">{{ icon('filter') }} Terapkan</button>
-      {% if query_string %}<a class="btn btn-ghost" href="/rilis">Reset</a>{% endif %}
+      <div class="filter-actions">
+        <label class="check-inline">
+          <input type="checkbox" name="saya" value="1" {{ 'checked' if saya == '1' }}>
+          <span>Rilis saya</span>
+        </label>
+        <button class="btn btn-primary" type="submit">{{ icon('filter') }} Terapkan</button>
+        {% if query_string %}<a class="btn btn-ghost" href="/rilis">Reset</a>{% endif %}
+      </div>
     </div>
 
     <details class="filter-details" style="margin-top: 2px;" {{ 'open' if date_from or date_to }}>
@@ -48,7 +50,7 @@
           <input class="input" id="f-to" type="date" name="date_to" value="{{ date_to }}">
         </div>
         <div class="form-group">
-          <span class="form-label">&nbsp;</span>
+          <span class="form-label label-spacer">&nbsp;</span>
           <button class="btn btn-soft" type="submit">{{ icon('search') }} Terapkan filter</button>
         </div>
       </div>
