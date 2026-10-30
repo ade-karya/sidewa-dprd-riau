@@ -62,6 +62,11 @@ def _remote_name() -> str:
     return name.strip("_") or "sidewahf"
 
 
+def remote_name() -> str:
+    """Nama remote rclone yang dipakai aplikasi (mis. ``sidewahf``)."""
+    return _remote_name()
+
+
 def _env_prefix() -> str:
     # rclone membaca RCLONE_CONFIG_<REMOTE>_<KEY>; nama remote dihuruf-besarkan.
     return f"RCLONE_CONFIG_{_remote_name().upper()}"

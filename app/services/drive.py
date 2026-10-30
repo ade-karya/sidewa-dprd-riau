@@ -146,7 +146,13 @@ def _join(directory: str, name: str) -> str:
 
 
 def _base() -> str:
-    return f"{media_sync.rclone_root()}/{ROOT_DIR}"
+    """Akar Drive di HF S3; bucket dapat dipisah dari bucket media (mis. publik)."""
+    bucket = (settings.drive_bucket or settings.hf_s3_bucket).strip()
+    prefix = settings.hf_s3_prefix.strip("/")
+    base = f"{media_sync.remote_name()}:{bucket}"
+    if prefix:
+        base = f"{base}/{prefix}"
+    return f"{base}/{ROOT_DIR}"
 
 
 def _target(root: str | None, relative_path: str | None = "") -> str:

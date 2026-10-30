@@ -318,6 +318,8 @@ class Settings:
 
     # ── Drive bersama tim Humas (folder ``drive/`` di HF S3) ────────────────
     drive_enabled: bool = field(default_factory=lambda: _bool("SIDEWA_DRIVE_ENABLED", True))
+    # Bucket khusus Drive (mis. bucket publik). Kosong = ikut SIDEWA_HF_S3_BUCKET.
+    drive_bucket: str = field(default_factory=lambda: os.getenv("SIDEWA_DRIVE_BUCKET", "").strip())
     drive_max_upload_mb: int = field(
         default_factory=lambda: _int("SIDEWA_DRIVE_MAX_UPLOAD_MB", 90)
     )

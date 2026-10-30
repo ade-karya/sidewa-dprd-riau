@@ -95,6 +95,8 @@ SIDEWA_RCLONE_EXTRA_ARGS=
 
 # Drive bersama tim Humas (folder drive/ di HF S3)
 SIDEWA_DRIVE_ENABLED=true
+# Bucket publik untuk Drive (kosong = ikut SIDEWA_HF_S3_BUCKET).
+SIDEWA_DRIVE_BUCKET=sidewa-production
 # Maksimal per berkas; jangan melebihi 100 MB (batas body Cloudflare).
 SIDEWA_DRIVE_MAX_UPLOAD_MB=90
 # Kuota Drive pribadi per pengguna (GB)
