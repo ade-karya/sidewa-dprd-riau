@@ -392,6 +392,68 @@ def remove(
     return _redirect(scope, owner, parent)
 
 
+@router.post("/hapus-banyak")
+def remove_many(
+    request: Request,
+    selected: list[str] = Form(default=[]),
+    scope: str = Form("pribadi"),
+    owner: int | None = Form(None),
+    path: str = Form(""),
+    user: User = Depends(MEMBER),
+    db: Session = Depends(get_db),
+):
+    scope = _scope(scope)
+    parent = path
+    try:
+        root, target, _ = _resolve(db, user, scope, owner)
+    except HTTPException as exc:
+        flash(request, str(exc.detail), "danger")
+        return _redirect(scope, owner, parent)
+
+    deleted = 0
+    failed = 0
+    for item in selected or []:
+        item = (item or "").strip()
+        if not item or "|" not in item:
+            continue
+        rel_path, _, kind = item.partition("|")
+        rel_path = rel_path.strip()
+        kind = kind.strip() or "file"
+        if not rel_path:
+            continue
+        try:
+            removed = drive.delete_entry(root, rel_path, kind == "folder")
+        except drive.DriveError as exc:
+            logger.warning("Drive bulk delete gagal (%s): %s", rel_path, exc)
+            failed += 1
+            continue
+        deleted += 1
+        try:
+            audit(
+                db,
+                request,
+                "DRIVE_DELETE",
+                actor=user,
+                entity_type="drive",
+                summary=f"Hapus {'folder' if kind == 'folder' else 'berkas'} Drive: {removed}",
+                detail={"scope": scope, "owner": target.id if target else None,
+                        "path": removed, "kind": kind, "bulk": True},
+            )
+        except Exception:
+            pass
+    if deleted:
+        flash(
+            request,
+            f"{deleted} berkas/folder dihapus."
+            + (f" {failed} gagal." if failed else ""),
+        )
+    elif failed:
+        flash(request, f"Tidak ada yang dihapus ({failed} gagal).", "danger")
+    else:
+        flash(request, "Tidak ada berkas yang dipilih.")
+    return _redirect(scope, owner, parent)
+
+
 @router.get("/unduh")
 def download(
     path: str = "",

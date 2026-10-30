@@ -184,11 +184,31 @@
 </div>
 {% endif %}
 
+<form id="drive-bulk-form" method="post" action="/drive/hapus-banyak"
+      data-confirm="Hapus berkas/folder yang dicentang? Tindakan ini tidak dapat dibatalkan.">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="scope" value="{{ scope }}">
+  <input type="hidden" name="path" value="{{ path }}">
+  {% if owner and scope != 'tim' %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
+</form>
+
+<div class="drive-bulk-bar">
+  <label class="drive-bulk-all">
+    <input type="checkbox" id="drive-select-all" aria-label="Pilih semua">
+    <span>Pilih semua</span>
+  </label>
+  <button type="submit" form="drive-bulk-form" class="btn btn-soft btn-sm" id="drive-bulk-delete" disabled>
+    {{ icon('trash') }} Hapus terpilih (<span id="drive-bulk-count">0</span>)
+  </button>
+  <span class="muted-small" id="drive-bulk-hint">Centang berkas/folder untuk menghapus sekaligus.</span>
+</div>
+
 <div class="table-card mt-2">
   <div class="table-wrap">
     <table class="data">
       <thead>
         <tr>
+          <th class="drive-check-col"><input type="checkbox" id="drive-select-all-head" aria-label="Pilih semua"></th>
           <th>Nama</th>
           <th>Ukuran</th>
           <th>Diubah</th>
@@ -198,6 +218,11 @@
       <tbody>
         {% for entry in entries %}
         <tr>
+          <td class="drive-check-col">
+            <input type="checkbox" class="drive-select" form="drive-bulk-form"
+                   name="selected" value="{{ entry.path }}|{{ 'folder' if entry.is_dir else 'file' }}"
+                   aria-label="Pilih {{ entry.name }}">
+          </td>
           <td>
             <div class="cell-main drive-name">
               {% if entry.is_dir %}
@@ -241,7 +266,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="4" class="empty-row">
+          <td colspan="5" class="empty-row">
             Folder ini masih kosong — unggah berkas atau buat subfolder.
           </td>
         </tr>
@@ -258,4 +283,52 @@
 {% if not entries and not query and not drive_ready %}
 {{ empty_state('folder', 'Drive belum aktif', 'Isi SIDEWA_HF_S3_* lalu muat ulang halaman ini.') }}
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById('drive-bulk-form');
+  const allHead = document.getElementById('drive-select-all-head');
+  const allBar = document.getElementById('drive-select-all');
+  const boxes = () => Array.from(document.querySelectorAll('.drive-select'));
+  const countEl = document.getElementById('drive-bulk-count');
+  const btn = document.getElementById('drive-bulk-delete');
+
+  function update() {
+    const checked = boxes().filter(b => b.checked).length;
+    if (countEl) countEl.textContent = checked;
+    if (btn) btn.disabled = checked === 0;
+    const total = boxes().length;
+    const allChecked = total > 0 && checked === total;
+    if (allHead) allHead.checked = allChecked;
+    if (allBar) allBar.checked = allChecked;
+  }
+
+  function setAll(state) {
+    boxes().forEach(b => { b.checked = state; });
+    update();
+  }
+
+  if (allHead) allHead.addEventListener('change', e => setAll(e.target.checked));
+  if (allBar) allBar.addEventListener('change', e => setAll(e.target.checked));
+  boxes().forEach(b => b.addEventListener('change', update));
+  update();
+
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      const checked = boxes().filter(b => b.checked).length;
+      if (checked === 0) { e.preventDefault(); return; }
+      const msg = form.getAttribute('data-confirm') || 'Lanjutkan?';
+      if (!window.confirm(msg)) e.preventDefault();
+    });
+  }
+})();
+</script>
+<style>
+.drive-bulk-bar { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .75rem 0; }
+.drive-bulk-all { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
+.drive-check-col { width: 2.2rem; text-align: center; }
+.drive-check-col input { cursor: pointer; }
+</style>
 {% endblock %}
