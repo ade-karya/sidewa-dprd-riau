@@ -319,7 +319,7 @@ class Settings:
     # ── Drive bersama tim Humas (folder ``drive/`` di HF S3) ────────────────
     drive_enabled: bool = field(default_factory=lambda: _bool("SIDEWA_DRIVE_ENABLED", True))
     drive_max_upload_mb: int = field(
-        default_factory=lambda: _int("SIDEWA_DRIVE_MAX_UPLOAD_MB", 100)
+        default_factory=lambda: _int("SIDEWA_DRIVE_MAX_UPLOAD_MB", 90)
     )
     drive_quota_gb: int = field(default_factory=lambda: _int("SIDEWA_DRIVE_QUOTA_GB", 100))
 

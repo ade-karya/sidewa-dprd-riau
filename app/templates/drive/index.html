@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% from "macros/ui.html" import icon, empty_state %}
 
+{%- set viewing_staff = scope != 'tim' and owner and owner != user.id -%}
+
 {% macro scope_url(p='') -%}
 {%- set base = '/drive/tim' if scope == 'tim' else '/drive' -%}
 {%- set params = [] -%}
@@ -34,9 +36,12 @@
 
 <div class="drive-switch">
   <nav class="drive-tabs" aria-label="Pilih Drive">
-    <a class="drive-tab {{ 'active' if scope != 'tim' }}" href="{{ '/drive' }}{% if owner and scope != 'tim' %}?owner={{ owner }}{% endif %}">
+    <a class="drive-tab {{ 'active' if scope != 'tim' and not viewing_staff }}" href="/drive">
       {{ icon('folder') }} Drive saya
     </a>
+    {% if viewing_staff %}
+    <span class="drive-tab active">{{ icon('shield') }} Drive staf</span>
+    {% endif %}
     <a class="drive-tab {{ 'active' if scope == 'tim' }}" href="/drive/tim">
       {{ icon('users') }} Drive tim
     </a>
@@ -132,16 +137,30 @@
     <p class="muted-small">
       Tujuan: {{ label }}{% if path %} / {{ path }}{% endif %} · maksimal {{ max_upload_mb }} MB per berkas{% if quota %} · sisa {{ quota.remaining|filesize }}{% endif %}.
     </p>
-    <form method="post" action="/drive/unggah" enctype="multipart/form-data" data-loading>
+    <form method="post" action="/drive/unggah" enctype="multipart/form-data"
+          data-drive-upload data-max-bytes="{{ max_upload_bytes }}" data-max-mb="{{ max_upload_mb }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="path" value="{{ path }}">
       <input type="hidden" name="scope" value="{{ scope }}">
       {% if owner and scope != 'tim' %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
       <div class="upload-zone drive-upload-zone">
-        <input type="file" name="files" multiple aria-label="Pilih berkas untuk diunggah">
+        <input type="file" name="files" multiple required aria-label="Pilih berkas untuk diunggah">
         <div class="upload-icon">{{ icon('upload') }}</div>
         <h4>Pilih berkas atau tarik ke sini</h4>
-        <p>Bisa beberapa berkas sekaligus</p>
+        <p data-upload-hint>Bisa banyak berkas sekaligus — dikirim satu per satu.</p>
+      </div>
+      <div class="drive-progress" data-upload-progress hidden>
+        <div class="drive-progress-head">
+          <span class="muted-small drive-progress-status" data-upload-status role="status" aria-live="polite">Menyiapkan…</span>
+          <span class="muted-small drive-progress-percent" data-upload-percent>0%</span>
+        </div>
+        <div class="drive-progress-track" data-upload-track role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progres unggahan">
+          <span data-upload-bar></span>
+        </div>
+        <div class="drive-progress-foot">
+          <span class="muted-small drive-progress-speed" data-upload-speed></span>
+          <button class="btn btn-ghost btn-sm" type="button" data-upload-cancel hidden>Batalkan</button>
+        </div>
       </div>
       <button class="btn btn-primary btn-sm mt-2" type="submit" {{ 'disabled' if quota and quota.full }}>{{ icon('upload') }} Unggah</button>
     </form>

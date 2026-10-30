@@ -178,6 +178,9 @@ def usage(root: str) -> int:
     """Total byte terpakai pada satu akar Drive (pemindaian rekursif rclone)."""
     proc = _run(["size", "--json", _target(root)])
     if proc.returncode != 0:
+        error = media_sync.rclone_error(proc)
+        if media_sync._is_missing(error) or proc.returncode in (3, 4):
+            return 0
         raise _fail(proc, "Gagal menghitung pemakaian Drive.")
     try:
         data = json.loads(proc.stdout or "{}")
@@ -202,6 +205,12 @@ def usage_cached(root: str, ttl: float = USAGE_TTL) -> int:
 def forget_usage(root: str) -> None:
     with _usage_lock:
         _usage_cache.pop(root, None)
+
+
+def prime_usage(root: str, value: int) -> None:
+    """Simpan pemakaian terbaru di cache agar unggahan berurutan tidak memindai S3 tiap berkas."""
+    with _usage_lock:
+        _usage_cache[root] = (time.monotonic(), max(0, int(value)))
 
 
 def quota_state(root: str, cached: bool = True) -> dict[str, Any]:
@@ -254,6 +263,9 @@ def _parse_time(value: str | None) -> datetime | None:
 def _entries(root: str, directory: str) -> list[dict[str, Any]]:
     proc = _run(["lsjson", "--max-depth", "1", _target(root, directory)])
     if proc.returncode != 0:
+        error = media_sync.rclone_error(proc)
+        if media_sync._is_missing(error) or proc.returncode in (3, 4):
+            return []
         raise _fail(proc, "Gagal membaca folder.")
     try:
         rows = json.loads(proc.stdout or "[]")
@@ -310,6 +322,9 @@ def listing(root: str, path: str | None, label: str = "Drive") -> dict[str, Any]
 def _exists(root: str, relative_path: str) -> bool:
     proc = _run(["lsf", "--max-depth", "1", _target(root, relative_path)])
     if proc.returncode != 0:
+        error = media_sync.rclone_error(proc)
+        if media_sync._is_missing(error) or proc.returncode in (3, 4):
+            return False
         raise _fail(proc, "Gagal memeriksa folder.")
     return bool((proc.stdout or "").strip())
 
@@ -456,6 +471,9 @@ def search(root: str, query: str) -> dict[str, Any]:
         return {"query": "", "results": [], "truncated": False}
     proc = _run(["lsf", "-R", "--files-only", "--format", "p", _target(root)])
     if proc.returncode != 0:
+        error = media_sync.rclone_error(proc)
+        if media_sync._is_missing(error) or proc.returncode in (3, 4):
+            return {"query": term, "results": [], "truncated": False}
         raise _fail(proc, "Gagal mencari berkas.")
     lowered = term.casefold()
     results = []

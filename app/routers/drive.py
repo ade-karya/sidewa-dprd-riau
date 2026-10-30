@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.background import BackgroundTask
 
@@ -60,7 +60,8 @@ def _resolve(
             or target.role not in CONTENT_MANAGER_ROLES
         ):
             raise HTTPException(status_code=404, detail="Drive staf tidak ditemukan.")
-    return drive.personal_root(target.id), target, "Drive saya"
+    label = "Drive saya" if target.id == user.id else f"Drive {target.full_name}"
+    return drive.personal_root(target.id), target, label
 
 
 def _redirect(
@@ -106,6 +107,7 @@ def _context(
             "label": label,
             "query": query,
             "max_upload_mb": settings.drive_max_upload_mb,
+            "max_upload_bytes": settings.drive_max_upload_bytes,
             "drive_ready": drive.available(),
             "quota": drive.quota_state(root) if scope == "pribadi" else None,
             "staff_options": _staff_options(db, user),
@@ -136,6 +138,7 @@ def _empty_context(
         "query": "",
         "search": {"query": "", "results": [], "truncated": False},
         "max_upload_mb": settings.drive_max_upload_mb,
+        "max_upload_bytes": settings.drive_max_upload_bytes,
         "drive_ready": False,
         "quota": None,
         "staff_options": _staff_options(db, user),
@@ -187,15 +190,22 @@ async def upload(
     db: Session = Depends(get_db),
 ):
     scope = _scope(scope)
+    # Unggahan dari browser dikirim satu berkas per permintaan (header di bawah)
+    # agar tiap request jauh di bawah batas 100 MB Cloudflare dan tidak kena 413.
+    ajax = request.headers.get("x-drive-ajax") == "1"
     try:
         root, target, _ = _resolve(db, user, scope, owner)
     except HTTPException as exc:
-        flash(request, str(exc.detail), "error")
+        if ajax:
+            return JSONResponse(
+                {"saved": [], "errors": [str(exc.detail)]}, status_code=exc.status_code
+            )
+        flash(request, str(exc.detail), "danger")
         return _redirect(scope, owner)
 
     limit = settings.drive_max_upload_bytes
     quota_total = drive.quota_bytes()
-    used = drive.usage(root) if scope == "pribadi" else 0
+    used = drive.usage_cached(root) if scope == "pribadi" else 0
     saved: list[str] = []
     errors: list[str] = []
 
@@ -226,6 +236,9 @@ async def upload(
             name = drive.upload_file(root, path, upload.filename, temporary_path)
             saved.append(name)
             used += size
+            if scope == "pribadi":
+                # Perbarui cache agar berkas berikutnya tidak memindai S3 lagi.
+                drive.prime_usage(root, used)
         except drive.DriveError as exc:
             errors.append(str(exc))
         finally:
@@ -235,7 +248,6 @@ async def upload(
             await upload.close()
 
     if saved:
-        drive.forget_usage(root)
         audit(
             db,
             request,
@@ -254,9 +266,12 @@ async def upload(
                 "files": saved[:20],
             },
         )
+    if ajax:
+        return JSONResponse({"saved": saved, "errors": errors})
+    if saved:
         flash(request, f"{len(saved)} berkas diunggah.")
     for message in errors:
-        flash(request, message, "error")
+        flash(request, message, "danger")
     return _redirect(scope, owner if scope == "pribadi" else None, path)
 
 
@@ -275,10 +290,10 @@ def create_folder(
         root, target, _ = _resolve(db, user, scope, owner)
         destination = drive.create_folder(root, path, name)
     except HTTPException as exc:
-        flash(request, str(exc.detail), "error")
+        flash(request, str(exc.detail), "danger")
         return _redirect(scope, owner, path)
     except drive.DriveError as exc:
-        flash(request, str(exc), "error")
+        flash(request, str(exc), "danger")
         return _redirect(scope, owner, path)
     audit(
         db,
@@ -314,10 +329,10 @@ def rename(
         root, target, _ = _resolve(db, user, scope, owner)
         destination = drive.rename_entry(root, path, name, kind == "folder")
     except HTTPException as exc:
-        flash(request, str(exc.detail), "error")
+        flash(request, str(exc.detail), "danger")
         return _redirect(scope, owner, parent)
     except drive.DriveError as exc:
-        flash(request, str(exc), "error")
+        flash(request, str(exc), "danger")
         return _redirect(scope, owner, parent)
     audit(
         db,
@@ -354,10 +369,10 @@ def remove(
         root, target, _ = _resolve(db, user, scope, owner)
         removed = drive.delete_entry(root, path, kind == "folder")
     except HTTPException as exc:
-        flash(request, str(exc.detail), "error")
+        flash(request, str(exc.detail), "danger")
         return _redirect(scope, owner, parent)
     except drive.DriveError as exc:
-        flash(request, str(exc), "error")
+        flash(request, str(exc), "danger")
         return _redirect(scope, owner, parent)
     audit(
         db,
