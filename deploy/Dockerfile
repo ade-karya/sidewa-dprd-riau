@@ -20,20 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         zlib1g-dev \
         libpq5 \
         curl \
-        unzip \
         ca-certificates \
         tini \
     && rm -rf /var/lib/apt/lists/*
-
-# rclone: klien S3 native untuk Hugging Face S3 (pengganti boto3).
-ARG RCLONE_VERSION=1.75.2
-ARG RCLONE_ARCH=amd64
-RUN curl -fsSL "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-${RCLONE_ARCH}.zip" \
-        -o /tmp/rclone.zip \
-    && unzip -q /tmp/rclone.zip -d /tmp \
-    && install -m 0755 "/tmp/rclone-v${RCLONE_VERSION}-linux-${RCLONE_ARCH}/rclone" /usr/local/bin/rclone \
-    && rm -rf /tmp/rclone.zip "/tmp/rclone-v${RCLONE_VERSION}-linux-${RCLONE_ARCH}" \
-    && rclone version
 
 WORKDIR /app
 

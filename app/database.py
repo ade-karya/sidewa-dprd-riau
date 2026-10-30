@@ -6,6 +6,7 @@ import logging
 from collections.abc import Generator
 
 from sqlalchemy import create_engine, event, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import settings
@@ -27,9 +28,20 @@ def _make_engine():
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30}
     else:
-        kwargs["pool_size"] = 10
-        kwargs["max_overflow"] = 20
+        # Supabase transaction pooler (port 6543) berbagi koneksi backend di
+        # antara banyak klien. Pool kecil + prepared statement dimatikan agar
+        # sesi tidak saling bertabrakan.
+        kwargs["pool_size"] = 5
+        kwargs["max_overflow"] = 5
         kwargs["pool_recycle"] = 1800
+        connect_args: dict = {"connect_timeout": 15}
+        try:
+            if make_url(url).port == 6543:
+                # PgBouncer transaction mode tidak mendukung prepared statements.
+                connect_args["prepare_threshold"] = None
+        except Exception:  # pragma: no cover - URL tidak valid ditangani saat connect
+            pass
+        kwargs["connect_args"] = connect_args
     return create_engine(url, **kwargs)
 
 

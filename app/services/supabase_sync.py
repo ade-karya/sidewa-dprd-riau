@@ -1,11 +1,14 @@
-"""Sinkronisasi local-first ke Supabase (database utama).
+"""Sinkronisasi local-first ke Supabase (mode cache lokal, opsional).
 
-Arsitektur:
+Arsitektur ini hanya dipakai bila ``SIDEWA_SYNC_ENABLED=true`` dan database
+utama masih berupa PostgreSQL lokal. Pada mode produksi default, aplikasi
+terhubung langsung ke Supabase sehingga modul ini tidak menjalankan worker.
+
 - Aplikasi membaca/menulis ke PostgreSQL lokal (cache operasional).
 - Trigger PostgreSQL mencatat setiap perubahan ke tabel ``sync_outbox``.
 - Worker di proses aplikasi mengirim outbox ke Supabase secara batch.
 - Jika database lokal kosong, data dipulihkan (hydrate) dari Supabase.
-- Media ditangani terpisah oleh ``media_sync`` (Hugging Face S3).
+- Media ditangani terpisah oleh ``media_sync`` (Hugging Face S3 via boto3).
 
 Supabase tetap menjadi sumber kebenaran (source of truth); PostgreSQL lokal
 hanya buffer/cache untuk mengurangi koneksi dan beban Supabase.
@@ -83,7 +86,7 @@ _last_sync_at: str | None = None
 
 
 def enabled() -> bool:
-    """Sinkronisasi hanya aktif untuk PostgreSQL lokal + Supabase terkonfigurasi."""
+    """Aktif hanya untuk mode cache lokal (PostgreSQL lokal + Supabase)."""
     return bool(
         settings.sync_enabled
         and settings.supabase_configured
@@ -215,7 +218,7 @@ $$ LANGUAGE plpgsql;
 
 
 def install_local_schema() -> None:
-    """Pasang outbox, trigger, dan tabel bantu media di PostgreSQL lokal."""
+    """Pasang outbox, trigger, dan tabel bantu media pada database aplikasi."""
     if not (settings.sync_enabled or settings.media_sync_enabled):
         return
     if not settings.database_url.startswith("postgresql"):
@@ -687,7 +690,6 @@ class SyncWorker:
 
     def _run(self) -> None:
         lock_conn = None
-        last_media = 0.0
         while not self._stop.is_set():
             try:
                 if lock_conn is None:
@@ -703,18 +705,6 @@ class SyncWorker:
                         lock_conn = None
                         continue
                     process_outbox()
-                    if (
-                        settings.media_sync_enabled
-                        and time.monotonic() - last_media >= settings.media_sync_interval
-                    ):
-                        try:
-                            from . import media_sync
-
-                            media_sync.sync_pending(limit=20)
-                            media_sync.process_deletions(limit=20)
-                        except Exception:
-                            logger.exception("Sinkronisasi media HF S3 gagal")
-                        last_media = time.monotonic()
                 else:
                     # Worker non-leader tetap menyiapkan skema agar /readyz
                     # akurat, tanpa memblokir siklus (non-blocking lock).

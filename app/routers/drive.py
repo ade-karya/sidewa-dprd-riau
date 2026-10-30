@@ -1,4 +1,4 @@
-"""Drive Humas: ruang pribadi berkuota + area bersama tim di HF S3 lewat rclone."""
+"""Drive Humas: ruang pribadi berkuota + area bersama tim di HF S3."""
 
 from __future__ import annotations
 

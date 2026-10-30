@@ -380,17 +380,15 @@ APP_KNOWLEDGE = """
 ### ARSITEKTUR TEKNIS
 - Backend: Python 3.12+, FastAPI, SQLAlchemy 2, Jinja2, Pillow, NumPy,
   dlib + face_recognition. Frontend: HTML, CSS, JavaScript vanilla tanpa build step.
-- Pengembangan: SQLite (`data/sidewa.db`). Produksi: PostgreSQL.
-- Arsitektur produksi tiga lapisan:
-  1. Supabase PostgreSQL = sumber kebenaran (source of truth), memakai RLS dan
-     mencabut akses anon/authenticated; aplikasi memakai kredensial database.
-  2. PostgreSQL lokal = cache operasional + antrean outbox (local-first,
-     write-behind). Trigger mencatat perubahan ke `sync_outbox`; worker mengirim
-     batch ke Supabase (default tiap 5 detik, 200 baris per batch).
-  3. Hugging Face S3 (`bucket=kelaska`) = penyimpanan foto/thumbnail. Media
-     ditulis lokal lalu diunggah worker; jika cache hilang, diunduh on-demand.
-     `hydrate` memulihkan cache lokal dari Supabase.
-- Sinkronisasi dapat dipantau lewat `/readyz` (field `sync` dan `media_sync`).
+- Pengembangan: SQLite (`data/sidewa.db`). Produksi: Supabase PostgreSQL.
+- Arsitektur produksi dua lapisan:
+  1. Supabase PostgreSQL = sumber kebenaran (source of truth), diakses langsung
+     lewat transaction pooler; memakai RLS dan mencabut akses anon/authenticated.
+  2. Hugging Face S3 (`bucket=kelaska`) = penyimpanan foto/thumbnail dan Drive,
+     diakses langsung lewat boto3. Media ditulis lokal sebagai cache lalu
+     diunggah worker; jika cache hilang, diunduh on-demand.
+- Tidak ada PostgreSQL lokal, worker outbox, maupun biner rclone.
+- Sinkronisasi media dapat dipantau lewat `/readyz` (field `media_sync`).
 - Pencarian wajah memakai encoding 128 dimensi dari face_recognition; jarak
   Euclidean dibandingkan dengan ambang toleransi. Detektor `hog` untuk CPU,
   `cnn` untuk GPU.

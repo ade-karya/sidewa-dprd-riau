@@ -2,44 +2,39 @@
 
 Dokumen ini menjelaskan dua jalur deploy:
 
-1. **Produksi terkelola** — Supabase (database utama) + PostgreSQL lokal (cache)
-   + Hugging Face S3 (media). Ini adalah arsitektur yang dipakai pada deployment
+1. **Produksi terkelola** — Supabase (database) + Hugging Face S3 (media),
+   keduanya diakses langsung. Ini adalah arsitektur yang dipakai pada deployment
    saat ini.
 2. **Docker Compose mandiri** — seluruh stack berjalan di satu server.
 
 ---
 
-## 1. Produksi: Supabase + cache lokal + HF S3
+## 1. Produksi: Supabase + HF S3 langsung
 
 ### Arsitektur
 
 ```
 Browser ──► FastAPI (N worker)
                 │
-                ├── baca/tulis cepat ──► PostgreSQL lokal (cache + sync_outbox)
-                │                              │
-                │                              └── worker outbox ──► Supabase (source of truth)
+                ├── baca/tulis langsung ──► Supabase PostgreSQL (source of truth)
                 │
-                └── media ──► disk lokal (cache) ──► Hugging Face S3 (bucket kelaska, lewat rclone)
+                └── media ──► disk lokal (cache) ──► Hugging Face S3 (bucket kelaska, via boto3)
 ```
 
-- **Supabase** adalah sumber kebenaran. Semua perubahan akhirnya tersimpan di sini.
-- **PostgreSQL lokal** hanya cache operasional; boleh hilang dan dapat dipulihkan
-  dengan `hydrate`.
-- **HF S3** menyimpan media secara permanen. Disk lokal hanya cache; berkas yang
-  hilang diunduh kembali saat diminta (*on-demand cache*).
-
-Penulisan bersifat *local-first write-behind*: aplikasi menulis ke PostgreSQL
-lokal, trigger mencatat perubahan ke `sync_outbox`, lalu worker mengirimkannya ke
-Supabase secara batch. Dengan begitu koneksi dan kuota Supabase tetap hemat.
+- **Supabase** adalah sumber kebenaran. Aplikasi terhubung langsung melalui
+  transaction pooler (port 6543); tidak ada PostgreSQL lokal maupun worker outbox.
+- **HF S3** menyimpan media dan Drive secara permanen. Disk lokal hanya cache;
+  berkas yang hilang diunduh kembali saat diminta (*on-demand cache*).
+- **Tidak ada rclone.** Semua operasi S3 memakai `boto3` dengan *path-style
+  addressing* dan signature v4.
 
 ### Prasyarat
 
-- Python 3.12+ dan PostgreSQL 16+ lokal.
+- Python 3.12+.
 - Proyek Supabase dengan **connection pooler** aktif.
-- Bucket Hugging Face S3 (S3-compatible).
-- Biner **rclone** ≥ 1.60 di `PATH` (atau lewat `SIDEWA_RCLONE_BINARY`).
-  Media diunggah/diunduh ke HF S3 memakai rclone, bukan boto3.
+- Bucket Hugging Face S3 (S3-compatible) beserta access key/secret.
+- Tidak ada biner tambahan; `boto3` dan `psycopg` terpasang dari
+  `requirements.txt`.
 
 ### Langkah deploy
 
@@ -50,13 +45,6 @@ pip install -r requirements.txt
 cp .env.example .env   # lalu isi nilai produksi
 ```
 
-Pasang rclone (lewati bila image Docker dipakai — rclone sudah ada di dalamnya):
-
-```bash
-curl https://rclone.org/install.sh | sudo bash
-rclone version
-```
-
 Isi variabel penting di `.env`:
 
 ```dotenv
@@ -65,18 +53,15 @@ SIDEWA_SECRET_KEY=<64+ karakter acak>
 SIDEWA_TRUSTED_HOSTS=<domain resmi atau * bila di belakang proxy dinamis>
 SIDEWA_COOKIE_SECURE=true
 
-# Cache lokal
-SIDEWA_DATABASE_URL=postgresql+psycopg://sidewa:<password>@127.0.0.1:5432/sidewa
-
-# Supabase — runtime memakai transaction pooler (6543)
-SIDEWA_SUPABASE_DATABASE_URL=postgresql+psycopg://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?sslmode=require
+# Database langsung ke Supabase (transaction pooler, port 6543)
+SIDEWA_DATABASE_URL=postgresql+psycopg://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?sslmode=require
+SIDEWA_SUPABASE_DATABASE_URL=<sama dengan SIDEWA_DATABASE_URL>
 # Skema/resync memakai session pooler (5432)
 SIDEWA_SUPABASE_ADMIN_DATABASE_URL=postgresql+psycopg://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
 
-SIDEWA_SYNC_ENABLED=true
-SIDEWA_SYNC_INTERVAL=5
-SIDEWA_SYNC_BATCH=200
-SIDEWA_SYNC_HYDRATE_ON_EMPTY=true
+# Mode langsung Supabase: worker outbox tidak dipakai.
+SIDEWA_SYNC_ENABLED=false
+SIDEWA_SYNC_HYDRATE_ON_EMPTY=false
 
 SIDEWA_HF_S3_BUCKET=kelaska
 SIDEWA_HF_S3_ENDPOINT=https://s3.hf.co/akj2025
@@ -86,12 +71,6 @@ SIDEWA_HF_S3_SECRET_ACCESS_KEY=<secret key>
 SIDEWA_HF_S3_PREFIX=sidewa/media
 SIDEWA_MEDIA_SYNC_ENABLED=true
 SIDEWA_MEDIA_CACHE_ON_DEMAND=true
-
-# rclone → HF S3 (remote dibuat otomatis dari SIDEWA_HF_S3_*)
-SIDEWA_RCLONE_BINARY=rclone
-SIDEWA_RCLONE_REMOTE=sidewahf
-SIDEWA_RCLONE_TIMEOUT=300
-SIDEWA_RCLONE_EXTRA_ARGS=
 
 # Drive bersama tim Humas (folder drive/ di HF S3)
 SIDEWA_DRIVE_ENABLED=true
@@ -110,19 +89,10 @@ SIDEWA_DRIVE_QUOTA_GB=100
 > Gunakan kredensial **database** Supabase (user `postgres.<ref>`), bukan
 > service-role key. Service-role/anon key tidak dibutuhkan server ini.
 
-Inisialisasi cache lokal, skema Supabase, lalu salin data:
+Siapkan tabel yang belum ada, lalu jalankan server:
 
 ```bash
 python -m app.cli init-db
-python -m app.cli resync --truncate   # lokal → Supabase (hati-hati: mengosongkan tabel remote)
-```
-
-`resync` juga mengunggah seluruh media ke HF S3. Untuk unggahan bertahap
-berikutnya, worker media menanganinya otomatis.
-
-Jalankan server:
-
-```bash
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers
 ```
 
@@ -137,28 +107,15 @@ python -m app.cli sync-status
 python -m app.cli media-check
 ```
 
-`media-check` mencetak `ok: true` bila biner rclone ada dan bucket HF S3 dapat
-dilist. Jika gagal, pesan `error` berisi keluaran rclone (mis. kredensial salah
+`media-check` mencetak `ok: true` bila bucket HF S3 dapat dilist lewat boto3.
+Jika gagal, pesan `error` berisi kode/keterangan dari S3 (mis. kredensial salah
 atau endpoint tidak terjangkau).
 
 `/readyz` menampilkan:
 
-- `sync.schema_ready` — skema Supabase sudah siap.
-- `sync.pending` — jumlah perubahan yang belum terkirim (idealnya 0).
-- `sync.last_error` — kesalahan sinkronisasi terakhir, bila ada.
+- `database` — status koneksi langsung ke Supabase.
 - `media_sync.pending` / `pending_deletions` — antrean media HF S3.
-- `media_sync.backend` / `binary_available` — status klien rclone.
-
-### Pemulihan cache
-
-Jika PostgreSQL lokal hilang atau rusak:
-
-```bash
-python -m app.cli init-db
-python -m app.cli hydrate --force    # Supabase → cache lokal
-```
-
-Media akan diunduh kembali dari HF S3 saat pertama kali diakses.
+- `media_sync.backend` — `boto3` bila worker media aktif.
 
 ### Catatan operasional
 
@@ -167,13 +124,9 @@ Media akan diunduh kembali dari HF S3 saat pertama kali diakses.
   tidak pernah diisi ulang.
 - Perintah `seed`, `seed-staff`, `upgrade-portraits`, dan `resync` **diblokir
   total** saat `SIDEWA_ENV=production`. Tidak ada flag bypass.
-- **Jangan** menjalankan `resync --truncate` saat ada perubahan lokal yang belum
-  terkirim; jalankan `python -m app.cli sync` terlebih dahulu.
-- Hanya satu worker yang memegang lock sinkronisasi (leader election via
-  advisory lock PostgreSQL). Worker lain tetap melayani request dan menyiapkan
-  skema.
-- Lock skema memakai *transaction-level advisory lock* sehingga otomatis lepas
-  saat transaksi selesai; tidak ada lock yang tertinggal di connection pool.
+- Media diunggah oleh worker latar belakang (`SIDEWA_MEDIA_SYNC_INTERVAL`,
+  default 30 detik). Setiap berkas baru dicatat di antrean `media_sync` lalu
+  diunggah langsung ke HF S3.
 - RLS di Supabase aktif dan akses `anon`/`authenticated` dicabut. Aplikasi
   terhubung sebagai user database.
 - Backup: Supabase menangani backup database; media ada di HF S3. Simpan `.env`
@@ -203,12 +156,18 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Stack: PostgreSQL 17, aplikasi FastAPI (4 worker), Nginx reverse proxy. Volume
-`media_data` dan `postgres_data`.
+Stack: PostgreSQL 17 (container `db`), aplikasi FastAPI (4 worker), Nginx reverse
+proxy. Volume `media_data` dan `postgres_data`.
+
+Jalur ini **self-hosted**: database ada di container `db`, bukan di Supabase.
+Media tetap dikirim langsung ke Hugging Face S3 lewat `boto3` (tidak ada
+rclone). Bila ingin memakai Supabase langsung lewat Compose, hapus baris
+`SIDEWA_DATABASE_URL` pada `docker-compose.yml` sehingga nilai dari `.env`
+(transaction pooler port 6543) yang dipakai.
 
 Saat container mulai, aplikasi **hanya** menyiapkan tabel yang belum ada
 (`init-db`). Tidak ada seed demo maupun `seed-staff` otomatis: data production
-di Supabase dan HF S3 dibiarkan apa adanya.
+di database dan HF S3 dibiarkan apa adanya.
 
 Untuk pengembangan non-produksi, isi data demo secara manual:
 

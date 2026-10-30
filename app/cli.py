@@ -298,8 +298,9 @@ def cmd_resync(args) -> int:
 
     if not supabase_sync.enabled():
         print(
-            "Supabase belum dikonfigurasi. Isi SIDEWA_SUPABASE_DATABASE_URL dan "
-            "SIDEWA_SUPABASE_ADMIN_DATABASE_URL di .env.",
+            "Sinkronisasi cache lokal tidak aktif. Isi SIDEWA_SUPABASE_DATABASE_URL, "
+            "SIDEWA_SUPABASE_ADMIN_DATABASE_URL, dan set SIDEWA_SYNC_ENABLED=true "
+            "bila memakai mode cache lokal.",
             file=sys.stderr,
         )
         return 1
@@ -341,7 +342,7 @@ def cmd_hydrate(args) -> int:
     from .services import supabase_sync
 
     if not supabase_sync.enabled():
-        print("Supabase belum dikonfigurasi.", file=sys.stderr)
+        print("Sinkronisasi cache lokal tidak aktif.", file=sys.stderr)
         return 1
     try:
         counts = supabase_sync.hydrate_from_supabase(force=args.force)
@@ -362,7 +363,7 @@ def cmd_sync(args) -> int:
     from .services import supabase_sync
 
     if not supabase_sync.enabled():
-        print("Supabase belum dikonfigurasi.", file=sys.stderr)
+        print("Sinkronisasi cache lokal tidak aktif.", file=sys.stderr)
         return 1
     applied = supabase_sync.process_outbox(limit=args.limit or None)
     print(f"{applied} perubahan dikirim ke Supabase.")
@@ -384,14 +385,14 @@ def cmd_sync_status(_args) -> int:
 
 
 def cmd_media_check(_args) -> int:
-    """Diagnosa koneksi rclone → HF S3 (tanpa menyentuh database)."""
+    """Diagnosa koneksi langsung ke HF S3 (tanpa menyentuh database)."""
     from .services import media_sync
 
     report = media_sync.check()
     print(json.dumps(report, indent=2, default=str))
     if not report.get("ok"):
         print(
-            "Periksa SIDEWA_HF_S3_*, SIDEWA_RCLONE_BINARY, dan koneksi jaringan.",
+            "Periksa SIDEWA_HF_S3_* dan koneksi jaringan ke endpoint HF S3.",
             file=sys.stderr,
         )
         return 1
@@ -548,7 +549,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("sync-status", help="Tampilkan status sinkronisasi database & media")
     p.set_defaults(func=cmd_sync_status)
 
-    p = sub.add_parser("media-check", help="Uji koneksi rclone → HF S3")
+    p = sub.add_parser("media-check", help="Uji koneksi langsung ke HF S3")
     p.set_defaults(func=cmd_media_check)
 
     return parser

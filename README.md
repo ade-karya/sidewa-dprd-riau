@@ -24,35 +24,28 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 ## Tumpukan teknologi
 
 - Backend: FastAPI, SQLAlchemy 2, Jinja2, Pillow, NumPy, dlib + `face_recognition`.
-- Database: SQLite (pengembangan) / PostgreSQL (produksi).
-- Object storage: Hugging Face S3 diakses lewat `rclone` (S3 native, path-style).
+- Database: SQLite (pengembangan) / Supabase PostgreSQL (produksi).
+- Object storage: Hugging Face S3 diakses langsung lewat `boto3` (S3 native, path-style).
 - Frontend: HTML + CSS + JavaScript vanilla (tanpa build step).
 
-## Arsitektur produksi: Supabase + cache lokal + HF S3
+## Arsitektur produksi: Supabase + HF S3 langsung
 
-Pada mode produksi, SIDEWA memakai tiga lapisan:
+Pada mode produksi, SIDEWA memakai dua layanan terkelola:
 
 | Lapisan | Peran | Teknologi |
 |---|---|---|
-| **Database utama** | Sumber kebenaran (source of truth) | Supabase PostgreSQL |
-| **Cache lokal** | Buffer operasional + antrean outbox | PostgreSQL lokal |
-| **Object storage** | Penyimpanan foto & thumbnail | Hugging Face S3 (`bucket=kelaska`) via `rclone` |
+| **Database** | Sumber kebenaran (source of truth) | Supabase PostgreSQL (transaction pooler) |
+| **Object storage** | Foto, thumbnail, dan Drive | Hugging Face S3 (`bucket=kelaska`) via `boto3` |
 
-Alur tulis bersifat **local-first write-behind**:
-
-1. Aplikasi membaca/menulis ke PostgreSQL lokal sehingga latensi rendah dan
-   koneksi Supabase tetap sedikit.
-2. Trigger PostgreSQL mencatat setiap perubahan ke tabel `sync_outbox`.
-3. Worker latar belakang mengirim outbox ke Supabase secara batch (default
-   tiap 5 detik, 200 baris per batch).
-4. Media ditulis ke disk lokal lalu diunggah ke HF S3 oleh worker media memakai
-   `rclone` (remote dibentuk otomatis dari `SIDEWA_HF_S3_*`). Jika cache lokal
-   hilang, berkas diunduh kembali saat pertama kali diminta (*on-demand cache*).
-5. Saat cache lokal kosong, data dipulihkan otomatis dari Supabase
-   (`hydrate`).
-
-Supabase tetap menjadi sumber kebenaran: semua data akhirnya tersimpan di
-Supabase, sedangkan PostgreSQL lokal hanya cache yang boleh hilang.
+- Aplikasi membaca/menulis **langsung ke Supabase** melalui transaction pooler
+  (port 6543). Tidak ada PostgreSQL lokal maupun worker outbox.
+- Media ditulis ke disk lokal sebagai cache lalu diunggah langsung ke HF S3 oleh
+  worker media (`boto3`). Jika cache lokal hilang, berkas diunduh kembali saat
+  pertama kali diminta (*on-demand cache*).
+- Drive memakai S3 langsung: daftar, unggah, unduh, ubah nama, hapus, pencarian,
+  dan *presigned URL*.
+- Tidak ada biner eksternal (`rclone`) dan tidak ada konfigurasi remote terpisah;
+  endpoint serta kredensial dibaca dari `SIDEWA_HF_S3_*`.
 
 > **Keamanan:** tabel aplikasi di Supabase memakai RLS dan akses `anon` /
 > `authenticated` dicabut. Aplikasi terhubung memakai kredensial database
@@ -60,16 +53,8 @@ Supabase, sedangkan PostgreSQL lokal hanya cache yang boleh hilang.
 
 ## Memulai
 
-Prasyarat tambahan: biner **rclone** ≥ 1.60 harus tersedia di `PATH`
-(atau tunjuk lewat `SIDEWA_RCLONE_BINARY`). Pemasangan cepat:
-
-```bash
-curl https://rclone.org/install.sh | sudo bash
-rclone version
-```
-
-Tidak perlu `rclone config`: kredensial dan endpoint HF S3 dibaca dari `.env`
-(`SIDEWA_HF_S3_*`) dan disuntikkan sebagai environment `RCLONE_CONFIG_*`.
+Tidak ada prasyarat biner tambahan. Klien S3 (`boto3`) dan PostgreSQL
+(`psycopg`) dipasang otomatis dari `requirements.txt`.
 
 ```bash
 cd dprd-riau
@@ -133,7 +118,7 @@ lain) ditolak. Variabel terkait: `SIDEWA_MEMBER_IDENTITY_FILE`,
 Setiap pengelola konten (superadmin, admin, humas, staf Humas) punya **Drive
 pribadi** di `/drive` dengan kuota **100 GB** (`SIDEWA_DRIVE_QUOTA_GB`). Berkas
 disimpan di `<SIDEWA_HF_S3_PREFIX>/drive/pribadi/<id pengguna>/` pada bucket HF S3
-dan diakses lewat `rclone` — tidak ada metadata tambahan di database.
+dan diakses langsung lewat `boto3` — tidak ada metadata tambahan di database.
 
 - Unggah **beberapa berkas sekaligus**, buat folder, cari, ubah nama, unduh, dan
   hapus (berkas maupun folder beserta isinya).
@@ -216,15 +201,14 @@ Variabel terkait: `SIDEWA_PHOTO_SELECTION_ENABLED`,
 Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Variabel penting:
 
 - `SIDEWA_SECRET_KEY` — wajib diganti di produksi.
-- `SIDEWA_DATABASE_URL` — cache lokal: `sqlite:///data/sidewa.db` atau
-  `postgresql+psycopg://...`. Pada arsitektur Supabase, ini **bukan** database utama.
+- `SIDEWA_DATABASE_URL` — koneksi database. Mode produksi langsung ke Supabase
+  transaction pooler: `postgresql+psycopg://...pooler.supabase.com:6543/postgres?sslmode=require`.
+  Pengembangan dapat memakai `sqlite:///data/sidewa.db`.
 - `SIDEWA_SUPABASE_DATABASE_URL` — koneksi runtime Supabase (transaction pooler, port 6543).
 - `SIDEWA_SUPABASE_ADMIN_DATABASE_URL` — koneksi skema/resync Supabase (session pooler, port 5432).
-- `SIDEWA_SYNC_ENABLED` — aktifkan outbox worker ke Supabase.
+- `SIDEWA_SYNC_ENABLED` — worker outbox lama; biarkan `false` pada mode langsung Supabase.
 - `SIDEWA_HF_S3_*` — bucket, endpoint, dan kredensial Hugging Face S3.
-- `SIDEWA_RCLONE_*` — biner (`rclone`), nama remote, batas waktu, dan argumen
-  tambahan untuk sinkronisasi media lewat rclone.
-- `SIDEWA_MEDIA_SYNC_ENABLED` — aktifkan unggah media ke HF S3.
+- `SIDEWA_MEDIA_SYNC_ENABLED` — aktifkan worker unggah media ke HF S3.
 - `SIDEWA_FACE_DETECTOR` — `hog` (CPU) atau `cnn` (GPU, lebih akurat).
 - `SIDEWA_FACE_TOLERANCE`, `SIDEWA_FACE_AUTO_TAG`, `SIDEWA_FACE_REVIEW` — ambang pencocokan.
 - `SIDEWA_FACE_LOGIN_TOLERANCE` (default `0.50`) dan `SIDEWA_FACE_LOGIN_MARGIN`
@@ -257,12 +241,12 @@ python -m app.cli create-user --username nama --name "Nama" --role humas
 python -m app.cli reindex [--activity ID]
 python -m app.cli stats
 
-# Sinkronisasi Supabase
+# Sinkronisasi Supabase (hanya mode cache lokal)
 python -m app.cli resync [--truncate]   # salin seluruh data lokal → Supabase
 python -m app.cli hydrate [--force]     # pulihkan cache lokal dari Supabase
 python -m app.cli sync [--limit N]      # kirim outbox sekarang
 python -m app.cli sync-status           # status database & media sync
-python -m app.cli media-check           # uji koneksi rclone → HF S3
+python -m app.cli media-check           # uji koneksi langsung ke HF S3
 ```
 
 Status sinkronisasi juga tersedia di `GET /readyz` (field `sync` dan

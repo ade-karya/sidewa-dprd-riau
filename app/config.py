@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import secrets
-import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -300,20 +299,6 @@ class Settings:
     )
     media_cache_on_demand: bool = field(
         default_factory=lambda: _bool("SIDEWA_MEDIA_CACHE_ON_DEMAND", True)
-    )
-
-    # ── rclone: klien S3 native untuk HF S3 ─────────────────────────────────
-    rclone_binary: str = field(
-        default_factory=lambda: os.getenv("SIDEWA_RCLONE_BINARY", "rclone").strip()
-    )
-    rclone_remote: str = field(
-        default_factory=lambda: os.getenv("SIDEWA_RCLONE_REMOTE", "sidewahf").strip()
-    )
-    rclone_timeout: int = field(default_factory=lambda: _int("SIDEWA_RCLONE_TIMEOUT", 300))
-    rclone_extra_args: tuple[str, ...] = field(
-        default_factory=lambda: tuple(
-            shlex.split(os.getenv("SIDEWA_RCLONE_EXTRA_ARGS", "").strip())
-        )
     )
 
     # ── Drive bersama tim Humas (folder ``drive/`` di HF S3) ────────────────

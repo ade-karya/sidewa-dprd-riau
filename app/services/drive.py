@@ -1,16 +1,15 @@
-"""Drive Humas di Hugging Face S3 melalui rclone.
+"""Drive Humas di Hugging Face S3 melalui boto3 (S3 native).
 
 Setiap pengguna punya ruang pribadi di ``<SIDEWA_HF_S3_PREFIX>/drive/pribadi/<id>/``
 dengan kuota ``SIDEWA_DRIVE_QUOTA_GB`` (default 100 GB). Area bersama tim tetap
 tersedia di akar ``drive/`` sehingga berkas lama tidak perlu dipindahkan.
 
-Semua operasi (daftar, unggah, unduh, ubah nama, hapus) memakai rclone; tidak
-ada metadata tambahan di database.
+Semua operasi (daftar, unggah, unduh, ubah nama, hapus) memakai S3 langsung;
+tidak ada metadata tambahan di database dan tidak ada biner eksternal.
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import mimetypes
 import os
@@ -24,7 +23,7 @@ from typing import Any
 
 from ..config import settings
 from ..utils import format_datetime_id
-from . import media_sync
+from . import s3
 
 logger = logging.getLogger("sidewa.drive")
 
@@ -35,7 +34,7 @@ MAX_NAME_LENGTH = 120
 MAX_SEARCH_RESULTS = 120
 USAGE_TTL = 60.0
 # Masa berlaku tautan unduh langsung (presigned URL) ke HF S3.
-LINK_TTL = "30m"
+LINK_TTL = 1800
 
 # Tipe yang tetap dialirkan lewat server: browser tidak boleh merender HTML/SVG
 # dari penyimpanan, dan berkas teks lebih nyaman diunduh sebagai lampiran.
@@ -54,6 +53,7 @@ def should_stream(name: str) -> bool:
     mime = mimetypes.guess_type(name)[0] or ""
     return mime.startswith("text/") or mime in STREAM_INLINE_MIME
 
+
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 _usage_lock = threading.Lock()
@@ -65,7 +65,7 @@ class DriveError(RuntimeError):
 
 
 class DriveUnavailable(DriveError):
-    """Drive belum siap (rclone/HF S3 belum dikonfigurasi)."""
+    """Drive belum siap (HF S3 belum dikonfigurasi)."""
 
 
 class DriveQuotaExceeded(DriveError):
@@ -73,11 +73,7 @@ class DriveQuotaExceeded(DriveError):
 
 
 def available() -> bool:
-    return bool(
-        settings.drive_enabled
-        and settings.hf_s3_configured
-        and media_sync.binary_path() is not None
-    )
+    return bool(settings.drive_enabled and settings.hf_s3_configured)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -145,20 +141,30 @@ def _join(directory: str, name: str) -> str:
     return f"{directory}/{name}" if directory else name
 
 
-def _base() -> str:
-    """Akar Drive di HF S3; bucket dapat dipisah dari bucket media (mis. publik)."""
-    bucket = (settings.drive_bucket or settings.hf_s3_bucket).strip()
+def _bucket() -> str:
+    """Bucket Drive; dapat dipisah dari bucket media (mis. publik)."""
+    return (settings.drive_bucket or settings.hf_s3_bucket).strip()
+
+
+def _base_prefix() -> str:
     prefix = settings.hf_s3_prefix.strip("/")
-    base = f"{media_sync.remote_name()}:{bucket}"
-    if prefix:
-        base = f"{base}/{prefix}"
-    return f"{base}/{ROOT_DIR}"
+    return f"{prefix}/{ROOT_DIR}" if prefix else ROOT_DIR
 
 
-def _target(root: str | None, relative_path: str | None = "") -> str:
-    parts = [part for part in (validate_path(root), validate_path(relative_path)) if part]
-    base = _base()
-    return f"{base}/{'/'.join(parts)}" if parts else base
+def _key(root: str | None, relative_path: str | None = "") -> str:
+    parts = [_base_prefix()]
+    root_part = validate_path(root)
+    relative = validate_path(relative_path)
+    if root_part:
+        parts.append(root_part)
+    if relative:
+        parts.append(relative)
+    return "/".join(part for part in parts if part)
+
+
+def _folder_prefix(root: str | None, directory: str | None) -> str:
+    key = _key(root, directory)
+    return f"{key}/" if key else ""
 
 
 def breadcrumbs(path: str | None, label: str = "Drive") -> list[dict[str, str]]:
@@ -181,18 +187,11 @@ def quota_bytes() -> int:
 
 
 def usage(root: str) -> int:
-    """Total byte terpakai pada satu akar Drive (pemindaian rekursif rclone)."""
-    proc = _run(["size", "--json", _target(root)])
-    if proc.returncode != 0:
-        error = media_sync.rclone_error(proc)
-        if media_sync._is_missing(error) or proc.returncode in (3, 4):
-            return 0
-        raise _fail(proc, "Gagal menghitung pemakaian Drive.")
+    """Total byte terpakai pada satu akar Drive (pemindaian rekursif S3)."""
     try:
-        data = json.loads(proc.stdout or "{}")
-    except json.JSONDecodeError as exc:
-        raise DriveError("Balasan rclone tidak dapat dibaca.") from exc
-    return int(data.get("bytes") or 0)
+        return s3.total_size(_bucket(), _folder_prefix(root, ""))
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal menghitung pemakaian Drive. {exc}") from exc
 
 
 def usage_cached(root: str, ttl: float = USAGE_TTL) -> int:
@@ -237,69 +236,60 @@ def quota_state(root: str, cached: bool = True) -> dict[str, Any]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Primitif rclone
+# Primitif S3
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _run(args: list[str], timeout: int | None = None):
+def _require_ready() -> None:
     if not available():
-        raise DriveUnavailable("Drive belum dikonfigurasi (rclone/HF S3).")
-    try:
-        proc = media_sync.rclone_run(args, timeout=timeout)
-    except media_sync.RcloneError as exc:
-        raise DriveError(str(exc)) from exc
-    return proc
-
-
-def _fail(proc, message: str = "Operasi Drive gagal.") -> DriveError:
-    detail = media_sync.rclone_error(proc)
-    logger.warning("Drive: %s (%s)", message, detail)
-    return DriveError(f"{message} {detail}".strip())
-
-
-def _parse_time(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
+        raise DriveUnavailable("Drive belum dikonfigurasi (HF S3).")
 
 
 def _entries(root: str, directory: str) -> list[dict[str, Any]]:
-    proc = _run(["lsjson", "--max-depth", "1", _target(root, directory)])
-    if proc.returncode != 0:
-        error = media_sync.rclone_error(proc)
-        if media_sync._is_missing(error) or proc.returncode in (3, 4):
-            return []
-        raise _fail(proc, "Gagal membaca folder.")
+    prefix = _folder_prefix(root, directory)
     try:
-        rows = json.loads(proc.stdout or "[]")
-    except json.JSONDecodeError as exc:
-        raise DriveError("Balasan rclone tidak dapat dibaca.") from exc
+        objects, folder_prefixes = s3.list_dir(_bucket(), prefix)
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal membaca folder. {exc}") from exc
 
     folders: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
-    for row in rows:
-        name = str(row.get("Name") or "")
-        if not name or name == PLACEHOLDER:
-            continue
-        # Folder penyimpanan pribadi tidak ditampilkan pada akar Drive tim.
-        if not root and not directory and name == PERSONAL_DIR:
+    for obj in objects:
+        key = str(obj.get("Key") or "")
+        name = key[len(prefix) :] if prefix and key.startswith(prefix) else key
+        if not name or "/" in name or name == PLACEHOLDER:
             continue
         item = {
             "name": name,
             "path": _join(directory, name),
-            "is_dir": bool(row.get("IsDir")),
-            "size": int(row.get("Size") or 0),
+            "is_dir": False,
+            "size": int(obj.get("Size") or 0),
             "modified": None,
             "modified_label": "—",
         }
-        if not item["is_dir"]:
-            modified = _parse_time(row.get("ModTime"))
+        modified = obj.get("LastModified")
+        if isinstance(modified, datetime):
             item["modified"] = modified
-            item["modified_label"] = format_datetime_id(modified) if modified else "—"
-        (folders if item["is_dir"] else files).append(item)
+            item["modified_label"] = format_datetime_id(modified)
+        files.append(item)
+
+    for folder_prefix in folder_prefixes:
+        name = folder_prefix[len(prefix) :].rstrip("/") if prefix else folder_prefix.rstrip("/")
+        if not name or "/" in name:
+            continue
+        # Folder penyimpanan pribadi tidak ditampilkan pada akar Drive tim.
+        if not root and not directory and name == PERSONAL_DIR:
+            continue
+        folders.append(
+            {
+                "name": name,
+                "path": _join(directory, name),
+                "is_dir": True,
+                "size": 0,
+                "modified": None,
+                "modified_label": "—",
+            }
+        )
 
     folders.sort(key=lambda entry: entry["name"].casefold())
     files.sort(key=lambda entry: entry["name"].casefold())
@@ -307,6 +297,7 @@ def _entries(root: str, directory: str) -> list[dict[str, Any]]:
 
 
 def listing(root: str, path: str | None, label: str = "Drive") -> dict[str, Any]:
+    _require_ready()
     directory = normalize_dir(path)
     entries = _entries(root, directory)
     file_count = sum(1 for entry in entries if not entry["is_dir"])
@@ -326,13 +317,16 @@ def listing(root: str, path: str | None, label: str = "Drive") -> dict[str, Any]
 
 
 def _exists(root: str, relative_path: str) -> bool:
-    proc = _run(["lsf", "--max-depth", "1", _target(root, relative_path)])
-    if proc.returncode != 0:
-        error = media_sync.rclone_error(proc)
-        if media_sync._is_missing(error) or proc.returncode in (3, 4):
-            return False
-        raise _fail(proc, "Gagal memeriksa folder.")
-    return bool((proc.stdout or "").strip())
+    _require_ready()
+    key = _key(root, relative_path)
+    if not key:
+        return False
+    try:
+        if s3.exists(_bucket(), key, is_dir=False):
+            return True
+        return s3.exists(_bucket(), key, is_dir=True)
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal memeriksa folder. {exc}") from exc
 
 
 def _unique_name(root: str, directory: str, name: str) -> str:
@@ -348,74 +342,66 @@ def _unique_name(root: str, directory: str, name: str) -> str:
 
 
 def upload_file(root: str, directory: str, filename: str, source: str | Path) -> str:
+    _require_ready()
     directory = normalize_dir(directory)
     name = clean_name(os.path.basename(filename))
     name = _unique_name(root, directory, name)
-    target = _target(root, _join(directory, name))
     mime = mimetypes.guess_type(name)[0] or "application/octet-stream"
-    proc = _run(
-        [
-            "copyto",
-            str(source),
-            target,
-            "--s3-no-check-bucket",
-            "--header-upload",
-            f"Content-Type: {mime}",
-        ]
-    )
-    if proc.returncode != 0:
-        raise _fail(proc, f"Gagal mengunggah {name}.")
+    try:
+        s3.put_file(
+            _bucket(),
+            _key(root, _join(directory, name)),
+            source,
+            content_type=mime,
+        )
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal mengunggah {name}. {exc}") from exc
     forget_usage(root)
     return name
 
 
 def create_folder(root: str, directory: str, name: str) -> str:
+    _require_ready()
     directory = normalize_dir(directory)
     name = clean_name(name)
     relative = _join(directory, name)
     if _exists(root, relative):
         raise DriveError(f"Folder “{name}” sudah ada.")
     # S3 tidak menyimpan folder kosong; penanda .keep membuat folder tetap tampil.
-    with tempfile.NamedTemporaryFile(prefix="sidewa-drive-", delete=False) as placeholder:
-        placeholder_path = Path(placeholder.name)
     try:
-        proc = _run(
-            [
-                "copyto",
-                str(placeholder_path),
-                f"{_target(root, relative)}/{PLACEHOLDER}",
-                "--s3-no-check-bucket",
-                "--header-upload",
-                "Content-Type: application/x-empty",
-            ]
+        s3.put_bytes(
+            _bucket(),
+            f"{_key(root, relative)}/{PLACEHOLDER}",
+            b"",
+            content_type="application/x-empty",
         )
-    finally:
-        placeholder_path.unlink(missing_ok=True)
-    if proc.returncode != 0:
-        raise _fail(proc, f"Gagal membuat folder {name}.")
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal membuat folder {name}. {exc}") from exc
     forget_usage(root)
     return relative
 
 
 def delete_entry(root: str, path: str, is_dir: bool) -> str:
+    _require_ready()
     relative = validate_path(path)
     if not relative:
         raise DriveError("Folder akar Drive tidak dapat dihapus.")
-    if is_dir:
-        proc = _run(["purge", _target(root, relative)])
-    else:
-        proc = _run(["deletefile", _target(root, relative)])
-    if proc.returncode == 0:
-        forget_usage(root)
-        return relative
-    error = media_sync.rclone_error(proc)
-    if not is_dir and (proc.returncode == 4 or "not found" in error.lower()):
-        forget_usage(root)
-        return relative
-    raise DriveError(f"Gagal menghapus {relative.rsplit('/', 1)[-1]}. {error}".strip())
+    key = _key(root, relative)
+    try:
+        if is_dir:
+            s3.delete_prefix(_bucket(), f"{key}/")
+        else:
+            s3.delete_object(_bucket(), key)
+    except s3.S3Error as exc:
+        raise DriveError(
+            f"Gagal menghapus {relative.rsplit('/', 1)[-1]}. {exc}"
+        ) from exc
+    forget_usage(root)
+    return relative
 
 
 def rename_entry(root: str, path: str, new_name: str, is_dir: bool) -> str:
+    _require_ready()
     relative = validate_path(path)
     if not relative:
         raise DriveError("Folder akar Drive tidak dapat diubah namanya.")
@@ -426,44 +412,50 @@ def rename_entry(root: str, path: str, new_name: str, is_dir: bool) -> str:
     destination = f"{parent}/{name}" if parent else name
     if _exists(root, destination):
         raise DriveError(f"Nama “{name}” sudah dipakai.")
-    proc = _run(["moveto", _target(root, relative), _target(root, destination)])
-    if proc.returncode != 0:
-        raise _fail(proc, f"Gagal mengubah nama {current}.")
+    source_key = _key(root, relative)
+    destination_key = _key(root, destination)
+    try:
+        if is_dir:
+            s3.copy_prefix(_bucket(), f"{source_key}/", f"{destination_key}/")
+            s3.delete_prefix(_bucket(), f"{source_key}/")
+        else:
+            s3.copy_object(_bucket(), source_key, destination_key)
+            s3.delete_object(_bucket(), source_key)
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal mengubah nama {current}. {exc}") from exc
     forget_usage(root)
     return destination
 
 
-def presigned_url(root: str, path: str, expire: str = LINK_TTL) -> str:
+def presigned_url(root: str, path: str, expire: int = LINK_TTL) -> str:
     """Tautan unduh langsung (presigned URL) agar browser mengambil dari HF S3.
 
-    Server hanya menandatangani URL; byte berkas tidak melewati aplikasi
-    sehingga unduhan tidak lagi dibatasi kecepatan proses rclone lokal.
+    Server hanya menandatangani URL; byte berkas tidak melewati aplikasi.
     """
+    _require_ready()
     relative = validate_path(path)
     if not relative:
         raise DriveError("Berkas tidak ditemukan.")
-    proc = _run(["link", "--expire", expire, _target(root, relative)])
-    if proc.returncode != 0:
-        raise _fail(proc, "Gagal membuat tautan unduh langsung.")
-    for line in (proc.stdout or "").splitlines():
-        candidate = line.strip()
-        if candidate.startswith(("http://", "https://")):
-            return candidate
-    raise DriveError("Tautan unduh langsung tidak tersedia.")
+    try:
+        return s3.presign(_bucket(), _key(root, relative), expire)
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal membuat tautan unduh langsung. {exc}") from exc
 
 
 def download_file(root: str, path: str) -> tuple[str, str, str]:
     """Unduh berkas ke berkas sementara; kembalikan (path, nama, mime)."""
+    _require_ready()
     relative = validate_path(path)
     if not relative:
         raise DriveError("Berkas tidak ditemukan.")
     name = relative.rsplit("/", 1)[-1]
     handle, temporary = tempfile.mkstemp(prefix="sidewa-drive-", suffix=".part")
     os.close(handle)
-    proc = _run(["copyto", _target(root, relative), temporary, "--s3-no-check-bucket"])
-    if proc.returncode != 0:
+    try:
+        s3.download_file(_bucket(), _key(root, relative), temporary)
+    except s3.S3Error as exc:
         Path(temporary).unlink(missing_ok=True)
-        raise _fail(proc, f"Gagal mengunduh {name}.")
+        raise DriveError(f"Gagal mengunduh {name}. {exc}") from exc
     mime = mimetypes.guess_type(name)[0] or "application/octet-stream"
     # Jangan pernah biarkan browser merender HTML/SVG dari Drive.
     if mime in {"text/html", "image/svg+xml", "application/xhtml+xml"}:
@@ -472,43 +464,45 @@ def download_file(root: str, path: str) -> tuple[str, str, str]:
 
 
 def search(root: str, query: str) -> dict[str, Any]:
+    _require_ready()
     term = (query or "").strip()
     if not term:
         return {"query": "", "results": [], "truncated": False}
-    proc = _run(["lsf", "-R", "--files-only", "--format", "p", _target(root)])
-    if proc.returncode != 0:
-        error = media_sync.rclone_error(proc)
-        if media_sync._is_missing(error) or proc.returncode in (3, 4):
-            return {"query": term, "results": [], "truncated": False}
-        raise _fail(proc, "Gagal mencari berkas.")
     lowered = term.casefold()
-    results = []
+    prefix = _folder_prefix(root, "")
+    results: list[dict[str, Any]] = []
     truncated = False
-    for line in (proc.stdout or "").splitlines():
-        try:
-            relative = validate_path(line)
-        except DriveError:
-            continue
-        if not relative or relative.rsplit("/", 1)[-1] == PLACEHOLDER:
-            continue
-        # Drive tim tidak boleh menampilkan berkas dari ruang pribadi.
-        if not root and relative.split("/", 1)[0] == PERSONAL_DIR:
-            continue
-        if lowered not in relative.casefold():
-            continue
-        if len(results) >= MAX_SEARCH_RESULTS:
-            truncated = True
-            break
-        name = relative.rsplit("/", 1)[-1]
-        folder = relative.rsplit("/", 1)[0] if "/" in relative else ""
-        results.append(
-            {
-                "name": name,
-                "path": relative,
-                "folder": folder,
-                "is_dir": False,
-                "size": 0,
-                "mime": mimetypes.guess_type(name)[0] or "application/octet-stream",
-            }
-        )
+    try:
+        for obj in s3.iter_objects(_bucket(), prefix):
+            key = str(obj.get("Key") or "")
+            if not key.startswith(prefix):
+                continue
+            try:
+                relative = validate_path(key[len(prefix) :])
+            except DriveError:
+                continue
+            if not relative or relative.rsplit("/", 1)[-1] == PLACEHOLDER:
+                continue
+            # Drive tim tidak boleh menampilkan berkas dari ruang pribadi.
+            if not root and relative.split("/", 1)[0] == PERSONAL_DIR:
+                continue
+            if lowered not in relative.casefold():
+                continue
+            if len(results) >= MAX_SEARCH_RESULTS:
+                truncated = True
+                break
+            name = relative.rsplit("/", 1)[-1]
+            folder = relative.rsplit("/", 1)[0] if "/" in relative else ""
+            results.append(
+                {
+                    "name": name,
+                    "path": relative,
+                    "folder": folder,
+                    "is_dir": False,
+                    "size": int(obj.get("Size") or 0),
+                    "mime": mimetypes.guess_type(name)[0] or "application/octet-stream",
+                }
+            )
+    except s3.S3Error as exc:
+        raise DriveError(f"Gagal mencari berkas. {exc}") from exc
     return {"query": term, "results": results, "truncated": truncated}

@@ -25,6 +25,9 @@ services:
     env_file: .env
     environment:
       SIDEWA_ENV: production
+      # Mode mandiri: database ikut container ``db`` di bawah.
+      # Untuk memakai Supabase langsung, hapus baris ini agar nilai
+      # SIDEWA_DATABASE_URL dari .env (transaction pooler) yang dipakai.
       SIDEWA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-sidewa}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sidewa}
       SIDEWA_MEDIA_ROOT: /app/data/media
       SIDEWA_COOKIE_SECURE: "true"
