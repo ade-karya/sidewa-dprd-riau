@@ -113,6 +113,57 @@ lain) ditolak. Variabel terkait: `SIDEWA_MEMBER_IDENTITY_FILE`,
 `SIDEWA_SENTIMENT_YEAR_FROM`, `SIDEWA_SENTIMENT_YEAR_TO`,
 `SIDEWA_GEMINI_MIN_IDENTITY_SCORE`, `SIDEWA_GEMINI_REQUIRE_IDENTITY`.
 
+## Seleksi foto AI Humas
+
+Pengelola konten Humas dapat membuka **Seleksi Foto** (`/seleksi-foto`) untuk
+mengurasi puluhan foto menjadi pilihan terbaik sebelum diterapkan ke kegiatan.
+Fitur ini memakai **kunci API Gemini milik masing-masing pengguna**, bukan kunci
+global `SIDEWA_GEMINI_API_KEY`.
+
+Alur kerja:
+
+1. Pengguna membuka `/seleksi-foto`, menempelkan kunci dari
+   <https://aistudio.google.com/apikey>, lalu mengisi batas **RPM/TPM/RPD**
+   kunci tersebut. Default mengikuti kuota Gemini 3.5 Flash Lite untuk model
+   teks: **15 RPM · 250K TPM · 500 RPD**.
+2. Pilih **skill** kurasi bawaan atau buat skill sendiri sesuai preferensi tim.
+3. Unggah hingga `SIDEWA_PHOTO_SELECTION_MAX_PHOTOS` foto (maks.
+   `SIDEWA_MAX_UPLOAD_MB` per berkas), atur target dan ambang skor, lalu
+   jalankan agen. Berkas disimpan di penyimpanan objek HF S3; batas MB hanya
+   validasi berkas, bukan batas jumlah foto yang boleh diunggah.
+4. Foto duplikat disaring lebih dulu dengan perceptual hash lokal—tanpa memakai
+   kuota. Foto unik dinilai satu per satu dengan model
+   `SIDEWA_PHOTO_SELECTION_MODEL` (default `gemini-3.5-flash-lite`). Jumlah foto
+   yang diproses dibatasi kuota API, bukan kapasitas unggah.
+5. Tinjau hasil, ubah pilihan bila perlu, lalu terapkan ke kegiatan atau unduh ZIP.
+
+Agen menunggu otomatis saat batas RPM tercapai dan menjeda sesi ketika RPD habis.
+Sesi dapat dilanjutkan setelah kuota direset. Kunci disimpan terenkripsi dengan
+`SIDEWA_SECRET_KEY`, tidak pernah ditampilkan kembali, dan hanya dipakai untuk
+fitur ini.
+
+**Skill adaptif.** Saat opsi *Perbarui skill otomatis* aktif, agen belajar dari
+foto yang benar-benar Anda terapkan dan koreksi pilihan manual. Ia menyesuaikan
+ringkasan preferensi, ambang skor, dan target skill tanpa memanggil Gemini
+sehingga tidak memakai kuota. Preferensi hasil belajar dapat disunting atau
+dikosongkan dari halaman pengaturan, dan tombol **Selaraskan sekarang** menghitung
+ulang dari riwayat koreksi.
+
+**Berbagi skill.** Skill milik anggota Humas lain dapat dipakai langsung atau
+disalin ke daftar skill pribadi. Aktifkan *Bagikan ke anggota Humas lain* pada
+skill Anda untuk memunculkannya di bagian **Skill komunitas Humas**. Daftar
+komunitas diurutkan berdasarkan skill yang paling banyak dipakai anggota lain
+(`share_usage_count`), sehingga preset tim yang terbukti berguna muncul lebih
+dulu. Menyalin skill membuat salinan pribadi yang dapat disunting dan dilatih
+ulang tanpa mengubah skill milik pembuatnya.
+
+Variabel terkait: `SIDEWA_PHOTO_SELECTION_ENABLED`,
+`SIDEWA_PHOTO_SELECTION_MODEL`, `SIDEWA_PHOTO_SELECTION_RPM`,
+`SIDEWA_PHOTO_SELECTION_TPM`, `SIDEWA_PHOTO_SELECTION_RPD`,
+`SIDEWA_PHOTO_SELECTION_MAX_PHOTOS`, `SIDEWA_PHOTO_SELECTION_WORKERS`,
+`SIDEWA_PHOTO_SELECTION_TIMEOUT`, dan
+`SIDEWA_PHOTO_SELECTION_SYNC` (khusus pengujian).
+
 ## Konfigurasi
 
 Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Variabel penting:

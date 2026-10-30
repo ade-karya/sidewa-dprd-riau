@@ -62,6 +62,13 @@ HUMAS_DUTIES = [
 
 WORKSPACE_SHORTCUTS = [
     {
+        "label": "Seleksi foto AI",
+        "description": "Kurasi foto terbaik sebelum diunggah.",
+        "href": "/seleksi-foto",
+        "icon": "sparkles",
+        "tone": "purple",
+    },
+    {
         "label": "Unggah dokumentasi",
         "description": "Tambahkan kegiatan dan foto baru.",
         "href": "/kegiatan/baru",

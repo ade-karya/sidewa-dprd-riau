@@ -65,6 +65,53 @@ STATUS_LABELS = {
     STATUS_ARCHIVED: "Diarsipkan",
 }
 
+SELECTION_QUEUED = "queued"
+SELECTION_RUNNING = "running"
+SELECTION_PAUSED = "paused"
+SELECTION_DONE = "done"
+SELECTION_FAILED = "failed"
+SELECTION_CANCELLED = "cancelled"
+
+SELECTION_STATUS_LABELS = {
+    SELECTION_QUEUED: "Dalam antrean",
+    SELECTION_RUNNING: "Berjalan",
+    SELECTION_PAUSED: "Jeda kuota",
+    SELECTION_DONE: "Selesai",
+    SELECTION_FAILED: "Gagal",
+    SELECTION_CANCELLED: "Dibatalkan",
+}
+
+SELECTION_STATUS_TONES = {
+    SELECTION_QUEUED: "gray",
+    SELECTION_RUNNING: "gold",
+    SELECTION_PAUSED: "blue",
+    SELECTION_DONE: "green",
+    SELECTION_FAILED: "red",
+    SELECTION_CANCELLED: "gray",
+}
+
+SELECTION_PENDING = "pending"
+SELECTION_SELECTED = "selected"
+SELECTION_BACKUP = "backup"
+SELECTION_REJECTED = "rejected"
+SELECTION_FAILED_ITEM = "failed"
+
+SELECTION_VERDICT_LABELS = {
+    SELECTION_PENDING: "Menunggu",
+    SELECTION_SELECTED: "Dipilih",
+    SELECTION_BACKUP: "Cadangan",
+    SELECTION_REJECTED: "Ditolak",
+    SELECTION_FAILED_ITEM: "Gagal dinilai",
+}
+
+SELECTION_VERDICT_TONES = {
+    SELECTION_PENDING: "gray",
+    SELECTION_SELECTED: "green",
+    SELECTION_BACKUP: "gold",
+    SELECTION_REJECTED: "red",
+    SELECTION_FAILED_ITEM: "red",
+}
+
 PHOTO_PENDING = "pending"
 PHOTO_PROCESSING = "processing"
 PHOTO_READY = "ready"
@@ -144,4 +191,16 @@ AUDIT_ACTIONS = {
     "TOKEN_CREATE": "Buat token API",
     "TOKEN_REVOKE": "Cabut token API",
     "COMMISSION_UPDATE": "Ubah komisi",
+    "AI_KEY_SAVE": "Simpan kunci AI",
+    "AI_KEY_TEST": "Uji kunci AI",
+    "AI_KEY_DELETE": "Hapus kunci AI",
+    "AI_SKILL_SAVE": "Simpan skill AI",
+    "AI_SKILL_DELETE": "Hapus skill AI",
+    "PHOTO_SELECTION_START": "Mulai seleksi foto AI",
+    "PHOTO_SELECTION_VERDICT": "Ubah pilihan foto AI",
+    "PHOTO_SELECTION_APPLY": "Terapkan foto pilihan",
+    "PHOTO_SELECTION_EXPORT": "Unduh foto pilihan",
+    "PHOTO_SELECTION_DELETE": "Hapus sesi seleksi foto",
+    "PHOTO_SELECTION_CANCEL": "Batalkan seleksi foto",
+    "PHOTO_SELECTION_RESUME": "Lanjutkan seleksi foto",
 }

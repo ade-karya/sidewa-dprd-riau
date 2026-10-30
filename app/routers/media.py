@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..constants import CONTENT_MANAGER_ROLES, STATUS_PUBLISHED
+from ..constants import ADMIN_ROLES, CONTENT_MANAGER_ROLES, STATUS_PUBLISHED
 from ..database import get_db
 from ..deps import require_user
 from ..models import (
@@ -18,6 +18,7 @@ from ..models import (
     Member,
     MemberFace,
     MemberFaceLogin,
+    PhotoSelectionItem,
     User,
 )
 from ..services.images import absolute_path, path_variants
@@ -56,16 +57,39 @@ def serve_media(
         if photo.activity.status != STATUS_PUBLISHED and user.role not in CONTENT_MANAGER_ROLES:
             raise HTTPException(status_code=403, detail="Anda tidak dapat mengakses media draf.")
     else:
-        member_media = (
-            db.query(MemberFace).filter(MemberFace.image_path.in_(variants)).first()
-            or db.query(MemberFaceLogin)
-            .filter(MemberFaceLogin.image_path.in_(variants))
+        selection_item = (
+            db.query(PhotoSelectionItem)
+            .filter(
+                (PhotoSelectionItem.file_path.in_(variants))
+                | (PhotoSelectionItem.thumb_path.in_(variants))
+            )
             .first()
-            or db.query(Member).filter(Member.portrait_path.in_(variants)).first()
-            or db.query(HumasStaff).filter(HumasStaff.portrait_path.in_(variants)).first()
         )
-        if not member_media:
-            raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
+        if selection_item:
+            run = selection_item.run
+            if not run or (
+                run.user_id != user.id and user.role not in ADMIN_ROLES
+            ):
+                raise HTTPException(
+                    status_code=403, detail="Media seleksi foto ini bukan milik Anda."
+                )
+        else:
+            member_media = (
+                db.query(MemberFace)
+                .filter(MemberFace.image_path.in_(variants))
+                .first()
+                or db.query(MemberFaceLogin)
+                .filter(MemberFaceLogin.image_path.in_(variants))
+                .first()
+                or db.query(Member)
+                .filter(Member.portrait_path.in_(variants))
+                .first()
+                or db.query(HumasStaff)
+                .filter(HumasStaff.portrait_path.in_(variants))
+                .first()
+            )
+            if not member_media:
+                raise HTTPException(status_code=404, detail="Media tidak ditemukan.")
 
     if not file_path.is_file():
         # Path utama/thumbnail bisa saja belum ada di cache lokal; coba

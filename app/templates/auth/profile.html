@@ -173,6 +173,49 @@
     </div>
 
     <div class="card card-pad">
+      <div class="flex-between mb-1">
+        <h2 style="font-size: 16px; margin: 0;">{{ icon('sparkles') }} Seleksi Foto AI</h2>
+        {% if ai_settings and ai_settings.api_key_encrypted %}
+        <span class="badge badge-green"><span class="dot"></span>Aktif</span>
+        {% else %}
+        <span class="badge badge-gray">Belum diatur</span>
+        {% endif %}
+      </div>
+      {% if ai_available %}
+      <p class="muted-small mb-2">
+        {% if ai_settings and ai_settings.api_key_encrypted %}
+        Kunci {{ ai_settings.api_key_hint }} · {{ ai_settings.model }}.
+        {% else %}
+        Hubungkan kunci Gemini Anda untuk memakai seleksi foto berbantuan AI.
+        {% endif %}
+      </p>
+      {% if ai_usage %}
+      <div class="chip-row mb-1">
+        <span class="chip chip-gray">{{ ai_usage.rpm_limit }} RPM</span>
+        <span class="chip chip-gray">{{ '{:,}'.format(ai_usage.tpm_limit) }} TPM</span>
+        <span class="chip chip-gray">{{ ai_usage.rpd_limit }} RPD</span>
+      </div>
+      <div class="ps-quota-row">
+        <div class="ps-quota-head"><span>Kuota hari ini</span><b>{{ ai_usage.rpd_used }}/{{ ai_usage.rpd_limit }}</b></div>
+        <div class="ps-meter gold"><i style="width: {{ ai_usage.rpd_percent }}%"></i></div>
+        <small>{{ ai_usage.rpd_remaining }} permintaan tersisa · reset {{ ai_usage.reset_at|datetime_id }}</small>
+      </div>
+      {% endif %}
+      {% if ai_settings and ai_settings.learned_preferences %}
+      <div class="ps-learned-note mt-2">
+        {{ icon('refresh') }}
+        <span><b>Preferensi belajar:</b> {{ ai_settings.learned_preferences|truncate(160) }}</span>
+      </div>
+      {% endif %}
+      <a class="btn btn-soft btn-sm btn-block mt-2" href="/seleksi-foto#pengaturan">
+        {{ icon('settings') }} {{ 'Kelola kunci & skill' if ai_settings and ai_settings.api_key_encrypted else 'Atur kunci API' }}
+      </a>
+      {% else %}
+      <p class="muted-small">Fitur ini tersedia untuk pengelola konten Humas. Hubungi admin bila Anda membutuhkannya.</p>
+      {% endif %}
+    </div>
+
+    <div class="card card-pad">
       <h2 style="font-size: 16px;">{{ icon('info') }} Informasi akun</h2>
       <div class="side-list mt-1">
         <div class="side-item">

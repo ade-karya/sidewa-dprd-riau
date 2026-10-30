@@ -13,7 +13,12 @@ from sqlalchemy.orm import Session
 
 from ..audit import audit
 from ..config import settings
-from ..constants import ROLE_ANGGOTA, ROLE_LABELS, ROLE_STAF_HUMAS
+from ..constants import (
+    CONTENT_MANAGER_ROLES,
+    ROLE_ANGGOTA,
+    ROLE_LABELS,
+    ROLE_STAF_HUMAS,
+)
 from ..database import get_db
 from ..deps import csrf_protect, flash, get_current_user, require_user
 from ..models import (
@@ -37,7 +42,7 @@ from ..security import (
     validate_password_strength,
     verify_password,
 )
-from ..services import face_engine
+from ..services import face_engine, photo_curator
 from ..services.images import (
     ImageValidationError,
     delete_paths,
@@ -615,12 +620,21 @@ def profile(
         .limit(10)
         .all()
     )
+    ai_row = photo_curator.get_settings_row(db, user.id)
+    ai_usage = None
+    if ai_row:
+        ai_usage = photo_curator.usage_snapshot(
+            db, user.id, ai_row.rpm, ai_row.rpd, ai_row.tpm
+        )
     return render(
         request,
         "auth/profile.html",
         user=user,
         tokens=tokens,
         my_audit=my_audit,
+        ai_settings=ai_row,
+        ai_usage=ai_usage,
+        ai_available=user.role in CONTENT_MANAGER_ROLES,
         role_label=ROLE_LABELS.get(user.role, user.role),
     )
 

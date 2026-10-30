@@ -21,6 +21,7 @@ def _prepare_env(tmp_path, demo: bool = False, secret: str | None = None):
     os.environ["SIDEWA_BOOTSTRAP_ADMIN_NAME"] = "Super Admin Test"
     os.environ["SIDEWA_DEMO_MODE"] = "true" if demo else "false"
     os.environ["SIDEWA_COOKIE_SECURE"] = "false"
+    os.environ["SIDEWA_TRUSTED_HOSTS"] = "testserver,localhost,127.0.0.1"
     os.environ["SIDEWA_FACE_WORKERS"] = "1"
     os.environ["SIDEWA_LOG_LEVEL"] = "WARNING"
     # Isolasi pengujian: matikan sinkronisasi agar tidak menyentuh Supabase

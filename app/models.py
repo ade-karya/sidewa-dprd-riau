@@ -272,6 +272,202 @@ class HumasStaffFaceLogin(Base):
     staff: Mapped[HumasStaff] = relationship(back_populates="faces")
 
 
+class AiPhotoSettings(Base, TimestampMixin):
+    """Preferensi AI per pengguna untuk seleksi foto Humas.
+
+    Kunci API disimpan dalam bentuk terenkripsi (lihat ``services.keyvault``)
+    dan tidak pernah dikirim balik ke peramban.
+    """
+
+    __tablename__ = "ai_photo_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    api_key_encrypted: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    api_key_hint: Mapped[str] = mapped_column(String(32), default="", nullable=False)
+    model: Mapped[str] = mapped_column(
+        String(80), default="gemini-3.5-flash-lite", nullable=False
+    )
+    rpm: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
+    rpd: Mapped[int] = mapped_column(Integer, default=500, nullable=False)
+    tpm: Mapped[int] = mapped_column(Integer, default=250000, nullable=False)
+    preferred_notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    default_skill_key: Mapped[str] = mapped_column(
+        String(60), default="jurnalistik", nullable=False
+    )
+    auto_learn: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    learned_preferences: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    learned_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    key_verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    key_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    user: Mapped[User] = relationship()
+
+
+class PhotoSelectionSkill(Base, TimestampMixin):
+    """Skill kurasi foto buatan pengguna (preset bawaan ada di kode)."""
+
+    __tablename__ = "photo_selection_skills"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    icon: Mapped[str] = mapped_column(String(30), default="sparkles", nullable=False)
+    description: Mapped[str] = mapped_column(String(220), default="", nullable=False)
+    instructions: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    target_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    min_score: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    auto_update: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    learned_preferences: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    auto_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_shared: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    share_usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    user: Mapped[User] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_photo_skill_user_name"),
+    )
+
+
+class PhotoSelectionRun(Base):
+    """Satu sesi kurasi foto oleh agen AI."""
+
+    __tablename__ = "photo_selection_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    skill_key: Mapped[str] = mapped_column(String(60), default="jurnalistik", nullable=False)
+    skill_name: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    skill_instructions: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    skill_learned_preferences: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    learned_preferences: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    user_notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    model: Mapped[str] = mapped_column(
+        String(80), default="gemini-3.5-flash-lite", nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), default="queued", index=True, nullable=False
+    )
+    target_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    min_score: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    total_items: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    processed_items: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    selected_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    backup_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rejected_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    quota_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    tokens_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    activity_id: Mapped[int | None] = mapped_column(
+        ForeignKey("activities.id", ondelete="SET NULL"), nullable=True
+    )
+    applied_activity_id: Mapped[int | None] = mapped_column(
+        ForeignKey("activities.id", ondelete="SET NULL"), nullable=True
+    )
+    applied_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    next_request_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+    activity: Mapped[Activity | None] = relationship(foreign_keys=[activity_id])
+    applied_activity: Mapped[Activity | None] = relationship(
+        foreign_keys=[applied_activity_id]
+    )
+    items: Mapped[list[PhotoSelectionItem]] = relationship(
+        back_populates="run",
+        cascade="all, delete-orphan",
+        order_by="PhotoSelectionItem.position",
+    )
+
+
+class PhotoSelectionItem(Base):
+    """Satu foto di dalam sesi kurasi AI."""
+
+    __tablename__ = "photo_selection_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(
+        ForeignKey("photo_selection_runs.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    original_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    file_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    thumb_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    width: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    perceptual_hash: Mapped[str] = mapped_column(String(16), default="", nullable=False)
+    technical: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    verdict: Mapped[str] = mapped_column(
+        String(16), default="pending", index=True, nullable=False
+    )
+    ai_verdict: Mapped[str] = mapped_column(String(16), default="", nullable=False)
+    manual_override: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    reason: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    caption: Mapped[str] = mapped_column(String(180), default="", nullable=False)
+    tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    strengths: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    weaknesses: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    face_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    duplicate_of_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    applied_photo_id: Mapped[int | None] = mapped_column(
+        ForeignKey("activity_photos.id", ondelete="SET NULL"), nullable=True
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    run: Mapped[PhotoSelectionRun] = relationship(back_populates="items")
+
+    __table_args__ = (
+        Index("ix_photo_selection_item_run_verdict", "run_id", "verdict"),
+    )
+
+
+class AiRequestLog(Base):
+    """Jejak permintaan ke API AI, dipakai untuk menegakkan RPM/RPD."""
+
+    __tablename__ = "ai_request_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("photo_selection_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    model: Mapped[str] = mapped_column(String(80), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utcnow, index=True, nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_ai_request_user_created", "user_id", "created_at"),
+    )
+
+
 class SentimentRun(Base):
     """Riwayat pemindaian sentimen media online melalui Tavily."""
 

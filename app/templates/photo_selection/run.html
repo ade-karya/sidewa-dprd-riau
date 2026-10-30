@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, empty_state %}
+
+{% block title %}Seleksi Foto #{{ run.id }}{% endblock %}
+{% block page_title %}Hasil seleksi foto{% endblock %}
+{% block page_subtitle %}{{ run.skill_name }} · {{ run.total_items }} foto · {{ run.model }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/seleksi-foto">{{ icon('arrow-left') }}<span>Ruang seleksi</span></a>
+{% if run.selected_count %}
+<a class="btn btn-soft btn-sm" href="/seleksi-foto/sesi/{{ run.id }}/unduh">{{ icon('download') }}<span>Unduh pilihan</span></a>
+<button class="btn btn-soft btn-sm" type="button" data-ps-share-whatsapp>{{ icon('send') }}<span>Bagikan via WhatsApp</span></button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div data-ps-run data-run-id="{{ run.id }}"
+     data-status-url="/seleksi-foto/sesi/{{ run.id }}/status.json"
+     data-status="{{ run.status }}"
+     data-wait="{{ wait_seconds }}">
+
+  <section class="ps-run-hero">
+    <div class="ps-run-hero-main">
+      <div class="chip-row">
+        <span class="badge badge-{{ status_tones.get(run.status, 'gray') }}" data-ps-status-badge>
+          <span class="dot"></span><span data-ps-status-label>{{ status_labels.get(run.status, run.status) }}</span>
+        </span>
+        <span class="chip chip-purple">{{ icon('sparkles') }} {{ run.skill_name }}</span>
+        <span class="chip chip-gray">{{ icon('clock') }} {{ run.created_at|datetime_id }}</span>
+        {% if run.target_count %}
+        <span class="chip chip-gold">{{ icon('target') }} Target {{ run.target_count }} foto</span>
+        {% endif %}
+        <span class="chip chip-gray">Skor ≥ {{ run.min_score }}</span>
+      </div>
+      <h2>
+        {% if run.status == 'running' %}Agen sedang menilai foto…
+        {% elif run.status == 'queued' %}Menunggu giliran…
+        {% elif run.status == 'paused' %}Sesi dijeda karena kuota
+        {% elif run.status == 'done' %}{{ run.selected_count }} foto terbaik siap dipakai
+        {% elif run.status == 'cancelled' %}Seleksi dibatalkan
+        {% else %}Seleksi belum berhasil{% endif %}
+      </h2>
+      <p>
+        {{ run.processed_items }} dari {{ run.total_items }} foto sudah dinilai.
+        {% if run.activity %}Konteks: <b>{{ run.activity.title }}</b>{% endif %}
+      </p>
+
+      <div class="ps-progress">
+        <div class="ps-progress-bar"><i style="width: {{ (run.processed_items / run.total_items * 100) if run.total_items else 0 }}%" data-ps-progress></i></div>
+        <span data-ps-progress-text>{{ run.processed_items }}/{{ run.total_items }}</span>
+      </div>
+
+      <div class="ps-run-stats">
+        <div class="ps-run-stat"><span class="ps-run-stat-icon green">{{ icon('check') }}</span><div><b data-ps-stat="selected">{{ run.selected_count }}</b><span>Dipilih</span></div></div>
+        <div class="ps-run-stat"><span class="ps-run-stat-icon gold">{{ icon('image') }}</span><div><b data-ps-stat="backup">{{ run.backup_count }}</b><span>Cadangan</span></div></div>
+        <div class="ps-run-stat"><span class="ps-run-stat-icon red">{{ icon('x') }}</span><div><b data-ps-stat="rejected">{{ run.rejected_count }}</b><span>Ditolak</span></div></div>
+        <div class="ps-run-stat"><span class="ps-run-stat-icon gray">{{ icon('sparkles') }}</span><div><b data-ps-stat="quota">{{ run.quota_used }}</b><span>Permintaan AI</span></div></div>
+      </div>
+    </div>
+
+    <div class="ps-run-hero-side">
+      {% if run.status in ['queued', 'running'] %}
+      <div class="ps-live-card" data-ps-live>
+        <span class="spinner"></span>
+        <div>
+          <strong data-ps-live-title>Memproses foto</strong>
+          <p data-ps-wait-text>
+            {% if wait_seconds > 0 %}Menunggu kuota API berikutnya… {{ wait_seconds }} detik{% else %}Foto sedang dikirim ke Gemini.{% endif %}
+          </p>
+        </div>
+      </div>
+      {% elif run.status == 'paused' %}
+      <div class="ps-paused-card">
+        {{ icon('clock') }}
+        <div>
+          <strong>Jeda otomatis</strong>
+          <p>{{ run.error or 'Kuota API sedang penuh.' }}</p>
+        </div>
+      </div>
+      {% elif run.status == 'done' %}
+      <div class="ps-done-card">
+        {{ icon('check') }}
+        <div>
+          <strong>Seleksi selesai</strong>
+          <p>Tinjau pilihan, lalu terapkan ke kegiatan atau unduh sebagai ZIP.</p>
+        </div>
+      </div>
+      {% elif run.status == 'cancelled' %}
+      <div class="ps-paused-card">
+        {{ icon('x') }}
+        <div><strong>Sesi dibatalkan</strong><p>{{ run.error or 'Foto yang sudah dinilai tetap tersimpan.' }}</p></div>
+      </div>
+      {% else %}
+      <div class="ps-paused-card">
+        {{ icon('alert') }}
+        <div><strong>Perlu perhatian</strong><p>{{ run.error or 'Terjadi kesalahan saat menilai foto.' }}</p></div>
+      </div>
+      {% endif %}
+
+      <div class="ps-run-hero-actions">
+        {% if can_resume %}
+        <form method="post" action="/seleksi-foto/sesi/{{ run.id }}/lanjut">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-primary btn-sm btn-block" type="submit">{{ icon('refresh') }} Lanjutkan seleksi</button>
+        </form>
+        {% endif %}
+        {% if can_cancel %}
+        <form method="post" action="/seleksi-foto/sesi/{{ run.id }}/batal"
+              data-confirm="Batalkan seleksi? Kuota yang sudah terpakai tidak dapat dikembalikan.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-outline btn-sm btn-block" type="submit">{{ icon('x') }} Batalkan</button>
+        </form>
+        {% endif %}
+        {% if run.status != 'running' %}
+        <form method="post" action="/seleksi-foto/sesi/{{ run.id }}/hapus"
+              data-confirm="Hapus sesi ini beserta berkas fotonya? Tindakan ini tidak dapat dibatalkan.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-ghost btn-sm btn-block" type="submit">{{ icon('trash') }} Hapus sesi</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% if run.error and run.status not in ['paused', 'failed'] %}
+  <div class="ps-inline-alert mt-2">{{ icon('alert') }}<span>{{ run.error }}</span></div>
+  {% endif %}
+
+  <div class="ps-detail-layout mt-3">
+    <div class="ps-detail-main">
+      <section class="section-card" id="hasil">
+        <div class="flex-between mb-2">
+          <h2 style="margin-bottom: 0;">{{ icon('grid') }} Tinjau hasil</h2>
+          <span class="muted-small">{{ items|length }} foto</span>
+        </div>
+
+        <div class="ps-filter-tabs" role="tablist" aria-label="Filter hasil seleksi">
+          <button class="ps-filter-tab active" type="button" data-ps-filter="all">Semua <span>{{ items|length }}</span></button>
+          <button class="ps-filter-tab" type="button" data-ps-filter="selected">Dipilih <span>{{ run.selected_count }}</span></button>
+          <button class="ps-filter-tab" type="button" data-ps-filter="backup">Cadangan <span>{{ run.backup_count }}</span></button>
+          <button class="ps-filter-tab" type="button" data-ps-filter="rejected">Ditolak <span>{{ run.rejected_count }}</span></button>
+          {% if run.failed_count %}
+          <button class="ps-filter-tab" type="button" data-ps-filter="failed">Gagal <span>{{ run.failed_count }}</span></button>
+          {% endif %}
+        </div>
+
+        {% if items %}
+        <form method="post" action="/seleksi-foto/sesi/{{ run.id }}/pilihan" data-ps-verdict-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="ps-photo-grid">
+            {% for item in items %}
+            <article class="ps-photo-card" data-ps-card data-verdict="{{ item.verdict }}" data-item="{{ item.id }}">
+              <div class="ps-photo-frame" data-lightbox data-caption="{{ item.caption or item.original_name }}">
+                {% if item.thumb_path %}
+                <img src="/media/{{ item.thumb_path }}" alt="{{ item.caption or item.original_name }}" loading="lazy">
+                {% else %}
+                <div class="ps-photo-empty">{{ icon('image') }}</div>
+                {% endif %}
+                <span class="ps-score-ring" style="--ps-score: {{ item.score }}" data-ps-score>{{ item.score }}</span>
+                <span class="ps-verdict-badge badge badge-{{ verdict_tones.get(item.verdict, 'gray') }}" data-ps-verdict-badge data-label-selected="Dipilih" data-label-backup="Cadangan" data-label-rejected="Ditolak" data-label-failed="Gagal" data-label-pending="Menunggu">{{ verdict_labels.get(item.verdict, item.verdict) }}</span>
+                {% if item.duplicate_of_id %}<span class="ps-dupe-badge">{{ icon('layers') }} Duplikat</span>{% endif %}
+                {% if item.face_count %}<span class="ps-face-badge">{{ icon('users') }} {{ item.face_count }}</span>{% endif %}
+              </div>
+
+              <div class="ps-photo-body">
+                <div class="ps-photo-title">
+                  <strong>{{ item.caption or item.original_name }}</strong>
+                  <span>#{{ item.position }} · {{ item.width }}×{{ item.height }}</span>
+                  <button type="button" class="btn btn-ghost btn-sm ps-wa-one" data-ps-share-one
+                          data-url="{{ request.base_url }}media/{{ item.file_path }}"
+                          data-caption="{{ item.caption or item.original_name }}"
+                          {% if item.verdict != 'selected' %}hidden{% endif %}>
+                    {{ icon('send') }} WhatsApp
+                  </button>
+                </div>
+                <p class="ps-reason">{{ item.reason or item.error or 'Belum ada catatan dari agen.' }}</p>
+                {% if item.tags %}
+                <div class="chip-row">
+                  {% for tag in item.tags[:4] %}<span class="chip chip-gray">{{ tag }}</span>{% endfor %}
+                </div>
+                {% endif %}
+                {% if item.technicals is defined %}{% endif %}
+                <div class="ps-mini-metrics">
+                  {% set tech = item.technical or {} %}
+                  {% for label, key in [('Tajam', 'sharpness'), ('Cahaya', 'exposure'), ('Komposisi', 'composition'), ('Relevansi', 'relevance')] %}
+                  {% set value = tech.get(key, 0) %}
+                  <span title="{{ label }}: {{ value }}/100"><i style="width: {{ value }}%"></i><small>{{ label }}</small></span>
+                  {% endfor %}
+                </div>
+                {% if item.weaknesses %}
+                <p class="ps-weakness">{{ icon('alert') }} {{ item.weaknesses|join(' · ') }}</p>
+                {% endif %}
+
+                <div class="ps-verdict-picker">
+                  <label class="ps-verdict-option selected">
+                    <input type="radio" name="verdict_{{ item.id }}" value="selected" {{ 'checked' if item.verdict == 'selected' }}>
+                    {{ icon('check') }} Pilih
+                  </label>
+                  <label class="ps-verdict-option backup">
+                    <input type="radio" name="verdict_{{ item.id }}" value="backup" {{ 'checked' if item.verdict == 'backup' }}>
+                    {{ icon('image') }} Cadangan
+                  </label>
+                  <label class="ps-verdict-option rejected">
+                    <input type="radio" name="verdict_{{ item.id }}" value="rejected" {{ 'checked' if item.verdict == 'rejected' }}>
+                    {{ icon('x') }} Tolak
+                  </label>
+                </div>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+
+          <div class="ps-save-bar">
+            <span class="muted-small">{{ icon('info') }} Perubahan pilihan disimpan sebagai keputusan manual dan tidak akan ditimpa agen.</span>
+            <button class="btn btn-primary btn-sm" type="submit">{{ icon('check') }} Simpan perubahan</button>
+          </div>
+        </form>
+        {% else %}
+        {{ empty_state('image', 'Tidak ada foto', 'Sesi ini belum memiliki foto.') }}
+        {% endif %}
+      </section>
+    </div>
+
+    <aside class="ps-detail-side">
+      <section class="section-card">
+        <h2 style="font-size: 16px;">{{ icon('check') }} Terapkan ke kegiatan</h2>
+        <p class="muted-small mb-2">
+          Foto berstatus <b>Dipilih</b> akan disalin ke galeri kegiatan dan diproses pengenalan wajah.
+        </p>
+        {% if run.selected_count %}
+        <form method="post" action="/seleksi-foto/sesi/{{ run.id }}/terapkan" data-loading>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="form-group mb-2">
+            <label class="form-label" for="ps-apply-activity">Kegiatan tujuan</label>
+            <select class="select" id="ps-apply-activity" name="activity_id" required>
+              <option value="">Pilih kegiatan…</option>
+              {% for activity in activities %}
+              <option value="{{ activity.id }}">{{ activity.code }} · {{ activity.title|truncate(54) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm btn-block" type="submit">
+            {{ icon('upload') }} Terapkan <span data-ps-selected-count>{{ run.selected_count }}</span> foto
+          </button>
+        </form>
+        <a class="btn btn-outline btn-sm btn-block mt-1" href="/seleksi-foto/sesi/{{ run.id }}/unduh">{{ icon('download') }} Unduh ZIP pilihan</a>
+        <button class="btn btn-soft btn-sm btn-block mt-1" type="button" data-ps-share-whatsapp>{{ icon('send') }} Bagikan via WhatsApp</button>
+        <p class="form-hint mt-1">Maksimal {{ max_photos }} foto per kegiatan. {{ run.applied_count }} foto dari sesi ini sudah diterapkan.</p>
+        {% else %}
+        <p class="muted-small">Belum ada foto terpilih. Pilih minimal satu foto pada kartu di samping.</p>
+        {% endif %}
+      </section>
+
+      <section class="section-card">
+        <h2 style="font-size: 16px;">{{ icon('target') }} Detail skill</h2>
+        <div class="ps-skill-snapshot">
+          <strong>{{ run.skill_name }}</strong>
+          <p>{{ run.skill_instructions or 'Tidak ada instruksi tambahan.' }}</p>
+        </div>
+        {% if run.skill_learned_preferences or run.learned_preferences %}
+        <div class="ps-learned-note mt-1">
+          {{ icon('sparkles') }}
+          <span>
+            <b>Preferensi hasil belajar:</b>
+            {{ run.skill_learned_preferences or run.learned_preferences }}
+          </span>
+        </div>
+        {% endif %}
+        {% if run.user_notes %}
+        <div class="ps-note-block">
+          <span>{{ icon('edit') }} Catatan sesi</span>
+          <p>{{ run.user_notes }}</p>
+        </div>
+        {% endif %}
+        <div class="side-list mt-2">
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('sparkles') }}</span>
+            <div class="side-copy"><span>Model</span><strong>{{ run.model }}</strong></div>
+          </div>
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('target') }}</span>
+            <div class="side-copy"><span>Target</span><strong>{{ run.target_count or 'Semua yang layak' }}</strong></div>
+          </div>
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('activity') }}</span>
+            <div class="side-copy"><span>Permintaan AI</span><strong>{{ run.quota_used }}</strong></div>
+          </div>
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('layers') }}</span>
+            <div class="side-copy"><span>Token AI</span><strong>{{ '{:,}'.format(run.tokens_used) }}</strong></div>
+          </div>
+          {% if run.finished_at %}
+          <div class="side-item">
+            <span class="meta-icon">{{ icon('clock') }}</span>
+            <div class="side-copy"><span>Selesai</span><strong>{{ run.finished_at|datetime_id }}</strong></div>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="section-card">
+        <h2 style="font-size: 16px;">{{ icon('info') }} Cara membaca hasil</h2>
+        <div class="ps-legend">
+          <div><span class="badge badge-green">Dipilih</span><p>Layak tayang dan masuk target. Bisa langsung diterapkan.</p></div>
+          <div><span class="badge badge-gold">Cadangan</span><p>Masih berguna, tetapi kalah dari foto lain atau mirip foto lain.</p></div>
+          <div><span class="badge badge-red">Ditolak</span><p>Blur, gelap, tidak relevan, atau melanggar preferensi skill.</p></div>
+        </div>
+        <div class="face-note mt-2">
+          {{ icon('shield') }}
+          <span>Keputusan AI bersifat saran. Anda tetap pemegang keputusan akhir dan dapat mengubah pilihan kapan saja.</span>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+{% include "partials/app_guide.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/app-guide.js?v={{ app_version }}" defer></script>
+<script src="/static/js/photo-selection.js?v={{ app_version }}" defer></script>
+{% endblock %}

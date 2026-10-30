@@ -36,6 +36,18 @@ class GeminiError(RuntimeError):
     pass
 
 
+class GeminiAuthError(GeminiError):
+    """API key ditolak atau tidak memiliki izin."""
+
+
+class GeminiQuotaError(GeminiError):
+    """Kuota RPM/RPD di sisi Google habis."""
+
+
+class GeminiUnavailableError(GeminiError):
+    """Layanan Gemini tidak dapat dihubungi."""
+
+
 @dataclass
 class NewsAnalysis:
     """Hasil penilaian Gemini untuk satu artikel."""
@@ -112,23 +124,29 @@ def _strip_json(text: str) -> str:
     return cleaned
 
 
-def _call_gemini(
-    prompt: str,
+def _generate_content(
+    parts: list[dict],
     schema: dict,
     *,
+    api_key: str,
+    model: str,
     temperature: float = 0.1,
     max_output_tokens: int | None = None,
+    timeout: int | None = None,
+    usage_sink: dict | None = None,
 ) -> dict:
-    """Panggil Gemini ``generateContent`` dan kembalikan objek JSON."""
-    if not settings.gemini_configured:
-        raise GeminiError(
-            "Gemini belum dikonfigurasi. Isi SIDEWA_GEMINI_API_KEY pada berkas .env."
-        )
+    """Panggil ``generateContent`` dengan parts apa pun dan kembalikan JSON.
 
-    model = settings.gemini_model.strip() or "gemini-3.5-flash-lite"
+    ``usage_sink`` (opsional) diisi dengan metadata pemakaian token dari Gemini
+    agar pemanggil dapat menegakkan batas TPM.
+    """
+    if not api_key:
+        raise GeminiAuthError("Kunci API Gemini belum diisi.")
+
+    model = (model or "gemini-3.5-flash-lite").strip()
     url = f"{settings.gemini_api_url}/models/{model}:generateContent"
     payload = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {
             "temperature": temperature,
             "responseMimeType": "application/json",
@@ -142,13 +160,15 @@ def _call_gemini(
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "x-goog-api-key": settings.gemini_api_key,
+            "x-goog-api-key": api_key,
             "User-Agent": "SIDEWA-DPRD-Riau/1.0",
         },
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=max(10, settings.gemini_timeout)) as response:
+        with urllib.request.urlopen(
+            request, timeout=max(10, timeout or settings.gemini_timeout)
+        ) as response:
             body = response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         detail = ""
@@ -158,28 +178,42 @@ def _call_gemini(
             pass
         logger.warning("Gemini HTTP %s: %s", exc.code, detail)
         if exc.code == 429:
-            raise GeminiError("Kuota Gemini sedang penuh. Coba lagi beberapa saat.") from exc
+            raise GeminiQuotaError(
+                "Kuota Gemini sedang penuh. Kurangi jumlah foto atau coba lagi nanti."
+            ) from exc
         if exc.code in {401, 403}:
-            raise GeminiError("Gemini menolak API key. Periksa SIDEWA_GEMINI_API_KEY.") from exc
+            raise GeminiAuthError(
+                "Gemini menolak API key. Periksa kembali kunci pada pengaturan."
+            ) from exc
         raise GeminiError(f"Gemini menolak permintaan (HTTP {exc.code}).") from exc
     except (urllib.error.URLError, TimeoutError) as exc:
         logger.warning("Gemini tidak dapat dihubungi: %s", exc)
-        raise GeminiError("Gemini tidak dapat dihubungi. Coba lagi beberapa saat.") from exc
+        raise GeminiUnavailableError(
+            "Gemini tidak dapat dihubungi. Coba lagi beberapa saat."
+        ) from exc
 
     try:
         data = json.loads(body)
     except json.JSONDecodeError as exc:
         raise GeminiError("Respons Gemini tidak valid.") from exc
 
+    if usage_sink is not None:
+        usage = data.get("usageMetadata") or {}
+        for name in ("promptTokenCount", "candidatesTokenCount", "totalTokenCount"):
+            try:
+                usage_sink[name] = max(0, int(usage.get(name) or 0))
+            except (TypeError, ValueError):
+                usage_sink[name] = 0
+
     candidates = data.get("candidates") or []
     if not candidates:
         feedback = data.get("promptFeedback") or {}
         reason = feedback.get("blockReason") or "tidak ada kandidat"
         raise GeminiError(f"Gemini tidak mengembalikan analisis ({reason}).")
-    parts = ((candidates[0] or {}).get("content") or {}).get("parts") or []
+    parts_out = ((candidates[0] or {}).get("content") or {}).get("parts") or []
     text = "".join(
         str(part.get("text") or "")
-        for part in parts
+        for part in parts_out
         if isinstance(part, dict) and not part.get("thought")
     )
     if not text.strip():
@@ -192,6 +226,28 @@ def _call_gemini(
     if not isinstance(parsed, dict):
         raise GeminiError("Format JSON dari Gemini tidak valid.")
     return parsed
+
+
+def _call_gemini(
+    prompt: str,
+    schema: dict,
+    *,
+    temperature: float = 0.1,
+    max_output_tokens: int | None = None,
+) -> dict:
+    """Panggil Gemini ``generateContent`` dan kembalikan objek JSON."""
+    if not settings.gemini_configured:
+        raise GeminiAuthError(
+            "Gemini belum dikonfigurasi. Isi SIDEWA_GEMINI_API_KEY pada berkas .env."
+        )
+    return _generate_content(
+        [{"text": prompt}],
+        schema,
+        api_key=settings.gemini_api_key,
+        model=settings.gemini_model,
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+    )
 
 
 def _clean_keywords(value) -> list[str]:

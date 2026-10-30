@@ -35,12 +35,13 @@ from .routers import (
     media,
     member_dashboard,
     members,
+    photo_selection,
     search,
     system,
     users,
 )
 from .security import PasswordPolicyError, hash_password, validate_password_strength
-from .services import face_engine, jobs, supabase_sync
+from .services import face_engine, jobs, photo_curator, supabase_sync
 from .templating import render
 
 logging.basicConfig(
@@ -180,6 +181,9 @@ async def lifespan(app: FastAPI):
     queued = jobs.requeue_pending()
     if queued:
         logger.info("%s foto dimasukkan kembali ke antrean pemrosesan wajah.", queued)
+    curator_runs = photo_curator.requeue_runs()
+    if curator_runs:
+        logger.info("%s sesi seleksi foto dimasukkan kembali ke antrean.", curator_runs)
     supabase_sync.bootstrap()
     logger.info(
         "SIDEWA %s siap — env=%s database=%s",
@@ -189,6 +193,7 @@ async def lifespan(app: FastAPI):
     )
     yield
     jobs.shutdown()
+    photo_curator.shutdown()
     supabase_sync.flush_and_shutdown()
 
 
@@ -237,6 +242,7 @@ def create_app() -> FastAPI:
     application.include_router(guide.router)
     application.include_router(member_dashboard.router)
     application.include_router(humas_staff.router)
+    application.include_router(photo_selection.router)
     application.include_router(activities.router)
     application.include_router(search.router)
     application.include_router(members.router)

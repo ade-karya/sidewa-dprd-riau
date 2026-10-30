@@ -26,6 +26,10 @@ from .constants import (
     STAFF_VIEW_ROLES,
     STATUS_LABELS,
     STATUSES,
+    SELECTION_STATUS_LABELS,
+    SELECTION_STATUS_TONES,
+    SELECTION_VERDICT_LABELS,
+    SELECTION_VERDICT_TONES,
 )
 from .deps import consume_flashes
 from .security import new_csrf_token
@@ -81,6 +85,10 @@ templates.env.globals.update(
         "photo_status_labels": PHOTO_STATUS_LABELS,
         "categories": CATEGORIES,
         "category_tones": CATEGORY_TONES,
+        "selection_status_labels": SELECTION_STATUS_LABELS,
+        "selection_status_tones": SELECTION_STATUS_TONES,
+        "selection_verdict_labels": SELECTION_VERDICT_LABELS,
+        "selection_verdict_tones": SELECTION_VERDICT_TONES,
     }
 )
 
@@ -107,6 +115,13 @@ NAV_ITEMS = [
         "icon": "book-open",
         "href": "/staf-humas",
         "roles": STAFF_VIEW_ROLES,
+    },
+    {
+        "key": "photo_selection",
+        "label": "Seleksi Foto",
+        "icon": "sparkles",
+        "href": "/seleksi-foto",
+        "roles": CONTENT_MANAGER_ROLES,
     },
     {
         "key": "activities",
@@ -153,6 +168,7 @@ def _active_key(path: str) -> str:
         ("member_dashboard", "/dashboard-anggota"),
         ("staff_dashboard", "/dashboard-staf"),
         ("humas_staff", "/staf-humas"),
+        ("photo_selection", "/seleksi-foto"),
         ("activities", "/kegiatan"),
         ("search", "/cari"),
         ("members", "/anggota"),

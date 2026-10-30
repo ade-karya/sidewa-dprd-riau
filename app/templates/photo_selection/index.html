@@ -1,0 +1,583 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, empty_state %}
+
+{% block title %}Seleksi Foto AI{% endblock %}
+{% block page_title %}Seleksi foto dengan AI{% endblock %}
+{% block page_subtitle %}Kurasi foto Humas memakai Gemini {{ selection.model }} dan kunci API Anda sendiri{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/kegiatan">{{ icon('calendar') }}<span>Dokumentasi</span></a>
+{% endblock %}
+
+{% block content %}
+<nav class="ps-subnav mb-3">
+  <a href="/seleksi-foto" class="{{ 'active' if view == 'dashboard' }}">Ringkasan</a>
+  <a href="/seleksi-foto/mulai" class="{{ 'active' if view == 'start' }}">Mulai seleksi</a>
+  <a href="/seleksi-foto/skill" class="{{ 'active' if view == 'skills' }}">Skill</a>
+  <a href="/seleksi-foto/pengaturan" class="{{ 'active' if view == 'settings' }}">Pengaturan</a>
+  <a href="/seleksi-foto/riwayat" class="{{ 'active' if view == 'history' }}">Riwayat</a>
+</nav>
+
+{% if view == 'dashboard' %}
+<section class="ps-hero">
+  <div class="ps-hero-copy">
+    <span class="hero-eyebrow">{{ icon('sparkles') }} Kurasi foto cerdas</span>
+    <h2>Pilih foto terbaik tanpa menghabiskan kuota.</h2>
+    <p>
+      Agen menilai ketajaman, pencahayaan, komposisi, ekspresi, dan relevansi peristiwa.
+      Duplikat dideteksi lebih dulu di server, lalu setiap foto dinilai dengan
+      <b>Gemini {{ selection.model }}</b> sesuai skill dan preferensi Anda.
+    </p>
+    <div class="chip-row mt-2">
+      {% if selection.has_key %}
+      <span class="chip chip-green">{{ icon('key') }} Kunci API tersimpan {{ selection.key_hint }}</span>
+      {% if selection.key_verified_at %}
+      <span class="chip chip-gray">{{ icon('check') }} Terverifikasi {{ selection.key_verified_at|datetime_id }}</span>
+      {% else %}
+      <span class="chip chip-gold">{{ icon('alert') }} Belum diuji</span>
+      {% endif %}
+      {% else %}
+      <span class="chip chip-gold">{{ icon('key') }} Kunci API belum diatur</span>
+      {% endif %}
+      <span class="chip chip-purple">{{ icon('sparkles') }} {{ selection.rpm }} RPM · {{ (selection.tpm / 1000)|round|int }}K TPM · {{ selection.rpd }} RPD</span>
+    </div>
+    <div class="ps-hero-actions">
+      <a class="btn btn-primary" href="/seleksi-foto/mulai">{{ icon('upload') }} Mulai seleksi</a>
+      <a class="btn btn-outline" href="/seleksi-foto/pengaturan">{{ icon('settings') }} Atur kunci &amp; kuota</a>
+    </div>
+  </div>
+  <div class="ps-hero-side">
+    <div class="ps-hero-stat">
+      <span class="ps-hero-stat-icon">{{ icon('check') }}</span>
+      <div><b>{{ total_selected }}</b><span>Foto terpilih</span></div>
+    </div>
+    <div class="ps-hero-stat">
+      <span class="ps-hero-stat-icon">{{ icon('activity') }}</span>
+      <div><b>{{ runs|length }}</b><span>Sesi terakhir</span></div>
+    </div>
+    <div class="ps-hero-stat">
+      <span class="ps-hero-stat-icon">{{ icon('sparkles') }}</span>
+      <div><b>{{ total_quota }}</b><span>Permintaan AI</span></div>
+    </div>
+    <div class="ps-quota-mini">
+      <div class="ps-quota-mini-head">
+        <span>Kuota harian</span>
+        <b>{{ usage.rpd_remaining }}</b>
+      </div>
+      <div class="ps-meter"><i style="width: {{ usage.rpd_percent }}%"></i></div>
+      <small>Tersisa dari {{ usage.rpd_limit }} · reset {{ usage.reset_at|datetime_id }}</small>
+    </div>
+  </div>
+</section>
+
+{% if not selection.has_key %}
+<div class="ps-callout mt-3">
+  <span class="ps-callout-icon">{{ icon('key') }}</span>
+  <div>
+    <strong>Hubungkan kunci API Anda terlebih dahulu</strong>
+    <p>Seleksi foto memakai kunci Gemini masing-masing pengguna. Kunci disimpan terenkripsi dan hanya dipakai untuk fitur ini. Dapatkan kunci gratis di Google AI Studio.</p>
+  </div>
+  <a class="btn btn-primary btn-sm" href="/seleksi-foto/pengaturan">{{ icon('settings') }} Atur sekarang</a>
+</div>
+{% endif %}
+{% endif %}
+
+<div class="ps-layout mt-3">
+  <div class="ps-main">
+    {% if view == 'start' %}
+    <section class="section-card" id="mulai">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('upload') }} Mulai sesi seleksi</h2>
+        <span class="badge badge-purple">Maks. {{ max_photos }} foto</span>
+      </div>
+
+      <form method="post" action="/seleksi-foto/mulai" enctype="multipart/form-data"
+            data-loading data-ps-start
+            data-rpm="{{ selection.rpm }}" data-rpd="{{ selection.rpd }}"
+            data-tpm="{{ selection.tpm }}"
+            data-rpd-remaining="{{ usage.rpd_remaining }}"
+            data-max-mb="{{ settings.max_upload_mb }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="form-section-title">1. Pilih skill seleksi</div>
+        <p class="muted-small mb-2">Skill menentukan selera kurasi. Pilih preset atau buat sendiri sesuai kebutuhan tim Anda.</p>
+        <div class="ps-skill-grid">
+          {% for skill in skills %}
+          <label class="ps-skill-card {{ 'custom' if skill.custom }} {{ 'shared' if skill.shared }}"
+                 data-ps-skill data-target="{{ skill.target_count }}" data-score="{{ skill.min_score }}">
+            <input type="radio" name="skill_key" value="{{ skill.key }}"
+                   {{ 'checked' if skill.key == default_skill_key }} required>
+            <span class="ps-skill-icon tone-{{ skill.tone }}">{{ icon(skill.icon) }}</span>
+            <span class="ps-skill-copy">
+              <strong>{{ skill.name }}</strong>
+              <span>{{ skill.description }}</span>
+              <small>
+                {% if skill.target_count %}{{ skill.target_count }} foto target{% else %}Semua yang layak{% endif %}
+                · skor ≥ {{ skill.min_score }}
+                {% if skill.shared %}· dibagikan {{ skill.owner_name }} · {{ skill.share_usage_count }}× dipakai
+                {% elif skill.custom %}· skill saya{% endif %}
+                {% if skill.auto_update %}· adaptif{% endif %}
+              </small>
+            </span>
+            <span class="ps-skill-check">{{ icon('check') }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="ps-step mt-3">
+          <div class="form-section-title">2. Unggah foto</div>
+          <p class="muted-small mb-2">Foto disimpan sementara di ruang kerja Anda dan tidak tampil di galeri publik sebelum diterapkan ke kegiatan.</p>
+          <div class="upload-zone ps-upload">
+            <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple required
+                   data-preview="#ps-preview" data-max="{{ max_photos }}"
+                   data-ps-photos aria-label="Pilih foto untuk diseleksi AI">
+            <div class="upload-icon">{{ icon('sparkles') }}</div>
+            <h4>Tarik foto ke sini atau klik untuk memilih</h4>
+            <p>Hingga {{ max_photos }} foto · JPG, PNG, atau WEBP · maks. {{ settings.max_upload_mb }} MB per foto</p>
+          </div>
+          <div class="upload-previews" id="ps-preview"></div>
+          <div class="ps-upload-summary" data-ps-file-summary hidden></div>
+          <p class="form-hint mt-1">
+            Foto disimpan di penyimpanan objek (HF S3). Batas Gemini hanya menentukan berapa foto
+            yang diproses per menit/hari; foto lainnya tetap tersimpan dan dapat diproses saat kuota tersedia.
+          </p>
+        </div>
+
+        <div class="ps-step mt-3">
+          <div class="form-section-title">3. Atur target &amp; konteks</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="ps-target">Target foto terbaik</label>
+              <input class="input" id="ps-target" name="target_count" type="number" min="0" max="{{ max_photos }}" value="0">
+              <span class="form-hint">Isi 0 untuk memilih semua foto yang layak.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ps-score">Ambang skor minimum</label>
+              <input class="input" id="ps-score" name="min_score" type="number" min="0" max="100" value="62" data-ps-score>
+              <span class="form-hint">Skor 0–100. Rekomendasi: 60–70 untuk dokumentasi.</span>
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="ps-activity">Konteks kegiatan (opsional)</label>
+              <select class="select" id="ps-activity" name="activity_id">
+                <option value="0">Tanpa konteks kegiatan</option>
+                {% for activity in activities %}
+                <option value="{{ activity.id }}">{{ activity.title|truncate(70) }} · {{ activity.activity_date|date_short }}</option>
+                {% endfor %}
+              </select>
+              <span class="form-hint">Konteks membantu AI menilai relevansi momen, lokasi, dan jenis kegiatan.</span>
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="ps-notes">Catatan preferensi untuk sesi ini</label>
+              <textarea class="textarea" id="ps-notes" name="notes" rows="3" maxlength="1200"
+                        placeholder="Contoh: utamakan foto Pimpinan DPRD, hindari foto dari belakang, wajah harus terlihat jelas."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="ps-estimate" data-ps-estimate>
+          <span class="ps-estimate-icon">{{ icon('clock') }}</span>
+          <div class="ps-estimate-copy" data-ps-estimate-text>Pilih foto untuk melihat estimasi waktu dan kuota.</div>
+        </div>
+
+        <div class="form-actions">
+          <a class="btn btn-ghost" href="/seleksi-foto">Bersihkan</a>
+          <button class="btn btn-primary" type="submit" {{ 'disabled' if not selection.has_key }}>
+            {{ icon('sparkles') }} Jalankan agen seleksi
+          </button>
+        </div>
+        {% if not selection.has_key %}
+        <p class="form-hint mt-1">Atur kunci API terlebih dahulu untuk mengaktifkan tombol ini.</p>
+        {% endif %}
+      </form>
+    </section>
+    {% endif %}
+
+    {% if view == 'skills' %}
+    <section class="section-card" id="skill">
+      <div class="flex-between mb-2">
+        <h2 style="margin-bottom: 0;">{{ icon('target') }} Skill &amp; preferensi</h2>
+        <span class="badge badge-gray">{{ skills|selectattr('custom')|list|length }} skill saya · {{ skills|selectattr('shared')|list|length }} komunitas</span>
+      </div>
+      <p class="muted-small mb-2">
+        Skill adalah instruksi kurasi yang dapat Anda pakai berulang. Preset bawaan tidak dapat dihapus;
+        skill buatan sendiri dapat disunting kapan saja.
+      </p>
+
+      {% set custom_skills = skills|selectattr('custom')|list %}
+      {% if custom_skills %}
+      <div class="ps-custom-skills">
+        {% for skill in custom_skills %}
+        <div class="ps-custom-skill">
+          <div class="ps-custom-skill-head">
+            <span class="ps-skill-icon tone-purple">{{ icon(skill.icon) }}</span>
+            <div class="grow">
+              <strong>{{ skill.name }}</strong>
+              <span>{{ skill.description or 'Tanpa deskripsi' }}</span>
+            </div>
+            <span class="badge badge-gray">{{ skill.target_count or 'Semua' }} · ≥ {{ skill.min_score }}</span>
+            {% if skill.auto_update %}<span class="badge badge-purple">{{ icon('refresh') }} Adaptif</span>{% endif %}
+            {% if skill.is_shared %}<span class="badge badge-blue">{{ icon('users') }} Dibagikan · {{ skill.share_usage_count }}×</span>{% endif %}
+          </div>
+          {% if skill.learned_preferences %}
+          <div class="ps-learned-note">
+            {{ icon('sparkles') }}
+            <span><b>Hasil belajar:</b> {{ skill.learned_preferences }}</span>
+          </div>
+          {% endif %}
+          <details class="ps-custom-edit">
+            <summary class="link-btn">Sunting skill</summary>
+            <form method="post" action="/seleksi-foto/skill" data-loading>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="skill_id" value="{{ skill.id }}">
+              <div class="form-grid mt-1">
+                <div class="form-group">
+                  <label class="form-label" for="skill-name-{{ skill.id }}">Nama</label>
+                  <input class="input" id="skill-name-{{ skill.id }}" name="name" value="{{ skill.name }}" required maxlength="80">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="skill-desc-{{ skill.id }}">Deskripsi singkat</label>
+                  <input class="input" id="skill-desc-{{ skill.id }}" name="description" value="{{ skill.description }}" maxlength="220">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="skill-target-{{ skill.id }}">Target foto (0 = semua)</label>
+                  <input class="input" id="skill-target-{{ skill.id }}" name="target_count" type="number" min="0" max="100" value="{{ skill.target_count }}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="skill-score-{{ skill.id }}">Ambang skor</label>
+                  <input class="input" id="skill-score-{{ skill.id }}" name="min_score" type="number" min="0" max="100" value="{{ skill.min_score }}">
+                </div>
+                <div class="form-group full">
+                  <label class="form-label" for="skill-inst-{{ skill.id }}">Instruksi untuk AI</label>
+                  <textarea class="textarea" id="skill-inst-{{ skill.id }}" name="instructions" rows="3" maxlength="2000">{{ skill.instructions }}</textarea>
+                </div>
+                <div class="form-group full">
+                  <label class="checkbox-row">
+                    <input type="checkbox" name="auto_update" value="1" {{ 'checked' if skill.auto_update }}>
+                    <span><b>Perbarui otomatis</b><br>Selaraskan target, ambang skor, dan preferensi skill ini dari koreksi serta foto yang Anda terapkan.</span>
+                  </label>
+                </div>
+                <div class="form-group full">
+                  <label class="checkbox-row">
+                    <input type="checkbox" name="is_shared" value="1" {{ 'checked' if skill.is_shared }}>
+                    <span><b>Bagikan ke anggota Humas lain</b><br>Skill muncul di daftar komunitas dan dapat dipakai atau disalin anggota lain. Diurutkan berdasarkan yang paling banyak dipakai.</span>
+                  </label>
+                </div>
+              </div>
+              <div class="flex" style="justify-content: flex-end; gap: 8px;">
+                <button class="btn btn-soft btn-sm" type="submit">{{ icon('check') }} Simpan</button>
+              </div>
+            </form>
+            <div class="flex" style="justify-content: space-between; gap: 8px; margin-top: 8px;">
+              <form method="post" action="/seleksi-foto/skill/{{ skill.key }}/default">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn btn-ghost btn-sm" type="submit">{{ icon('target') }} Jadikan default</button>
+              </form>
+              <form method="post" action="/seleksi-foto/skill/{{ skill.id }}/hapus" data-confirm="Hapus skill ini? Sesi lama tidak terpengaruh.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn btn-danger btn-sm" type="submit">{{ icon('trash') }} Hapus</button>
+              </form>
+            </div>
+          </details>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% set shared_skills = skills|selectattr('shared')|list %}
+      <div class="ps-community">
+        <div class="flex-between mb-1">
+          <div>
+            <h3 class="ps-community-title">{{ icon('users') }} Skill komunitas Humas</h3>
+            <p class="muted-small">Dibagikan oleh anggota lain, diurutkan dari yang paling banyak dipakai.</p>
+          </div>
+          <span class="badge badge-blue">{{ shared_skills|length }} tersedia</span>
+        </div>
+        {% if shared_skills %}
+        <div class="ps-community-grid">
+          {% for skill in shared_skills %}
+          <article class="ps-community-skill">
+            <div class="ps-community-head">
+              <span class="ps-skill-icon tone-cyan">{{ icon(skill.icon) }}</span>
+              <div class="grow">
+                <strong>{{ skill.name }}</strong>
+                <span>{{ skill.owner_name or 'Anggota Humas' }}</span>
+              </div>
+              <span class="badge badge-blue">{{ skill.share_usage_count }}×</span>
+            </div>
+            <p>{{ skill.description or 'Tanpa deskripsi.' }}</p>
+            {% if skill.learned_preferences %}
+            <div class="ps-learned-note">{{ icon('sparkles') }}<span>{{ skill.learned_preferences|truncate(140) }}</span></div>
+            {% endif %}
+            <div class="ps-community-foot">
+              <small>{{ skill.target_count or 'Semua' }} foto · skor ≥ {{ skill.min_score }}</small>
+              <form method="post" action="/seleksi-foto/skill/{{ skill.id }}/salin" data-confirm="Salin skill ini ke daftar skill saya?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn btn-soft btn-sm" type="submit">{{ icon('plus') }} Salin ke skill saya</button>
+              </form>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        <p class="form-hint mt-1">Untuk memakai langsung, pilih skill komunitas pada langkah 1 di bagian “Mulai sesi seleksi”.</p>
+        {% else %}
+        <div class="ps-community-empty">
+          {{ icon('users') }}
+          <span>Belum ada skill yang dibagikan. Aktifkan “Bagikan ke anggota Humas lain” pada skill Anda untuk membuka kolaborasi.</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <details class="ps-skill-builder" {{ 'open' if not custom_skills }}>
+        <summary>
+          <span class="ps-skill-builder-icon">{{ icon('plus') }}</span>
+          <span>
+            <strong>Buat skill baru</strong>
+            <small>Simpan selera kurasi tim Anda, misalnya “Foto Pimpinan” atau “Kunjungan Kerja”.</small>
+          </span>
+          {{ icon('chevron-down') }}
+        </summary>
+        <form method="post" action="/seleksi-foto/skill" data-loading class="mt-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="new-skill-name">Nama skill <span class="required">*</span></label>
+              <input class="input" id="new-skill-name" name="name" required maxlength="80" placeholder="Foto Pimpinan">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-skill-desc">Deskripsi singkat</label>
+              <input class="input" id="new-skill-desc" name="description" maxlength="220" placeholder="Fokus pada pimpinan dan momen seremonial.">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-skill-target">Target foto (0 = semua)</label>
+              <input class="input" id="new-skill-target" name="target_count" type="number" min="0" max="100" value="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-skill-score">Ambang skor</label>
+              <input class="input" id="new-skill-score" name="min_score" type="number" min="0" max="100" value="62">
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="new-skill-inst">Instruksi untuk AI</label>
+              <textarea class="textarea" id="new-skill-inst" name="instructions" rows="3" maxlength="2000"
+                        placeholder="Contoh: utamakan wajah pimpinan yang jelas, hindari foto punggung, dan pilih komposisi formal."></textarea>
+            </div>
+            <div class="form-group full">
+              <label class="checkbox-row">
+                <input type="checkbox" name="auto_update" value="1" checked>
+                <span><b>Perbarui otomatis</b><br>Agen menyesuaikan skill ini dari koreksi pilihan dan foto yang Anda terapkan.</span>
+              </label>
+            </div>
+            <div class="form-group full">
+              <label class="checkbox-row">
+                <input type="checkbox" name="is_shared" value="1">
+                <span><b>Bagikan ke anggota Humas lain</b><br>Izinkan anggota lain memakai atau menyalin skill ini dari daftar komunitas.</span>
+              </label>
+            </div>
+          </div>
+          <div class="flex" style="justify-content: flex-end;">
+            <button class="btn btn-primary btn-sm" type="submit">{{ icon('plus') }} Simpan skill</button>
+          </div>
+        </form>
+      </details>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="ps-side">
+    {% if view == 'settings' %}
+    <section class="section-card" id="pengaturan">
+      <div class="flex-between mb-1">
+        <h2 style="margin-bottom: 0;">{{ icon('key') }} Kunci API</h2>
+        {% if selection.has_key %}
+        <span class="badge badge-green"><span class="dot"></span>Aktif</span>
+        {% else %}
+        <span class="badge badge-gold">Belum diatur</span>
+        {% endif %}
+      </div>
+      <p class="muted-small mb-2">
+        Gunakan kunci dari <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+        Kunci hanya dipakai untuk seleksi foto atas nama akun Anda.
+      </p>
+
+      {% if selection.key_error %}
+      <div class="ps-inline-alert">{{ icon('alert') }}<span>{{ selection.key_error }}</span></div>
+      {% endif %}
+
+      <form method="post" action="/seleksi-foto/pengaturan" data-loading>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="form-group mb-2">
+          <label class="form-label" for="ps-api-key">Kunci API Gemini</label>
+          <div class="password-wrap">
+            <input class="input" id="ps-api-key" name="api_key" type="password" autocomplete="off"
+                   placeholder="{{ selection.key_hint or 'AIza…' }}">
+            <button class="icon-btn toggle-password" type="button" data-toggle-password aria-label="Tampilkan kunci">{{ icon('eye') }}</button>
+          </div>
+          <span class="form-hint">
+            {% if selection.has_key %}Kosongkan bila tidak ingin mengganti kunci tersimpan.{% else %}Kunci disimpan terenkripsi dan tidak pernah ditampilkan kembali.{% endif %}
+          </span>
+        </div>
+
+        <div class="form-group mb-2">
+          <label class="form-label" for="ps-model">Model</label>
+          <input class="input" id="ps-model" name="model" value="{{ selection.model }}" list="ps-models" maxlength="80">
+          <datalist id="ps-models">
+            <option value="{{ default_model }}"></option>
+          </datalist>
+          <span class="form-hint">Disarankan <b>{{ default_model }}</b> — cepat dan hemat biaya.</span>
+        </div>
+
+        <div class="ps-quota-inputs">
+          <div class="form-group">
+            <label class="form-label" for="ps-rpm">Batas RPM</label>
+            <input class="input" id="ps-rpm" name="rpm" type="number" min="1" max="300" value="{{ selection.rpm }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ps-tpm">Batas TPM</label>
+            <input class="input" id="ps-tpm" name="tpm" type="number" min="1000" max="2000000" step="1000" value="{{ selection.tpm }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ps-rpd">Batas RPD</label>
+            <input class="input" id="ps-rpd" name="rpd" type="number" min="1" max="10000" value="{{ selection.rpd }}">
+          </div>
+        </div>
+        <span class="form-hint">
+          Kuota Gemini 3.5 Flash Lite untuk model teks: <b>15 RPM · 250K TPM · 500 RPD</b>.
+          Agen menunggu otomatis saat RPM/TPM penuh dan menjeda sesi saat RPD habis.
+        </span>
+
+        <div class="form-group mt-2">
+          <label class="form-label" for="ps-default-skill">Skill default</label>
+          <select class="select" id="ps-default-skill" name="default_skill_key">
+            {% for skill in skills %}
+            <option value="{{ skill.key }}" {{ 'selected' if skill.key == default_skill_key }}>{{ skill.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group mt-2">
+          <label class="form-label" for="ps-pref-notes">Preferensi umum</label>
+          <textarea class="textarea" id="ps-pref-notes" name="preferred_notes" rows="3" maxlength="1200"
+                    placeholder="Contoh: hindari foto yang memperlihatkan wajah tertutup masker atau ekspresi menguap.">{{ selection.preferred_notes }}</textarea>
+          <span class="form-hint">Preferensi ini ditambahkan ke setiap sesi seleksi.</span>
+        </div>
+
+        <div class="ps-learn-box mt-2">
+          <label class="switch">
+            <input type="checkbox" name="auto_learn" value="1" {{ 'checked' if selection.auto_learn }}>
+            <span class="switch-track"></span>
+            <span>Perbarui skill otomatis dari preferensi saya</span>
+          </label>
+          <p class="muted-small mt-1">Agen belajar dari foto yang Anda terapkan dan koreksi pilihan manual. Tidak memakai kuota AI.</p>
+          <div class="form-group mt-2">
+            <label class="form-label" for="ps-learned">Preferensi hasil belajar</label>
+            <textarea class="textarea" id="ps-learned" name="learned_preferences" rows="3" maxlength="1200"
+                      placeholder="Belum ada pelajaran. Terapkan foto atau ubah pilihan pada hasil seleksi.">{{ selection.learned_preferences }}</textarea>
+            <span class="form-hint">
+              Dapat disunting atau dikosongkan. Diperbarui {{ selection.learned_updated_at|time_ago if selection.learned_updated_at else 'belum pernah' }}.
+            </span>
+          </div>
+          <button class="btn btn-soft btn-sm btn-block" type="submit"
+                  formaction="/seleksi-foto/pembelajaran/selaraskan" formnovalidate>
+            {{ icon('refresh') }} Selaraskan sekarang dari riwayat
+          </button>
+        </div>
+
+        <button class="btn btn-primary btn-sm btn-block mt-2" type="submit">{{ icon('check') }} Simpan pengaturan</button>
+      </form>
+
+      <div class="ps-key-actions">
+        <form method="post" action="/seleksi-foto/pengaturan/uji">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-soft btn-sm" type="submit" {{ 'disabled' if not selection.has_key }}>{{ icon('refresh') }} Uji koneksi</button>
+        </form>
+        <form method="post" action="/seleksi-foto/pengaturan/hapus-kunci"
+              data-confirm="Hapus kunci API tersimpan? Seleksi foto tidak dapat dijalankan sampai kunci baru diisi.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-ghost btn-sm" type="submit" {{ 'disabled' if not selection.has_key }}>{{ icon('trash') }} Hapus kunci</button>
+        </form>
+      </div>
+      <div class="face-note mt-2">
+        {{ icon('lock') }}
+        <span>Kunci dienkripsi dengan kunci rahasia aplikasi. Jangan gunakan kunci dengan akses penuh ke layanan lain.</span>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if view in ['settings','dashboard'] %}
+    <section class="section-card">
+      <div class="flex-between mb-1">
+        <h2 style="margin-bottom: 0;">{{ icon('activity') }} Kuota hari ini</h2>
+        <span class="badge badge-purple">{{ usage.rpd_used }}/{{ usage.rpd_limit }}</span>
+      </div>
+      <div class="ps-quota-row">
+        <div class="ps-quota-head"><span>Permintaan per menit</span><b>{{ usage.rpm_used }}/{{ usage.rpm_limit }}</b></div>
+        <div class="ps-meter"><i style="width: {{ usage.rpm_percent }}%"></i></div>
+        <small>{{ usage.rpm_remaining }} slot tersisa dalam 60 detik terakhir.</small>
+      </div>
+      <div class="ps-quota-row">
+        <div class="ps-quota-head"><span>Token per menit</span><b>{{ '{:,}'.format(usage.tpm_used) }}/{{ '{:,}'.format(usage.tpm_limit) }}</b></div>
+        <div class="ps-meter"><i style="width: {{ usage.tpm_percent }}%"></i></div>
+        <small>{{ '{:,}'.format(usage.tpm_remaining) }} token tersisa · {{ '{:,}'.format(usage.tokens_today) }} token hari ini.</small>
+      </div>
+      <div class="ps-quota-row">
+        <div class="ps-quota-head"><span>Permintaan per hari</span><b>{{ usage.rpd_used }}/{{ usage.rpd_limit }}</b></div>
+        <div class="ps-meter gold"><i style="width: {{ usage.rpd_percent }}%"></i></div>
+        <small>{{ usage.rpd_remaining }} slot tersisa · reset {{ usage.reset_at|datetime_id }}</small>
+      </div>
+      <div class="face-note mt-2">
+        {{ icon('info') }}
+        <span>Angka dihitung dari permintaan nyata ke Gemini. Foto duplikat tidak memakai kuota karena disaring lebih dulu.</span>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if view == 'dashboard' %}
+    <section class="section-card">
+      <h2>{{ icon('sparkles') }} Rekomendasi kerja</h2>
+      <div class="ps-tips">
+        <div class="ps-tip"><span>1</span><p><b>Seleksi sebelum unggah.</b> Kurasi 20–40 foto menjadi 6–10 foto terbaik, lalu terapkan ke kegiatan.</p></div>
+        <div class="ps-tip"><span>2</span><p><b>Mulai dari target 0.</b> Biarkan AI memilih semua yang layak, lalu turunkan target bila ingin lebih ketat.</p></div>
+        <div class="ps-tip"><span>3</span><p><b>Gunakan konteks kegiatan.</b> Relevansi dan caption akan jauh lebih tepat.</p></div>
+        <div class="ps-tip"><span>4</span><p><b>Tinjau manual.</b> Klik kartu foto untuk mengubah pilihan sebelum diterapkan.</p></div>
+      </div>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+
+{% if view in ['history','dashboard'] %}
+<section class="section-card mt-3" id="riwayat">
+  <div class="flex-between mb-2">
+    <h2 style="margin-bottom: 0;">{{ icon('clock') }} Riwayat seleksi</h2>
+    <span class="muted-small">8 sesi terakhir</span>
+  </div>
+  {% if runs %}
+  <div class="ps-run-list">
+    {% for run in runs %}
+    <a class="ps-run-row" href="/seleksi-foto/sesi/{{ run.id }}">
+      <span class="ps-run-icon">{{ icon('sparkles') }}</span>
+      <span class="ps-run-copy">
+        <strong>{{ run.skill_name }}</strong>
+        <span>{{ run.total_items }} foto · {{ run.model }} · {{ run.created_at|time_ago }}</span>
+        {% if run.activity %}<span class="ps-run-context">{{ icon('calendar') }} {{ run.activity.title|truncate(58) }}</span>{% endif %}
+      </span>
+      <span class="ps-run-stats">
+        <b>{{ run.selected_count }}</b><span>dipilih</span>
+      </span>
+      <span class="badge badge-{{ selection_status_tones.get(run.status, 'gray') }}">{{ selection_status_labels.get(run.status, run.status) }}</span>
+      <span class="ps-run-arrow">{{ icon('arrow-right') }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  {{ empty_state('sparkles', 'Belum ada sesi seleksi', 'Unggah beberapa foto dan jalankan agen seleksi untuk melihat hasilnya di sini.', '/seleksi-foto/mulai', 'Mulai seleksi') }}
+  {% endif %}
+</section>
+{% endif %}
+
+{% include "partials/app_guide.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/app-guide.js?v={{ app_version }}" defer></script>
+<script src="/static/js/photo-selection.js?v={{ app_version }}" defer></script>
+{% endblock %}

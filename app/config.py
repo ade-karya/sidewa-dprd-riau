@@ -207,6 +207,38 @@ class Settings:
         default_factory=lambda: _bool("SIDEWA_GEMINI_REQUIRE_IDENTITY", True)
     )
 
+    # ── Seleksi foto AI di ruang kerja Humas ────────────────────────────────
+    # Setiap pengguna memakai kunci Gemini sendiri; kuota diatur per kunci.
+    photo_selection_enabled: bool = field(
+        default_factory=lambda: _bool("SIDEWA_PHOTO_SELECTION_ENABLED", True)
+    )
+    photo_selection_model: str = field(
+        default_factory=lambda: os.getenv(
+            "SIDEWA_PHOTO_SELECTION_MODEL", "gemini-3.5-flash-lite"
+        )
+    )
+    photo_selection_rpm_default: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_RPM", 15)
+    )
+    photo_selection_rpd_default: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_RPD", 500)
+    )
+    photo_selection_tpm_default: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_TPM", 250000)
+    )
+    photo_selection_max_photos: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_MAX_PHOTOS", 24)
+    )
+    photo_selection_workers: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_WORKERS", 1)
+    )
+    photo_selection_sync: bool = field(
+        default_factory=lambda: _bool("SIDEWA_PHOTO_SELECTION_SYNC", False)
+    )
+    photo_selection_timeout: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_TIMEOUT", 90)
+    )
+
     demo_mode: bool = field(default_factory=lambda: _bool("SIDEWA_DEMO_MODE", True))
     bootstrap_admin_username: str = field(
         default_factory=lambda: os.getenv("SIDEWA_BOOTSTRAP_ADMIN_USERNAME", "")
@@ -304,13 +336,15 @@ class Settings:
 
     @property
     def max_request_bytes(self) -> int:
-        return self.max_upload_bytes * self.max_photos_per_activity + 2 * 1024 * 1024
+        photos = max(self.max_photos_per_activity, self.photo_selection_max_photos)
+        return self.max_upload_bytes * photos + 2 * 1024 * 1024
 
     def ensure_dirs(self) -> None:
         self.media_root.mkdir(parents=True, exist_ok=True)
         (self.media_root / "activities").mkdir(exist_ok=True)
         (self.media_root / "members").mkdir(exist_ok=True)
         (self.media_root / "staff").mkdir(exist_ok=True)
+        (self.media_root / "selection").mkdir(exist_ok=True)
         if self.database_url.startswith("sqlite:///"):
             db_path = Path(self.database_url.replace("sqlite:///", "", 1))
             if not db_path.is_absolute():
