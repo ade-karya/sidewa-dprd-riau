@@ -2406,3 +2406,30 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
   .drive-tools { grid-template-columns: 1fr; }
   .drive-search .filter-search { min-width: 180px; }
 }
+
+/* ---------- Drive Humas: kuota & tab ---------- */
+.drive-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.drive-tabs { display: inline-flex; gap: 4px; padding: 4px; background: #f4f1f6; border-radius: 14px; }
+.drive-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 11px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.drive-tab .icon { width: 16px; height: 16px; }
+.drive-tab:hover { color: var(--purple); }
+.drive-tab.active { background: #fff; color: var(--purple); box-shadow: 0 2px 8px rgba(38, 26, 45, .08); }
+.drive-owner { display: flex; align-items: center; gap: 8px; }
+.drive-owner .select { height: 38px; min-width: 200px; font-size: 12px; }
+.drive-viewing { display: flex; align-items: center; gap: 7px; margin: -6px 0 12px; }
+.drive-viewing .icon { width: 15px; height: 15px; color: var(--purple); }
+.drive-quota-card { margin-bottom: 16px; }
+.drive-quota-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.drive-quota-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; }
+.drive-quota-head h2 .icon { width: 17px; height: 17px; color: var(--purple); }
+.drive-quota-bar { height: 10px; border-radius: 999px; background: #f0ecf3; overflow: hidden; }
+.drive-quota-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #a97bc4, var(--purple)); transition: width .3s ease; }
+.drive-quota-fill.is-warning { background: linear-gradient(90deg, #e0b45f, #c98b1f); }
+.drive-quota-fill.is-full { background: linear-gradient(90deg, #d9707f, var(--red)); }
+.drive-quota-card .muted-small { margin-top: 8px; }
+.drive-quota-warn { display: flex; align-items: center; gap: 7px; color: #8a2e44 !important; }
+.drive-quota-warn .icon { width: 15px; height: 15px; }
+@media (max-width: 820px) {
+  .drive-owner { width: 100%; }
+  .drive-owner .select { flex: 1; min-width: 0; }
+}

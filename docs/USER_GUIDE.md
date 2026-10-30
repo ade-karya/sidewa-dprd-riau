@@ -35,25 +35,33 @@
 5. Gunakan **Arsipkan** untuk menyimpan rilis sebagai referensi tanpa menampilkannya
    sebagai rilis aktif. Administrator dapat menghapus rilis secara permanen.
 
-## Drive bersama tim Humas
-Menu **Drive** (`/drive`) dipakai seluruh tim Humas untuk menyimpan berkas kerja
-yang bukan dokumentasi kegiatan, misalnya naskah siaran pers, daftar hadir,
-desain, atau arsip. Berkas disimpan di folder `drive/` pada HF S3.
+## Drive Humas
+Setiap staf Humas memiliki **Drive pribadi** berkuota **100 GB** di menu
+**Drive** (`/drive`). Berkas disimpan di HF S3, terpisah dari dokumentasi
+kegiatan.
 
 1. Buka **Drive** di sidebar atau pintasan **Drive Humas** pada ruang kerja staf.
-2. Klik **Pilih berkas** pada kartu *Unggah berkas* — beberapa berkas sekaligus
-   diperbolehkan, maksimal **100 MB** per berkas. Berkas masuk ke folder yang
-   sedang dibuka.
-3. Gunakan **Folder baru** untuk membuat subfolder, misalnya *Dokumentasi 2026*.
-   Klik nama folder untuk masuk; gunakan remah folder di atas untuk kembali.
-4. Kolom pencarian mencari nama berkas di seluruh isi Drive.
-5. Tombol **Unduh** menyimpan berkas ke komputer. Ikon pensil mengubah nama,
+2. Halaman menampilkan bilah kuota: ruang terpakai, sisa, dan persentase. Bila
+   sudah mencapai 90%, bilah berubah warna sebagai peringatan.
+3. Klik **Pilih berkas** pada kartu *Unggah berkas* — beberapa berkas sekaligus
+   diperbolehkan, maksimal **100 MB** per berkas dan tidak melebihi sisa kuota.
+   Berkas yang terlalu besar ditolak dengan pesan sisa ruang.
+4. Gunakan **Folder baru** untuk membuat subfolder. Klik nama folder untuk masuk;
+   remah folder di atas untuk kembali.
+5. Kolom pencarian mencari nama berkas di seluruh Drive Anda.
+6. Tombol **Unduh** menyimpan berkas ke komputer. Ikon pensil mengubah nama,
    ikon tempat sampah menghapus berkas atau folder beserta isinya.
-6. Bila nama berkas sama, sistem menambahkan akhiran ` (2)`, ` (3)`, dan
+7. Bila nama berkas sama, sistem menambahkan akhiran ` (2)`, ` (3)`, dan
    seterusnya agar tidak ada berkas yang tertimpa.
 
-Folder yang baru dibuat tetap terlihat meskipun masih kosong. Staf komisi dan
-anggota dewan tidak memiliki akses ke Drive.
+**Drive tim.** Tab **Drive tim** (`/drive/tim`) menyimpan berkas bersama, misalnya
+template rilis atau aset desain. Semua pengelola konten dapat membuka dan
+mengubah isinya. Berkas pribadi staf tidak pernah muncul di sini.
+
+**Untuk administrator.** Superadmin dan admin dapat memilih nama staf pada menu
+**Lihat Drive staf** untuk memeriksa pemakaian ruang dan isi Drive staf tersebut.
+Staf hanya melihat Drive miliknya sendiri; staf komisi dan anggota dewan tidak
+memiliki akses ke Drive.
 
 ## Staf Humas Sekretariat
 Setiap staf Humas memiliki **ruang kerja pribadi** di `/dashboard-staf/{id}`.

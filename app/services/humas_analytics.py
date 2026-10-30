@@ -92,7 +92,7 @@ WORKSPACE_SHORTCUTS = [
     },
     {
         "label": "Drive Humas",
-        "description": "Simpan berkas tim di Drive bersama.",
+        "description": "Ruang pribadi 100 GB untuk berkas kerja Anda.",
         "href": "/drive",
         "icon": "folder",
         "tone": "gold",

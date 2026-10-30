@@ -321,6 +321,7 @@ class Settings:
     drive_max_upload_mb: int = field(
         default_factory=lambda: _int("SIDEWA_DRIVE_MAX_UPLOAD_MB", 100)
     )
+    drive_quota_gb: int = field(default_factory=lambda: _int("SIDEWA_DRIVE_QUOTA_GB", 100))
 
     @property
     def is_production(self) -> bool:
@@ -358,6 +359,10 @@ class Settings:
     @property
     def drive_max_upload_bytes(self) -> int:
         return self.drive_max_upload_mb * 1024 * 1024
+
+    @property
+    def drive_quota_bytes(self) -> int:
+        return max(0, self.drive_quota_gb) * 1024 * 1024 * 1024
 
     @property
     def max_request_bytes(self) -> int:

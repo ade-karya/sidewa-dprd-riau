@@ -1,9 +1,25 @@
 {% extends "base.html" %}
 {% from "macros/ui.html" import icon, empty_state %}
 
+{% macro scope_url(p='') -%}
+{%- set base = '/drive/tim' if scope == 'tim' else '/drive' -%}
+{%- set params = [] -%}
+{%- if owner and scope != 'tim' -%}{%- set _ = params.append('owner=' ~ owner) -%}{%- endif -%}
+{%- if p -%}{%- set _ = params.append('path=' ~ (p|urlencode)) -%}{%- endif -%}
+{{ base }}{% if params %}?{{ params|join('&') }}{% endif %}
+{%- endmacro %}
+
+{% macro download_url(p) -%}
+/drive/unduh?scope={{ scope }}{% if owner and scope != 'tim' %}&owner={{ owner }}{% endif %}&path={{ p|urlencode }}
+{%- endmacro %}
+
 {% block title %}Drive Humas{% endblock %}
-{% block page_title %}Drive Humas{% endblock %}
-{% block page_subtitle %}{{ folder_count }} folder · {{ file_count }} berkas · {{ total_size|filesize }} di Hugging Face S3{% endblock %}
+{% block page_title %}Drive{% endblock %}
+{% block page_subtitle %}
+{% if scope == 'tim' %}{{ folder_count }} folder · {{ file_count }} berkas · {{ total_size|filesize }} di area bersama
+{%- elif quota %}{{ quota.used|filesize }} dari {{ quota.total|filesize }} terpakai · {{ file_count }} berkas
+{%- else %}{{ folder_count }} folder · {{ file_count }} berkas{% endif %}
+{% endblock %}
 
 {% block topbar_actions %}
 {% if drive_ready %}
@@ -16,26 +32,71 @@
 <div class="global-error">{{ icon('alert') }}<span>{{ error }}</span></div>
 {% endif %}
 
+<div class="drive-switch">
+  <nav class="drive-tabs" aria-label="Pilih Drive">
+    <a class="drive-tab {{ 'active' if scope != 'tim' }}" href="{{ '/drive' }}{% if owner and scope != 'tim' %}?owner={{ owner }}{% endif %}">
+      {{ icon('folder') }} Drive saya
+    </a>
+    <a class="drive-tab {{ 'active' if scope == 'tim' }}" href="/drive/tim">
+      {{ icon('users') }} Drive tim
+    </a>
+  </nav>
+
+  {% if staff_options %}
+  <form class="drive-owner" method="get" action="/drive">
+    <label class="muted-small" for="drive-owner">Lihat Drive staf</label>
+    <select class="select select-sm" id="drive-owner" name="owner" onchange="this.form.submit()">
+      <option value="">— Pilih staf —</option>
+      {% for staff in staff_options %}
+      <option value="{{ staff.id }}" {{ 'selected' if owner == staff.id }}>{{ staff.full_name }}</option>
+      {% endfor %}
+    </select>
+    <noscript><button class="btn btn-soft btn-sm" type="submit">Buka</button></noscript>
+  </form>
+  {% endif %}
+</div>
+
+{% if scope == 'pribadi' and target_user and target_user.id != user.id %}
+<p class="muted-small drive-viewing">{{ icon('shield') }} Anda membuka Drive milik <strong>{{ target_user.full_name }}</strong> sebagai administrator.</p>
+{% endif %}
+
+{% if quota %}
+<section class="card card-pad drive-quota-card">
+  <div class="drive-quota-head">
+    <h2>{{ icon('cloud') }} Kuota Drive pribadi</h2>
+    <span class="badge {{ 'badge-red' if quota.full else ('badge-gold' if quota.warning else 'badge-purple') }}">{{ quota.used_percent }}% terpakai</span>
+  </div>
+  <div class="drive-quota-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ quota.used_percent }}" aria-label="Pemakaian kuota Drive">
+    <span class="drive-quota-fill{{ ' is-warning' if quota.warning }}{{ ' is-full' if quota.full }}" style="width: {{ quota.used_percent }}%"></span>
+  </div>
+  <p class="muted-small">{{ quota.used|filesize }} dari {{ quota.total|filesize }} terpakai · sisa {{ quota.remaining|filesize }}</p>
+  {% if quota.warning %}
+  <p class="muted-small drive-quota-warn">{{ icon('alert') }} Ruang hampir penuh. Hapus berkas yang tidak dipakai agar bisa mengunggah lagi.</p>
+  {% endif %}
+</section>
+{% endif %}
+
 <div class="card card-pad drive-toolbar">
   <nav class="drive-crumbs" aria-label="Lokasi folder">
     {% for crumb in crumbs %}
     {% if loop.last %}
     <span class="drive-crumb-current">{{ icon('folder') }}<span>{{ crumb.label }}</span></span>
     {% else %}
-    <a href="/drive?path={{ crumb.path|urlencode }}">{{ icon('folder') }}<span>{{ crumb.label }}</span></a>
+    <a href="{{ scope_url(crumb.path) }}">{{ icon('folder') }}<span>{{ crumb.label }}</span></a>
     {{ icon('arrow-right') }}
     {% endif %}
     {% endfor %}
   </nav>
-  <form class="drive-search" method="get" action="/drive">
+  <form class="drive-search" method="get" action="{{ '/drive/tim' if scope == 'tim' else '/drive' }}">
+    {% if owner and scope != 'tim' %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
     <input type="hidden" name="path" value="{{ path }}">
     <div class="input-icon-wrap filter-search">
       {{ icon('search') }}
       <input class="input search-pill" type="search" name="q" value="{{ query }}"
-             placeholder="Cari berkas di Drive…" aria-label="Cari berkas">
+             placeholder="Cari berkas di {{ 'Drive tim' if scope == 'tim' else 'Drive' }}…" aria-label="Cari berkas">
     </div>
     <button class="btn btn-soft btn-sm" type="submit">Cari</button>
-    {% if query %}<a class="btn btn-ghost btn-sm" href="/drive?path={{ path|urlencode }}">Reset</a>{% endif %}
+    {% if query %}<a class="btn btn-ghost btn-sm" href="{{ scope_url(path) }}">Reset</a>{% endif %}
   </form>
 </div>
 
@@ -50,8 +111,8 @@
     {% for item in search.results %}
     <li>
       <span class="drive-result-name">{{ icon('file') }}<span>{{ item.name }}</span></span>
-      <span class="drive-result-folder">{{ item.folder or 'Drive' }}</span>
-      <a class="btn btn-soft btn-sm" href="/drive/unduh?path={{ item.path|urlencode }}">{{ icon('download') }} Unduh</a>
+      <span class="drive-result-folder">{{ item.folder or label }}</span>
+      <a class="btn btn-soft btn-sm" href="{{ download_url(item.path) }}">{{ icon('download') }} Unduh</a>
     </li>
     {% endfor %}
   </ul>
@@ -68,26 +129,32 @@
 <div class="drive-tools" id="unggah">
   <section class="card card-pad">
     <h2>{{ icon('upload') }} Unggah berkas</h2>
-    <p class="muted-small">Tujuan: {{ path or 'Drive' }} · maksimal {{ max_upload_mb }} MB per berkas.</p>
+    <p class="muted-small">
+      Tujuan: {{ label }}{% if path %} / {{ path }}{% endif %} · maksimal {{ max_upload_mb }} MB per berkas{% if quota %} · sisa {{ quota.remaining|filesize }}{% endif %}.
+    </p>
     <form method="post" action="/drive/unggah" enctype="multipart/form-data" data-loading>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="path" value="{{ path }}">
+      <input type="hidden" name="scope" value="{{ scope }}">
+      {% if owner and scope != 'tim' %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
       <div class="upload-zone drive-upload-zone">
         <input type="file" name="files" multiple aria-label="Pilih berkas untuk diunggah">
         <div class="upload-icon">{{ icon('upload') }}</div>
         <h4>Pilih berkas atau tarik ke sini</h4>
         <p>Bisa beberapa berkas sekaligus</p>
       </div>
-      <button class="btn btn-primary btn-sm mt-2" type="submit">{{ icon('upload') }} Unggah</button>
+      <button class="btn btn-primary btn-sm mt-2" type="submit" {{ 'disabled' if quota and quota.full }}>{{ icon('upload') }} Unggah</button>
     </form>
   </section>
 
   <section class="card card-pad">
     <h2>{{ icon('folder') }} Folder baru</h2>
-    <p class="muted-small">Buat subfolder di {{ path or 'Drive' }} untuk merapikan berkas tim.</p>
+    <p class="muted-small">Buat subfolder di {{ label }}{% if path %} / {{ path }}{% endif %} untuk merapikan berkas.</p>
     <form method="post" action="/drive/folder" data-loading>
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="path" value="{{ path }}">
+      <input type="hidden" name="scope" value="{{ scope }}">
+      {% if owner and scope != 'tim' %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
       <div class="form-group">
         <label class="form-label" for="folder-name">Nama folder</label>
         <input class="input" id="folder-name" name="name" maxlength="120" placeholder="Contoh: Dokumentasi 2026" required>
@@ -115,7 +182,7 @@
           <td>
             <div class="cell-main drive-name">
               {% if entry.is_dir %}
-              <a href="/drive?path={{ entry.path|urlencode }}">{{ icon('folder') }}<strong>{{ entry.name }}</strong></a>
+              <a href="{{ scope_url(entry.path) }}">{{ icon('folder') }}<strong>{{ entry.name }}</strong></a>
               {% else %}
               <span class="drive-file-icon">{{ icon('file') }}</span>
               <strong>{{ entry.name }}</strong>
@@ -127,7 +194,7 @@
           <td>
             <div class="actions">
               {% if not entry.is_dir %}
-              <a class="icon-btn" href="/drive/unduh?path={{ entry.path|urlencode }}" title="Unduh {{ entry.name }}" aria-label="Unduh {{ entry.name }}">{{ icon('download') }}</a>
+              <a class="icon-btn" href="{{ download_url(entry.path) }}" title="Unduh {{ entry.name }}" aria-label="Unduh {{ entry.name }}">{{ icon('download') }}</a>
               {% endif %}
               <details class="drive-more">
                 <summary class="icon-btn" title="Ubah nama" aria-label="Ubah nama {{ entry.name }}">{{ icon('edit') }}</summary>
@@ -135,6 +202,8 @@
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <input type="hidden" name="path" value="{{ entry.path }}">
                   <input type="hidden" name="kind" value="{{ 'folder' if entry.is_dir else 'file' }}">
+                  <input type="hidden" name="scope" value="{{ scope }}">
+                  {% if owner and scope != 'tim' %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
                   <input class="input" name="name" value="{{ entry.name }}" maxlength="120" aria-label="Nama baru" required>
                   <button class="btn btn-soft btn-sm" type="submit">Simpan</button>
                 </form>
@@ -144,6 +213,8 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="path" value="{{ entry.path }}">
                 <input type="hidden" name="kind" value="{{ 'folder' if entry.is_dir else 'file' }}">
+                <input type="hidden" name="scope" value="{{ scope }}">
+                {% if owner and scope != 'tim' %}<input type="hidden" name="owner" value="{{ owner }}">{% endif %}
                 <button class="icon-btn drive-danger" type="submit" title="Hapus {{ entry.name }}" aria-label="Hapus {{ entry.name }}">{{ icon('trash') }}</button>
               </form>
             </div>
@@ -152,7 +223,7 @@
         {% else %}
         <tr>
           <td colspan="4" class="empty-row">
-            {% if query %}Tidak ada berkas pada folder ini.{% else %}Folder ini masih kosong — unggah berkas atau buat subfolder.{% endif %}
+            Folder ini masih kosong — unggah berkas atau buat subfolder.
           </td>
         </tr>
         {% endfor %}

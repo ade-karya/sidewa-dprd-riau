@@ -14,7 +14,7 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
   dipadukan dengan leksikon sentimen Bahasa Indonesia.
 - Unggah dokumentasi kegiatan: metadata, komisi terkait, lokasi, tanggal, foto; deteksi wajah otomatis.
 - **Rilis & siaran pers Humas**: susun draf, tautkan ke kegiatan, terbitkan, arsipkan, dan pantau rilis terbaru langsung dari ruang kerja staf Humas (`/rilis`).
-- **Drive bersama tim Humas** (`/drive`): folder bersama di HF S3 untuk berkas kerja non-kegiatan — unggah banyak berkas, buat folder, cari, ubah nama, dan unduh lewat rclone.
+- **Drive Humas** (`/drive`): setiap pengelola konten punya ruang pribadi **100 GB** di HF S3 (unggah banyak berkas, folder, cari, ubah nama, unduh, hapus) plus area **Drive tim** bersama di `/drive/tim`.
 - Pencarian berdasarkan wajah (unggah foto), nama/jabatan, kategori, komisi, lokasi, dan rentang tanggal.
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
 - Dashboard statistik, log audit, ekspor CSV, health/metrics, API v1 + token Bearer.
@@ -128,21 +128,26 @@ lain) ditolak. Variabel terkait: `SIDEWA_MEMBER_IDENTITY_FILE`,
 `SIDEWA_SENTIMENT_YEAR_FROM`, `SIDEWA_SENTIMENT_YEAR_TO`,
 `SIDEWA_GEMINI_MIN_IDENTITY_SCORE`, `SIDEWA_GEMINI_REQUIRE_IDENTITY`.
 
-## Drive bersama tim Humas
+## Drive Humas
 
-Pengelola konten Humas (superadmin, admin, humas, staf Humas) dapat membuka
-**Drive** (`/drive`) untuk menyimpan berkas kerja tim yang bukan dokumentasi
-kegiatan: naskah siaran pers, daftar hadir, desain, dan arsip lain.
+Setiap pengelola konten (superadmin, admin, humas, staf Humas) punya **Drive
+pribadi** di `/drive` dengan kuota **100 GB** (`SIDEWA_DRIVE_QUOTA_GB`). Berkas
+disimpan di `<SIDEWA_HF_S3_PREFIX>/drive/pribadi/<id pengguna>/` pada bucket HF S3
+dan diakses lewat `rclone` — tidak ada metadata tambahan di database.
 
-- Berkas disimpan di `<SIDEWA_HF_S3_PREFIX>/drive/` pada bucket HF S3 dan diakses
-  lewat `rclone` — tidak ada metadata tambahan di database, jadi folder dapat
-  dirapikan langsung dari aplikasi.
-- Mendukung unggah **beberapa berkas sekaligus**, buat folder, pencarian nama,
-  ubah nama, unduh, dan hapus (berkas maupun folder beserta isinya).
+- Unggah **beberapa berkas sekaligus**, buat folder, cari, ubah nama, unduh, dan
+  hapus (berkas maupun folder beserta isinya).
+- **Kuota ditegakkan saat unggah**: berkas yang melebihi sisa ruang ditolak dengan
+  pesan sisa kuota, dan halaman menampilkan bilah pemakaian (peringatan pada 90%).
 - Nama berkas duplikat otomatis diberi akhiran ` (2)`, ` (3)`, dan seterusnya.
 - Batas ukuran per berkas diatur `SIDEWA_DRIVE_MAX_UPLOAD_MB` (default **100 MB**).
 - S3 tidak menyimpan folder kosong; aplikasi menaruh penanda `.keep` agar folder
   baru tetap tampil.
+- **Drive tim** di `/drive/tim` menyimpan berkas bersama. Isi lama tetap di
+  tempatnya (akar `drive/`), sedangkan folder `pribadi/` disembunyikan dari
+  tampilan dan pencarian tim.
+- Superadmin dan admin dapat membuka Drive staf lain lewat pemilih **Lihat Drive
+  staf** untuk keperluan audit; humas/staf Humas hanya melihat Drive sendiri.
 - Semua tindakan tercatat di log audit (`DRIVE_UPLOAD`, `DRIVE_FOLDER`,
   `DRIVE_RENAME`, `DRIVE_DELETE`). Staf komisi tidak memiliki akses ke Drive.
 

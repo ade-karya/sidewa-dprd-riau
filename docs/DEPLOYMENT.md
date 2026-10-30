@@ -96,6 +96,8 @@ SIDEWA_RCLONE_EXTRA_ARGS=
 # Drive bersama tim Humas (folder drive/ di HF S3)
 SIDEWA_DRIVE_ENABLED=true
 SIDEWA_DRIVE_MAX_UPLOAD_MB=100
+# Kuota Drive pribadi per pengguna (GB)
+SIDEWA_DRIVE_QUOTA_GB=100
 ```
 
 > Gunakan kredensial **database** Supabase (user `postgres.<ref>`), bukan
