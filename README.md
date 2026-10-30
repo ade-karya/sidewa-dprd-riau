@@ -140,6 +140,10 @@ dan diakses lewat `rclone` — tidak ada metadata tambahan di database.
 - **Kuota ditegakkan saat unggah**: berkas yang melebihi sisa ruang ditolak dengan
   pesan sisa kuota, dan halaman menampilkan bilah pemakaian (peringatan pada 90%).
 - Nama berkas duplikat otomatis diberi akhiran ` (2)`, ` (3)`, dan seterusnya.
+- **Unduhan langsung**: tombol **Unduh** mengalihkan browser ke *presigned URL*
+  HF S3 (berlaku 30 menit), jadi berkas diambil langsung dari CDN tanpa melewati
+  server aplikasi. Berkas HTML/SVG/teks tetap dialirkan lewat server sebagai
+  lampiran agar tidak dirender inline oleh browser.
 - Batas ukuran per berkas diatur `SIDEWA_DRIVE_MAX_UPLOAD_MB` (default **100 MB**).
 - S3 tidak menyimpan folder kosong; aplikasi menaruh penanda `.keep` agar folder
   baru tetap tampil.

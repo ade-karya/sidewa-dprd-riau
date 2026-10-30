@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import mimetypes
 import os
 import tempfile
@@ -22,6 +23,8 @@ from ..models import User
 from ..services import drive
 from ..templating import render
 from ..utils import human_filesize
+
+logger = logging.getLogger("sidewa.drive")
 
 router = APIRouter(prefix="/drive", dependencies=[Depends(csrf_protect)])
 
@@ -379,15 +382,36 @@ def download(
     path: str = "",
     scope: str = "pribadi",
     owner: int | None = None,
+    direct: bool = True,
     user: User = Depends(MEMBER),
     db: Session = Depends(get_db),
 ):
     scope = _scope(scope)
     try:
         root, _, _ = _resolve(db, user, scope, owner)
-        temporary, name, mime = drive.download_file(root, path)
     except HTTPException:
         raise
+    except drive.DriveError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # Unduhan normal: alihkan browser ke presigned URL HF S3 (langsung ke CDN),
+    # sehingga byte berkas tidak melewati server aplikasi. Berkas HTML/SVG/teks
+    # tetap dialirkan lewat server agar tidak dirender inline oleh browser.
+    file_name = path.rsplit("/", 1)[-1]
+    if direct and not drive.should_stream(file_name):
+        try:
+            url = drive.presigned_url(root, path)
+        except drive.DriveError as exc:
+            logger.warning("Drive: tautan langsung gagal, memakai streaming (%s)", exc)
+        else:
+            return RedirectResponse(
+                url,
+                status_code=302,
+                headers={"Cache-Control": "no-store"},
+            )
+
+    try:
+        temporary, name, mime = drive.download_file(root, path)
     except drive.DriveError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return FileResponse(

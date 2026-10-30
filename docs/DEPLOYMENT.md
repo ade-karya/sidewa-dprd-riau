@@ -100,6 +100,10 @@ SIDEWA_DRIVE_MAX_UPLOAD_MB=100
 SIDEWA_DRIVE_QUOTA_GB=100
 ```
 
+> Unduhan Drive dialihkan ke *presigned URL* HF S3 (berlaku 30 menit) sehingga
+> lalu lintas berkas besar tidak melewati server ini. Pastikan domain
+> `s3.hf.co` dan CDN Hugging Face dapat diakses dari jaringan pengguna.
+
 > Gunakan kredensial **database** Supabase (user `postgres.<ref>`), bukan
 > service-role key. Service-role/anon key tidak dibutuhkan server ini.
 

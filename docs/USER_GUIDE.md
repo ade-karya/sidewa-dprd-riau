@@ -49,8 +49,10 @@ kegiatan.
 4. Gunakan **Folder baru** untuk membuat subfolder. Klik nama folder untuk masuk;
    remah folder di atas untuk kembali.
 5. Kolom pencarian mencari nama berkas di seluruh Drive Anda.
-6. Tombol **Unduh** menyimpan berkas ke komputer. Ikon pensil mengubah nama,
-   ikon tempat sampah menghapus berkas atau folder beserta isinya.
+6. Tombol **Unduh** membuka tautan langsung ke HF S3 (berlaku 30 menit) sehingga
+   berkas diambil dari CDN tanpa membebani server aplikasi. Berkas teks, HTML,
+   dan SVG tetap diunduh sebagai lampiran. Ikon pensil mengubah nama, ikon tempat
+   sampah menghapus berkas atau folder beserta isinya.
 7. Bila nama berkas sama, sistem menambahkan akhiran ` (2)`, ` (3)`, dan
    seterusnya agar tidak ada berkas yang tertimpa.
 

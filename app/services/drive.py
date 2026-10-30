@@ -34,6 +34,25 @@ PLACEHOLDER = ".keep"
 MAX_NAME_LENGTH = 120
 MAX_SEARCH_RESULTS = 120
 USAGE_TTL = 60.0
+# Masa berlaku tautan unduh langsung (presigned URL) ke HF S3.
+LINK_TTL = "30m"
+
+# Tipe yang tetap dialirkan lewat server: browser tidak boleh merender HTML/SVG
+# dari penyimpanan, dan berkas teks lebih nyaman diunduh sebagai lampiran.
+STREAM_INLINE_MIME = frozenset(
+    {
+        "application/xhtml+xml",
+        "image/svg+xml",
+        "application/xml",
+        "application/json",
+    }
+)
+
+
+def should_stream(name: str) -> bool:
+    """True bila berkas harus dialirkan lewat server, bukan dialihkan ke S3."""
+    mime = mimetypes.guess_type(name)[0] or ""
+    return mime.startswith("text/") or mime in STREAM_INLINE_MIME
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
@@ -391,6 +410,25 @@ def rename_entry(root: str, path: str, new_name: str, is_dir: bool) -> str:
         raise _fail(proc, f"Gagal mengubah nama {current}.")
     forget_usage(root)
     return destination
+
+
+def presigned_url(root: str, path: str, expire: str = LINK_TTL) -> str:
+    """Tautan unduh langsung (presigned URL) agar browser mengambil dari HF S3.
+
+    Server hanya menandatangani URL; byte berkas tidak melewati aplikasi
+    sehingga unduhan tidak lagi dibatasi kecepatan proses rclone lokal.
+    """
+    relative = validate_path(path)
+    if not relative:
+        raise DriveError("Berkas tidak ditemukan.")
+    proc = _run(["link", "--expire", expire, _target(root, relative)])
+    if proc.returncode != 0:
+        raise _fail(proc, "Gagal membuat tautan unduh langsung.")
+    for line in (proc.stdout or "").splitlines():
+        candidate = line.strip()
+        if candidate.startswith(("http://", "https://")):
+            return candidate
+    raise DriveError("Tautan unduh langsung tidak tersedia.")
 
 
 def download_file(root: str, path: str) -> tuple[str, str, str]:
