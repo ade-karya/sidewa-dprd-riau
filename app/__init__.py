@@ -1,3 +1,3 @@
 """SIDEWA — Sistem Dokumentasi Kegiatan Dewan, DPRD Provinsi Riau."""
 
-__version__ = "1.5.8"
+__version__ = "1.5.9"
