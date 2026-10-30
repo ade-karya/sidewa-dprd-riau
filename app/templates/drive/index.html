@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon, empty_state %}
+
+{% block title %}Drive Humas{% endblock %}
+{% block page_title %}Drive Humas{% endblock %}
+{% block page_subtitle %}{{ folder_count }} folder · {{ file_count }} berkas · {{ total_size|filesize }} di Hugging Face S3{% endblock %}
+
+{% block topbar_actions %}
+{% if drive_ready %}
+<a class="btn btn-primary btn-sm" href="#unggah">{{ icon('upload') }}<span>Unggah</span></a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="global-error">{{ icon('alert') }}<span>{{ error }}</span></div>
+{% endif %}
+
+<div class="card card-pad drive-toolbar">
+  <nav class="drive-crumbs" aria-label="Lokasi folder">
+    {% for crumb in crumbs %}
+    {% if loop.last %}
+    <span class="drive-crumb-current">{{ icon('folder') }}<span>{{ crumb.label }}</span></span>
+    {% else %}
+    <a href="/drive?path={{ crumb.path|urlencode }}">{{ icon('folder') }}<span>{{ crumb.label }}</span></a>
+    {{ icon('arrow-right') }}
+    {% endif %}
+    {% endfor %}
+  </nav>
+  <form class="drive-search" method="get" action="/drive">
+    <input type="hidden" name="path" value="{{ path }}">
+    <div class="input-icon-wrap filter-search">
+      {{ icon('search') }}
+      <input class="input search-pill" type="search" name="q" value="{{ query }}"
+             placeholder="Cari berkas di Drive…" aria-label="Cari berkas">
+    </div>
+    <button class="btn btn-soft btn-sm" type="submit">Cari</button>
+    {% if query %}<a class="btn btn-ghost btn-sm" href="/drive?path={{ path|urlencode }}">Reset</a>{% endif %}
+  </form>
+</div>
+
+{% if search.query %}
+<section class="card card-pad mt-2">
+  <div class="flex-between mb-2">
+    <h2 style="margin: 0;">{{ icon('search') }} Hasil pencarian “{{ search.query }}”</h2>
+    <span class="badge badge-purple">{{ search.results|length }} hasil</span>
+  </div>
+  {% if search.results %}
+  <ul class="drive-results">
+    {% for item in search.results %}
+    <li>
+      <span class="drive-result-name">{{ icon('file') }}<span>{{ item.name }}</span></span>
+      <span class="drive-result-folder">{{ item.folder or 'Drive' }}</span>
+      <a class="btn btn-soft btn-sm" href="/drive/unduh?path={{ item.path|urlencode }}">{{ icon('download') }} Unduh</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if search.truncated %}
+  <p class="muted-small mt-2">Menampilkan maksimal 120 hasil pertama. Persempit kata kunci bila perlu.</p>
+  {% endif %}
+  {% else %}
+  <p class="muted-small">Tidak ada berkas yang cocok dengan “{{ search.query }}”.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if drive_ready %}
+<div class="drive-tools" id="unggah">
+  <section class="card card-pad">
+    <h2>{{ icon('upload') }} Unggah berkas</h2>
+    <p class="muted-small">Tujuan: {{ path or 'Drive' }} · maksimal {{ max_upload_mb }} MB per berkas.</p>
+    <form method="post" action="/drive/unggah" enctype="multipart/form-data" data-loading>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="path" value="{{ path }}">
+      <div class="upload-zone drive-upload-zone">
+        <input type="file" name="files" multiple aria-label="Pilih berkas untuk diunggah">
+        <div class="upload-icon">{{ icon('upload') }}</div>
+        <h4>Pilih berkas atau tarik ke sini</h4>
+        <p>Bisa beberapa berkas sekaligus</p>
+      </div>
+      <button class="btn btn-primary btn-sm mt-2" type="submit">{{ icon('upload') }} Unggah</button>
+    </form>
+  </section>
+
+  <section class="card card-pad">
+    <h2>{{ icon('folder') }} Folder baru</h2>
+    <p class="muted-small">Buat subfolder di {{ path or 'Drive' }} untuk merapikan berkas tim.</p>
+    <form method="post" action="/drive/folder" data-loading>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="path" value="{{ path }}">
+      <div class="form-group">
+        <label class="form-label" for="folder-name">Nama folder</label>
+        <input class="input" id="folder-name" name="name" maxlength="120" placeholder="Contoh: Dokumentasi 2026" required>
+      </div>
+      <button class="btn btn-outline btn-sm" type="submit">{{ icon('plus') }} Buat folder</button>
+    </form>
+  </section>
+</div>
+{% endif %}
+
+<div class="table-card mt-2">
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Ukuran</th>
+          <th>Diubah</th>
+          <th class="text-right">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td>
+            <div class="cell-main drive-name">
+              {% if entry.is_dir %}
+              <a href="/drive?path={{ entry.path|urlencode }}">{{ icon('folder') }}<strong>{{ entry.name }}</strong></a>
+              {% else %}
+              <span class="drive-file-icon">{{ icon('file') }}</span>
+              <strong>{{ entry.name }}</strong>
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ '—' if entry.is_dir else entry.size|filesize }}</td>
+          <td>{{ entry.modified_label }}</td>
+          <td>
+            <div class="actions">
+              {% if not entry.is_dir %}
+              <a class="icon-btn" href="/drive/unduh?path={{ entry.path|urlencode }}" title="Unduh {{ entry.name }}" aria-label="Unduh {{ entry.name }}">{{ icon('download') }}</a>
+              {% endif %}
+              <details class="drive-more">
+                <summary class="icon-btn" title="Ubah nama" aria-label="Ubah nama {{ entry.name }}">{{ icon('edit') }}</summary>
+                <form class="drive-menu" method="post" action="/drive/ubah-nama">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="path" value="{{ entry.path }}">
+                  <input type="hidden" name="kind" value="{{ 'folder' if entry.is_dir else 'file' }}">
+                  <input class="input" name="name" value="{{ entry.name }}" maxlength="120" aria-label="Nama baru" required>
+                  <button class="btn btn-soft btn-sm" type="submit">Simpan</button>
+                </form>
+              </details>
+              <form method="post" action="/drive/hapus"
+                    data-confirm="Hapus {{ 'folder' if entry.is_dir else 'berkas' }} “{{ entry.name }}”? Tindakan ini tidak dapat dibatalkan.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="path" value="{{ entry.path }}">
+                <input type="hidden" name="kind" value="{{ 'folder' if entry.is_dir else 'file' }}">
+                <button class="icon-btn drive-danger" type="submit" title="Hapus {{ entry.name }}" aria-label="Hapus {{ entry.name }}">{{ icon('trash') }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="empty-row">
+            {% if query %}Tidak ada berkas pada folder ini.{% else %}Folder ini masih kosong — unggah berkas atau buat subfolder.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-foot">
+    <span class="muted-small">{{ folder_count }} folder · {{ file_count }} berkas · total {{ total_size|filesize }}</span>
+    <span class="badge">{{ icon('cloud') }} Hugging Face S3 · rclone</span>
+  </div>
+</div>
+
+{% if not entries and not query and not drive_ready %}
+{{ empty_state('folder', 'Drive belum aktif', 'Isi SIDEWA_HF_S3_* dan pastikan biner rclone tersedia, lalu muat ulang halaman ini.') }}
+{% endif %}
+{% endblock %}

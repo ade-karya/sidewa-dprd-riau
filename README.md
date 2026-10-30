@@ -14,6 +14,7 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
   dipadukan dengan leksikon sentimen Bahasa Indonesia.
 - Unggah dokumentasi kegiatan: metadata, komisi terkait, lokasi, tanggal, foto; deteksi wajah otomatis.
 - **Rilis & siaran pers Humas**: susun draf, tautkan ke kegiatan, terbitkan, arsipkan, dan pantau rilis terbaru langsung dari ruang kerja staf Humas (`/rilis`).
+- **Drive bersama tim Humas** (`/drive`): folder bersama di HF S3 untuk berkas kerja non-kegiatan — unggah banyak berkas, buat folder, cari, ubah nama, dan unduh lewat rclone.
 - Pencarian berdasarkan wajah (unggah foto), nama/jabatan, kategori, komisi, lokasi, dan rentang tanggal.
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
 - Dashboard statistik, log audit, ekspor CSV, health/metrics, API v1 + token Bearer.
@@ -24,6 +25,7 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 
 - Backend: FastAPI, SQLAlchemy 2, Jinja2, Pillow, NumPy, dlib + `face_recognition`.
 - Database: SQLite (pengembangan) / PostgreSQL (produksi).
+- Object storage: Hugging Face S3 diakses lewat `rclone` (S3 native, path-style).
 - Frontend: HTML + CSS + JavaScript vanilla (tanpa build step).
 
 ## Arsitektur produksi: Supabase + cache lokal + HF S3
@@ -34,7 +36,7 @@ Pada mode produksi, SIDEWA memakai tiga lapisan:
 |---|---|---|
 | **Database utama** | Sumber kebenaran (source of truth) | Supabase PostgreSQL |
 | **Cache lokal** | Buffer operasional + antrean outbox | PostgreSQL lokal |
-| **Object storage** | Penyimpanan foto & thumbnail | Hugging Face S3 (`bucket=kelaska`) |
+| **Object storage** | Penyimpanan foto & thumbnail | Hugging Face S3 (`bucket=kelaska`) via `rclone` |
 
 Alur tulis bersifat **local-first write-behind**:
 
@@ -43,9 +45,9 @@ Alur tulis bersifat **local-first write-behind**:
 2. Trigger PostgreSQL mencatat setiap perubahan ke tabel `sync_outbox`.
 3. Worker latar belakang mengirim outbox ke Supabase secara batch (default
    tiap 5 detik, 200 baris per batch).
-4. Media ditulis ke disk lokal lalu diunggah ke HF S3 oleh worker media.
-   Jika cache lokal hilang, berkas diunduh kembali saat pertama kali diminta
-   (*on-demand cache*).
+4. Media ditulis ke disk lokal lalu diunggah ke HF S3 oleh worker media memakai
+   `rclone` (remote dibentuk otomatis dari `SIDEWA_HF_S3_*`). Jika cache lokal
+   hilang, berkas diunduh kembali saat pertama kali diminta (*on-demand cache*).
 5. Saat cache lokal kosong, data dipulihkan otomatis dari Supabase
    (`hydrate`).
 
@@ -57,6 +59,17 @@ Supabase, sedangkan PostgreSQL lokal hanya cache yang boleh hilang.
 > (bukan service-role key). Jangan commit `.env`.
 
 ## Memulai
+
+Prasyarat tambahan: biner **rclone** ≥ 1.60 harus tersedia di `PATH`
+(atau tunjuk lewat `SIDEWA_RCLONE_BINARY`). Pemasangan cepat:
+
+```bash
+curl https://rclone.org/install.sh | sudo bash
+rclone version
+```
+
+Tidak perlu `rclone config`: kredensial dan endpoint HF S3 dibaca dari `.env`
+(`SIDEWA_HF_S3_*`) dan disuntikkan sebagai environment `RCLONE_CONFIG_*`.
 
 ```bash
 cd dprd-riau
@@ -114,6 +127,26 @@ Berita yang membahas orang lain dengan nama sama (misalnya anggota DPRD daerah
 lain) ditolak. Variabel terkait: `SIDEWA_MEMBER_IDENTITY_FILE`,
 `SIDEWA_SENTIMENT_YEAR_FROM`, `SIDEWA_SENTIMENT_YEAR_TO`,
 `SIDEWA_GEMINI_MIN_IDENTITY_SCORE`, `SIDEWA_GEMINI_REQUIRE_IDENTITY`.
+
+## Drive bersama tim Humas
+
+Pengelola konten Humas (superadmin, admin, humas, staf Humas) dapat membuka
+**Drive** (`/drive`) untuk menyimpan berkas kerja tim yang bukan dokumentasi
+kegiatan: naskah siaran pers, daftar hadir, desain, dan arsip lain.
+
+- Berkas disimpan di `<SIDEWA_HF_S3_PREFIX>/drive/` pada bucket HF S3 dan diakses
+  lewat `rclone` — tidak ada metadata tambahan di database, jadi folder dapat
+  dirapikan langsung dari aplikasi.
+- Mendukung unggah **beberapa berkas sekaligus**, buat folder, pencarian nama,
+  ubah nama, unduh, dan hapus (berkas maupun folder beserta isinya).
+- Nama berkas duplikat otomatis diberi akhiran ` (2)`, ` (3)`, dan seterusnya.
+- Batas ukuran per berkas diatur `SIDEWA_DRIVE_MAX_UPLOAD_MB` (default **100 MB**).
+- S3 tidak menyimpan folder kosong; aplikasi menaruh penanda `.keep` agar folder
+  baru tetap tampil.
+- Semua tindakan tercatat di log audit (`DRIVE_UPLOAD`, `DRIVE_FOLDER`,
+  `DRIVE_RENAME`, `DRIVE_DELETE`). Staf komisi tidak memiliki akses ke Drive.
+
+Nonaktifkan halaman ini dengan `SIDEWA_DRIVE_ENABLED=false` bila tidak diperlukan.
 
 ## Seleksi foto AI Humas
 
@@ -177,6 +210,8 @@ Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Var
 - `SIDEWA_SUPABASE_ADMIN_DATABASE_URL` — koneksi skema/resync Supabase (session pooler, port 5432).
 - `SIDEWA_SYNC_ENABLED` — aktifkan outbox worker ke Supabase.
 - `SIDEWA_HF_S3_*` — bucket, endpoint, dan kredensial Hugging Face S3.
+- `SIDEWA_RCLONE_*` — biner (`rclone`), nama remote, batas waktu, dan argumen
+  tambahan untuk sinkronisasi media lewat rclone.
 - `SIDEWA_MEDIA_SYNC_ENABLED` — aktifkan unggah media ke HF S3.
 - `SIDEWA_FACE_DETECTOR` — `hog` (CPU) atau `cnn` (GPU, lebih akurat).
 - `SIDEWA_FACE_TOLERANCE`, `SIDEWA_FACE_AUTO_TAG`, `SIDEWA_FACE_REVIEW` — ambang pencocokan.
@@ -215,6 +250,7 @@ python -m app.cli resync [--truncate]   # salin seluruh data lokal → Supabase
 python -m app.cli hydrate [--force]     # pulihkan cache lokal dari Supabase
 python -m app.cli sync [--limit N]      # kirim outbox sekarang
 python -m app.cli sync-status           # status database & media sync
+python -m app.cli media-check           # uji koneksi rclone → HF S3
 ```
 
 Status sinkronisasi juga tersedia di `GET /readyz` (field `sync` dan

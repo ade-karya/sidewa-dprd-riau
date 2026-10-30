@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -301,6 +302,26 @@ class Settings:
         default_factory=lambda: _bool("SIDEWA_MEDIA_CACHE_ON_DEMAND", True)
     )
 
+    # ── rclone: klien S3 native untuk HF S3 ─────────────────────────────────
+    rclone_binary: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_RCLONE_BINARY", "rclone").strip()
+    )
+    rclone_remote: str = field(
+        default_factory=lambda: os.getenv("SIDEWA_RCLONE_REMOTE", "sidewahf").strip()
+    )
+    rclone_timeout: int = field(default_factory=lambda: _int("SIDEWA_RCLONE_TIMEOUT", 300))
+    rclone_extra_args: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            shlex.split(os.getenv("SIDEWA_RCLONE_EXTRA_ARGS", "").strip())
+        )
+    )
+
+    # ── Drive bersama tim Humas (folder ``drive/`` di HF S3) ────────────────
+    drive_enabled: bool = field(default_factory=lambda: _bool("SIDEWA_DRIVE_ENABLED", True))
+    drive_max_upload_mb: int = field(
+        default_factory=lambda: _int("SIDEWA_DRIVE_MAX_UPLOAD_MB", 100)
+    )
+
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() in {"production", "prod"}
@@ -333,6 +354,10 @@ class Settings:
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def drive_max_upload_bytes(self) -> int:
+        return self.drive_max_upload_mb * 1024 * 1024
 
     @property
     def max_request_bytes(self) -> int:

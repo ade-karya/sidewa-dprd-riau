@@ -35,6 +35,26 @@
 5. Gunakan **Arsipkan** untuk menyimpan rilis sebagai referensi tanpa menampilkannya
    sebagai rilis aktif. Administrator dapat menghapus rilis secara permanen.
 
+## Drive bersama tim Humas
+Menu **Drive** (`/drive`) dipakai seluruh tim Humas untuk menyimpan berkas kerja
+yang bukan dokumentasi kegiatan, misalnya naskah siaran pers, daftar hadir,
+desain, atau arsip. Berkas disimpan di folder `drive/` pada HF S3.
+
+1. Buka **Drive** di sidebar atau pintasan **Drive Humas** pada ruang kerja staf.
+2. Klik **Pilih berkas** pada kartu *Unggah berkas* — beberapa berkas sekaligus
+   diperbolehkan, maksimal **100 MB** per berkas. Berkas masuk ke folder yang
+   sedang dibuka.
+3. Gunakan **Folder baru** untuk membuat subfolder, misalnya *Dokumentasi 2026*.
+   Klik nama folder untuk masuk; gunakan remah folder di atas untuk kembali.
+4. Kolom pencarian mencari nama berkas di seluruh isi Drive.
+5. Tombol **Unduh** menyimpan berkas ke komputer. Ikon pensil mengubah nama,
+   ikon tempat sampah menghapus berkas atau folder beserta isinya.
+6. Bila nama berkas sama, sistem menambahkan akhiran ` (2)`, ` (3)`, dan
+   seterusnya agar tidak ada berkas yang tertimpa.
+
+Folder yang baru dibuat tetap terlihat meskipun masih kosong. Staf komisi dan
+anggota dewan tidak memiliki akses ke Drive.
+
 ## Staf Humas Sekretariat
 Setiap staf Humas memiliki **ruang kerja pribadi** di `/dashboard-staf/{id}`.
 1. Buka halaman login, pilih tab **Face ID** → **Daftarkan Face ID**.

@@ -124,6 +124,13 @@ NAV_ITEMS = [
         "roles": CONTENT_MANAGER_ROLES,
     },
     {
+        "key": "drive",
+        "label": "Drive",
+        "icon": "folder",
+        "href": "/drive",
+        "roles": CONTENT_MANAGER_ROLES,
+    },
+    {
         "key": "activities",
         "label": "Kegiatan",
         "icon": "calendar",
@@ -176,6 +183,7 @@ def _active_key(path: str) -> str:
         ("staff_dashboard", "/dashboard-staf"),
         ("humas_staff", "/staf-humas"),
         ("photo_selection", "/seleksi-foto"),
+        ("drive", "/drive"),
         ("activities", "/kegiatan"),
         ("releases", "/rilis"),
         ("search", "/cari"),

@@ -208,4 +208,8 @@ AUDIT_ACTIONS = {
     "PHOTO_SELECTION_DELETE": "Hapus sesi seleksi foto",
     "PHOTO_SELECTION_CANCEL": "Batalkan seleksi foto",
     "PHOTO_SELECTION_RESUME": "Lanjutkan seleksi foto",
+    "DRIVE_UPLOAD": "Unggah berkas Drive",
+    "DRIVE_FOLDER": "Buat folder Drive",
+    "DRIVE_RENAME": "Ubah nama berkas Drive",
+    "DRIVE_DELETE": "Hapus berkas Drive",
 }

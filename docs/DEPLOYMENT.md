@@ -20,7 +20,7 @@ Browser ──► FastAPI (N worker)
                 │                              │
                 │                              └── worker outbox ──► Supabase (source of truth)
                 │
-                └── media ──► disk lokal (cache) ──► Hugging Face S3 (bucket kelaska)
+                └── media ──► disk lokal (cache) ──► Hugging Face S3 (bucket kelaska, lewat rclone)
 ```
 
 - **Supabase** adalah sumber kebenaran. Semua perubahan akhirnya tersimpan di sini.
@@ -38,6 +38,8 @@ Supabase secara batch. Dengan begitu koneksi dan kuota Supabase tetap hemat.
 - Python 3.12+ dan PostgreSQL 16+ lokal.
 - Proyek Supabase dengan **connection pooler** aktif.
 - Bucket Hugging Face S3 (S3-compatible).
+- Biner **rclone** ≥ 1.60 di `PATH` (atau lewat `SIDEWA_RCLONE_BINARY`).
+  Media diunggah/diunduh ke HF S3 memakai rclone, bukan boto3.
 
 ### Langkah deploy
 
@@ -46,6 +48,13 @@ cd /content/sidewa-dprd-riau
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # lalu isi nilai produksi
+```
+
+Pasang rclone (lewati bila image Docker dipakai — rclone sudah ada di dalamnya):
+
+```bash
+curl https://rclone.org/install.sh | sudo bash
+rclone version
 ```
 
 Isi variabel penting di `.env`:
@@ -77,6 +86,16 @@ SIDEWA_HF_S3_SECRET_ACCESS_KEY=<secret key>
 SIDEWA_HF_S3_PREFIX=sidewa/media
 SIDEWA_MEDIA_SYNC_ENABLED=true
 SIDEWA_MEDIA_CACHE_ON_DEMAND=true
+
+# rclone → HF S3 (remote dibuat otomatis dari SIDEWA_HF_S3_*)
+SIDEWA_RCLONE_BINARY=rclone
+SIDEWA_RCLONE_REMOTE=sidewahf
+SIDEWA_RCLONE_TIMEOUT=300
+SIDEWA_RCLONE_EXTRA_ARGS=
+
+# Drive bersama tim Humas (folder drive/ di HF S3)
+SIDEWA_DRIVE_ENABLED=true
+SIDEWA_DRIVE_MAX_UPLOAD_MB=100
 ```
 
 > Gunakan kredensial **database** Supabase (user `postgres.<ref>`), bukan
@@ -106,7 +125,12 @@ Gunakan systemd/supervisor agar proses tetap hidup, dan Nginx di depan untuk TLS
 curl -s http://127.0.0.1:8000/healthz
 curl -s http://127.0.0.1:8000/readyz | python -m json.tool
 python -m app.cli sync-status
+python -m app.cli media-check
 ```
+
+`media-check` mencetak `ok: true` bila biner rclone ada dan bucket HF S3 dapat
+dilist. Jika gagal, pesan `error` berisi keluaran rclone (mis. kredensial salah
+atau endpoint tidak terjangkau).
 
 `/readyz` menampilkan:
 
@@ -114,6 +138,7 @@ python -m app.cli sync-status
 - `sync.pending` — jumlah perubahan yang belum terkirim (idealnya 0).
 - `sync.last_error` — kesalahan sinkronisasi terakhir, bila ada.
 - `media_sync.pending` / `pending_deletions` — antrean media HF S3.
+- `media_sync.backend` / `binary_available` — status klien rclone.
 
 ### Pemulihan cache
 

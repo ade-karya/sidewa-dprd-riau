@@ -1,8 +1,13 @@
-"""Sinkronisasi media ke Hugging Face S3 (S3-compatible).
+"""Sinkronisasi media ke Hugging Face S3 lewat rclone (S3 native).
 
 PostgreSQL lokal hanya cache. Setiap berkas media yang ditulis aplikasi
-diunggah ke bucket HF S3. Jika cache lokal hilang, berkas diunduh kembali
-saat pertama kali diminta (on-demand cache).
+diunggah ke bucket HF S3 memakai perintah ``rclone``. Jika cache lokal hilang,
+berkas diunduh kembali saat pertama kali diminta (on-demand cache).
+
+Remote rclone tidak perlu ditulis di ``rclone.conf``: konfigurasi S3 dibangun
+dari variabel ``SIDEWA_HF_S3_*`` dan disuntikkan sebagai environment
+``RCLONE_CONFIG_<REMOTE>_*``. Endpoint HF (``https://s3.hf.co/<namespace>``)
+dipakai apa adanya dengan path-style addressing.
 """
 
 from __future__ import annotations
@@ -10,6 +15,8 @@ from __future__ import annotations
 import logging
 import mimetypes
 import os
+import shutil
+import subprocess
 import threading
 from pathlib import Path
 from typing import Any
@@ -23,9 +30,14 @@ from .images import absolute_path
 
 logger = logging.getLogger("sidewa.media_sync")
 
-_client = None
-_client_lock = threading.Lock()
+_lock = threading.Lock()
+_binary_path: str | None = None
+_binary_checked = False
 _bucket_checked = False
+
+
+class RcloneError(RuntimeError):
+    """Kegagalan menjalankan biner rclone."""
 
 
 def _enabled() -> bool:
@@ -36,34 +48,70 @@ def _enabled() -> bool:
     )
 
 
-def _get_client():
-    global _client
-    if _client is not None:
-        return _client
-    with _client_lock:
-        if _client is not None:
-            return _client
-        try:
-            import boto3
-            from botocore.config import Config
-        except ImportError:  # pragma: no cover - dependensi produksi
-            logger.error("boto3 tidak terpasang; sinkronisasi media dinonaktifkan.")
-            return None
-        _client = boto3.client(
-            "s3",
-            endpoint_url=settings.hf_s3_endpoint,
-            region_name=settings.hf_s3_region,
-            aws_access_key_id=settings.hf_s3_access_key_id,
-            aws_secret_access_key=settings.hf_s3_secret_access_key,
-            config=Config(
-                signature_version="s3v4",
-                s3={"addressing_style": "path"},
-                retries={"max_attempts": 3, "mode": "standard"},
-                connect_timeout=10,
-                read_timeout=60,
-            ),
-        )
-        return _client
+# ─────────────────────────────────────────────────────────────────────────────
+# Konfigurasi remote rclone
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _remote_name() -> str:
+    raw = (settings.rclone_remote or "sidewahf").strip().rstrip(":")
+    # rclone mencocokkan nama remote tanpa membedakan huruf besar/kecil, tetapi
+    # karakter selain [A-Za-z0-9_] tidak dinormalisasi. Samakan nama remote
+    # dengan nama variabel environment agar keduanya selalu cocok.
+    name = "".join(ch if ch.isascii() and (ch.isalnum() or ch == "_") else "_" for ch in raw)
+    return name.strip("_") or "sidewahf"
+
+
+def _env_prefix() -> str:
+    # rclone membaca RCLONE_CONFIG_<REMOTE>_<KEY>; nama remote dihuruf-besarkan.
+    return f"RCLONE_CONFIG_{_remote_name().upper()}"
+
+
+def _env() -> dict[str, str]:
+    env = os.environ.copy()
+    prefix = _env_prefix()
+    values = {
+        "TYPE": "s3",
+        "PROVIDER": "Other",
+        "ACCESS_KEY_ID": settings.hf_s3_access_key_id,
+        "SECRET_ACCESS_KEY": settings.hf_s3_secret_access_key,
+        "ENDPOINT": settings.hf_s3_endpoint,
+        "REGION": settings.hf_s3_region or "us-east-1",
+        "FORCE_PATH_STYLE": "true",
+        # HF S3 belum mengimplementasikan ListObjects v1 (501 NotImplemented).
+        "LIST_VERSION": "2",
+        "NO_CHECK_BUCKET": "true",
+    }
+    for key, value in values.items():
+        env[f"{prefix}_{key}"] = value
+    return env
+
+
+def binary_path() -> str | None:
+    """Lokasi biner rclone, atau ``None`` bila tidak tersedia."""
+    global _binary_path, _binary_checked
+    with _lock:
+        if _binary_checked:
+            return _binary_path
+        candidate = (settings.rclone_binary or "rclone").strip() or "rclone"
+        expanded = os.path.expanduser(candidate)
+        found = shutil.which(expanded)
+        if not found and os.path.isfile(expanded) and os.access(expanded, os.X_OK):
+            found = expanded
+        _binary_path = found
+        _binary_checked = True
+        if found is None:
+            logger.error(
+                "rclone tidak ditemukan (SIDEWA_RCLONE_BINARY=%s); sinkronisasi media dinonaktifkan.",
+                candidate,
+            )
+        return found
+
+
+def _root() -> str:
+    prefix = settings.hf_s3_prefix.strip("/")
+    base = f"{_remote_name()}:{settings.hf_s3_bucket}"
+    return f"{base}/{prefix}" if prefix else base
 
 
 def _key(relative_path: str) -> str:
@@ -72,23 +120,120 @@ def _key(relative_path: str) -> str:
     return f"{prefix}/{path}" if prefix else path
 
 
+def _target(relative_path: str) -> str:
+    return f"{_remote_name()}:{settings.hf_s3_bucket}/{_key(relative_path)}"
+
+
+def _run(args: list[str], timeout: int | None = None) -> subprocess.CompletedProcess[str]:
+    binary = binary_path()
+    if binary is None:
+        raise RcloneError("biner rclone tidak tersedia")
+    command = [binary, "--log-level", "ERROR", *settings.rclone_extra_args, *args]
+    try:
+        return subprocess.run(
+            command,
+            env=_env(),
+            capture_output=True,
+            text=True,
+            timeout=timeout or settings.rclone_timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RcloneError(
+            f"rclone melebihi batas waktu {timeout or settings.rclone_timeout} detik"
+        ) from exc
+    except OSError as exc:
+        raise RcloneError(f"gagal menjalankan rclone: {exc}") from exc
+
+
+# API publik untuk modul lain (mis. ``drive``) yang juga memakai rclone.
+def rclone_run(args: list[str], timeout: int | None = None) -> subprocess.CompletedProcess[str]:
+    return _run(args, timeout)
+
+
+def rclone_root() -> str:
+    return _root()
+
+
+def rclone_error(proc: subprocess.CompletedProcess[str]) -> str:
+    return _stderr(proc)
+
+
+def _stderr(proc: subprocess.CompletedProcess[str]) -> str:
+    output = (proc.stderr or "").strip() or (proc.stdout or "").strip()
+    if len(output) > 900:
+        output = output[-900:]
+    return output or f"rclone keluar dengan kode {proc.returncode}"
+
+
+def _is_missing(output: str) -> bool:
+    lowered = output.lower()
+    return any(
+        marker in lowered
+        for marker in ("not found", "doesn't exist", "does not exist", "nosuchkey")
+    )
+
+
 def ensure_bucket() -> bool:
-    """Pastikan bucket HF S3 dapat diakses (bucket tidak dibuat otomatis)."""
+    """Pastikan bucket HF S3 dapat diakses lewat rclone (bucket tidak dibuat otomatis)."""
     global _bucket_checked
     if _bucket_checked:
         return True
-    client = _get_client()
-    if client is None:
+    if binary_path() is None:
         return False
     try:
-        client.head_bucket(Bucket=settings.hf_s3_bucket)
+        proc = _run(["lsf", "--max-depth", "1", _root()])
+    except RcloneError as exc:
+        logger.warning("HF S3 tidak dapat diakses lewat rclone: %s", exc)
+        return False
+    if proc.returncode == 0:
         _bucket_checked = True
         return True
-    except Exception as exc:
-        logger.warning(
-            "Bucket HF S3 '%s' belum dapat diakses: %s", settings.hf_s3_bucket, exc
-        )
-        return False
+    logger.warning(
+        "Bucket HF S3 '%s' belum dapat diakses lewat rclone: %s",
+        settings.hf_s3_bucket,
+        _stderr(proc),
+    )
+    return False
+
+
+def check() -> dict[str, Any]:
+    """Diagnosa koneksi rclone → HF S3 (dipakai ``python -m app.cli media-check``)."""
+    binary = binary_path()
+    report: dict[str, Any] = {
+        "backend": "rclone",
+        "binary": binary or settings.rclone_binary,
+        "binary_available": binary is not None,
+        "remote": _remote_name(),
+        "bucket": settings.hf_s3_bucket,
+        "prefix": settings.hf_s3_prefix,
+        "endpoint": settings.hf_s3_endpoint,
+        "configured": settings.hf_s3_configured,
+        "enabled": _enabled(),
+        "ok": False,
+    }
+    if not settings.hf_s3_configured:
+        report["error"] = "HF S3 belum dikonfigurasi (SIDEWA_HF_S3_*)"
+        return report
+    if binary is None:
+        report["error"] = "biner rclone tidak ditemukan"
+        return report
+    try:
+        version = _run(["version"])
+        if version.returncode != 0:
+            report["error"] = _stderr(version)
+            return report
+        report["version"] = (version.stdout or "").splitlines()[0].strip()
+        listing = _run(["lsf", "--max-depth", "1", _root()])
+    except RcloneError as exc:
+        report["error"] = str(exc)
+        return report
+    report["returncode"] = listing.returncode
+    if listing.returncode != 0:
+        report["error"] = _stderr(listing)
+        return report
+    report["ok"] = True
+    return report
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -239,25 +384,34 @@ def _scan() -> int:
 
 
 def upload_path(relative_path: str) -> bool:
-    if not _enabled():
-        return False
-    client = _get_client()
-    if client is None:
+    if not _enabled() or binary_path() is None:
         return False
     try:
         local = absolute_path(relative_path)
-        if not local.is_file():
-            return False
-        content_type = mimetypes.guess_type(local.name)[0] or "application/octet-stream"
-        client.upload_file(
-            Filename=str(local),
-            Bucket=settings.hf_s3_bucket,
-            Key=_key(relative_path),
-            ExtraArgs={"ContentType": content_type},
+    except ValueError:
+        return False
+    if not local.is_file():
+        return False
+    content_type = mimetypes.guess_type(local.name)[0] or "application/octet-stream"
+    try:
+        proc = _run(
+            [
+                "copyto",
+                str(local),
+                _target(relative_path),
+                "--s3-no-check-bucket",
+                "--header-upload",
+                f"Content-Type: {content_type}",
+            ]
         )
-    except Exception as exc:
+    except RcloneError as exc:
         logger.warning("Upload media %s ke HF S3 gagal: %s", relative_path, exc)
         _mark_error(relative_path, str(exc))
+        return False
+    if proc.returncode != 0:
+        error = _stderr(proc)
+        logger.warning("Upload media %s ke HF S3 gagal: %s", relative_path, error)
+        _mark_error(relative_path, error)
         return False
     _mark_uploaded(relative_path, local)
     return True
@@ -288,7 +442,7 @@ def _upload_pending(limit: int) -> int:
 
 
 def sync_pending(limit: int = 20) -> int:
-    if not _enabled():
+    if not _enabled() or binary_path() is None:
         return 0
     ensure_bucket()
     _scan()
@@ -296,7 +450,7 @@ def sync_pending(limit: int = 20) -> int:
 
 
 def sync_all() -> int:
-    if not _enabled():
+    if not _enabled() or binary_path() is None:
         return 0
     ensure_bucket()
     _scan()
@@ -315,23 +469,25 @@ def sync_all() -> int:
 
 
 def delete_remote(relative_path: str) -> bool:
-    if not _enabled():
-        return False
-    client = _get_client()
-    if client is None:
+    if not _enabled() or binary_path() is None:
         return False
     try:
-        client.delete_object(Bucket=settings.hf_s3_bucket, Key=_key(relative_path))
-    except Exception as exc:
-        code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        if code not in {"404", "NoSuchKey", "NotFound"}:
-            logger.warning("Hapus media %s dari HF S3 gagal: %s", relative_path, exc)
-            return False
-    return True
+        proc = _run(["deletefile", _target(relative_path)])
+    except RcloneError as exc:
+        logger.warning("Hapus media %s dari HF S3 gagal: %s", relative_path, exc)
+        return False
+    if proc.returncode == 0:
+        return True
+    error = _stderr(proc)
+    # ``rclone deletefile`` mengembalikan kode 4 bila objek memang sudah tidak ada.
+    if proc.returncode == 4 or _is_missing(error):
+        return True
+    logger.warning("Hapus media %s dari HF S3 gagal: %s", relative_path, error)
+    return False
 
 
 def process_deletions(limit: int = 20) -> int:
-    if not _enabled():
+    if not _enabled() or binary_path() is None:
         return 0
     try:
         with engine.connect() as conn:
@@ -366,7 +522,7 @@ def process_deletions(limit: int = 20) -> int:
 
 def download_to_cache(relative_path: str) -> bool:
     """Unduh berkas dari HF S3 ke cache lokal bila belum ada."""
-    if not _enabled():
+    if not _enabled() or binary_path() is None:
         return False
     try:
         local = absolute_path(relative_path)
@@ -374,20 +530,17 @@ def download_to_cache(relative_path: str) -> bool:
         return False
     if local.is_file():
         return True
-    client = _get_client()
-    if client is None:
-        return False
 
     local.parent.mkdir(parents=True, exist_ok=True)
     temporary = local.with_name(f".{local.name}.{uuid4().hex}.part")
     try:
-        client.download_file(
-            Bucket=settings.hf_s3_bucket,
-            Key=_key(relative_path),
-            Filename=str(temporary),
+        proc = _run(
+            ["copyto", _target(relative_path), str(temporary), "--s3-no-check-bucket"]
         )
+        if proc.returncode != 0:
+            raise RcloneError(_stderr(proc))
         os.replace(temporary, local)
-    except Exception as exc:
+    except (RcloneError, OSError) as exc:
         logger.warning("Unduh media %s dari HF S3 gagal: %s", relative_path, exc)
         try:
             temporary.unlink(missing_ok=True)
@@ -399,8 +552,14 @@ def download_to_cache(relative_path: str) -> bool:
 
 
 def status() -> dict[str, Any]:
+    backend = {
+        "backend": "rclone",
+        "remote": _remote_name(),
+        "binary": binary_path() or settings.rclone_binary,
+        "binary_available": binary_path() is not None,
+    }
     if not _enabled():
-        return {"enabled": False}
+        return {"enabled": False, **backend}
     try:
         with engine.connect() as conn:
             pending = int(
@@ -423,6 +582,7 @@ def status() -> dict[str, Any]:
             "pending": pending,
             "failed": failed,
             "pending_deletions": deletions,
+            **backend,
         }
     except Exception as exc:
-        return {"enabled": True, "error": str(exc)}
+        return {"enabled": True, **backend, "error": str(exc)}

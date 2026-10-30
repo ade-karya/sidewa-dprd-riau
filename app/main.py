@@ -30,6 +30,7 @@ from .routers import (
     auth,
     commissions,
     dashboard,
+    drive,
     guide,
     humas_staff,
     media,
@@ -246,6 +247,7 @@ def create_app() -> FastAPI:
     application.include_router(auth.router)
     application.include_router(dashboard.router)
     application.include_router(guide.router)
+    application.include_router(drive.router)
     application.include_router(member_dashboard.router)
     application.include_router(humas_staff.router)
     application.include_router(photo_selection.router)

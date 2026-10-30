@@ -91,6 +91,13 @@ WORKSPACE_SHORTCUTS = [
         "tone": "blue",
     },
     {
+        "label": "Drive Humas",
+        "description": "Simpan berkas tim di Drive bersama.",
+        "href": "/drive",
+        "icon": "folder",
+        "tone": "gold",
+    },
+    {
         "label": "Cari wajah",
         "description": "Telusuri dokumentasi berdasarkan wajah.",
         "href": "/cari",

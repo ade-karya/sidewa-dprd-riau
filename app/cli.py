@@ -383,6 +383,21 @@ def cmd_sync_status(_args) -> int:
     return 0
 
 
+def cmd_media_check(_args) -> int:
+    """Diagnosa koneksi rclone → HF S3 (tanpa menyentuh database)."""
+    from .services import media_sync
+
+    report = media_sync.check()
+    print(json.dumps(report, indent=2, default=str))
+    if not report.get("ok"):
+        print(
+            "Periksa SIDEWA_HF_S3_*, SIDEWA_RCLONE_BINARY, dan koneksi jaringan.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def cmd_upgrade_portraits(args) -> int:
     """Naikkan potret lama (thumbnail) ke gambar utama resolusi penuh."""
     if _blocked_in_production("upgrade-portraits"):
@@ -532,6 +547,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("sync-status", help="Tampilkan status sinkronisasi database & media")
     p.set_defaults(func=cmd_sync_status)
+
+    p = sub.add_parser("media-check", help="Uji koneksi rclone → HF S3")
+    p.set_defaults(func=cmd_media_check)
 
     return parser
 
