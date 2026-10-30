@@ -1320,7 +1320,7 @@ table.data .actions { display: flex; gap: 3px; justify-content: flex-end; }
 }
 .release-byline span { display: inline-flex; align-items: center; gap: 5px; }
 .release-byline .icon { width: 13px; height: 13px; }
-.release-prose { margin-top: 18px; font-size: 14px; line-height: 1.8; }
+.release-prose { margin-top: 18px; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
 .release-actions {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line);
