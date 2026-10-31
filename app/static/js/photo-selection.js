@@ -331,48 +331,42 @@
         toast("Belum ada foto berstatus Dipilih untuk dibagikan.");
         return;
       }
-      const files = [];
-      for (const card of cards) {
-        const button = card.querySelector("[data-ps-share-one]");
-        const url = button?.dataset.url || "";
-        if (!url) continue;
-        try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const caption = (button?.dataset.caption || "").trim() || "foto";
-          const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
-          files.push(new File([blob], filename, { type: blob.type || "image/jpeg" }));
-        } catch (error) {
-          console.warn("Gagal menyiapkan berkas:", error);
-        }
-      }
-      if (!files.length) {
-        toast("Gagal menyiapkan foto untuk dibagikan.");
+      const runId = document.querySelector("[data-ps-run]")?.dataset.runId || "";
+      if (!runId) {
+        toast("Sesi seleksi tidak ditemukan.");
         return;
       }
-      let canShare = false;
+      const zipUrl = `/seleksi-foto/sesi/${runId}/unduh`;
+      const zipName = `seleksi-foto-${runId}.zip`;
       try {
-        canShare = !!(navigator.canShare && navigator.canShare({ files }));
-      } catch (error) {
-        canShare = false;
-      }
-      if (canShare) {
+        const response = await fetch(zipUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const file = new File([blob], zipName, { type: "application/zip" });
+        let canShare = false;
         try {
-          await navigator.share({ files, title: "Foto terpilih" });
-          return;
+          canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
         } catch (error) {
-          if (error?.name === "AbortError") return;
+          canShare = false;
         }
+        if (canShare) {
+          try {
+            await navigator.share({ files: [file], title: "Foto terpilih" });
+            return;
+          } catch (error) {
+            if (error?.name === "AbortError") return;
+          }
+        }
+      } catch (error) {
+        console.warn("Gagal menyiapkan ZIP:", error);
       }
-      const runId = document.querySelector("[data-ps-run]")?.dataset.runId || "";
-      if (runId) {
-        const link = document.createElement("a");
-        link.href = `/seleksi-foto/sesi/${runId}/unduh`;
-        link.download = `seleksi-foto-${runId}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
+      // Fallback: unduh ZIP foto asli.
+      const link = document.createElement("a");
+      link.href = zipUrl;
+      link.download = zipName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     });
   });
 
