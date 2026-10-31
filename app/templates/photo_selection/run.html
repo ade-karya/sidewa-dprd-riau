@@ -7,14 +7,12 @@
 
 {% block topbar_actions %}
 <a class="btn btn-outline btn-sm" href="/seleksi-foto">{{ icon('arrow-left') }}<span>Ruang seleksi</span></a>
-{% if run.selected_count %}
-<button class="btn btn-soft btn-sm" type="button" data-ps-download-all>{{ icon('download') }}<span>Unduh foto pilihan</span></button>
-<button class="btn btn-soft btn-sm" type="button" data-ps-share-whatsapp>{{ icon('send') }}<span>Kirim foto pilihan</span></button>
-{% endif %}
+<button class="btn btn-soft btn-sm ps-global-action" type="button" data-ps-download-all aria-label="Unduh foto pilihan" {% if not run.selected_count %}hidden{% endif %}>{{ icon('download') }}<span>Unduh foto pilihan</span></button>
+<button class="btn btn-soft btn-sm ps-global-action" type="button" data-ps-share-whatsapp aria-label="Kirim foto pilihan" {% if not run.selected_count %}hidden{% endif %}>{{ icon('send') }}<span>Kirim foto pilihan</span></button>
 {% endblock %}
 
 {% block content %}
-<div data-ps-run data-run-id="{{ run.id }}"
+<div class="ps-run-page" data-ps-run data-run-id="{{ run.id }}"
      data-status-url="/seleksi-foto/sesi/{{ run.id }}/status.json"
      data-status="{{ run.status }}"
      data-wait="{{ wait_seconds }}">
@@ -166,11 +164,17 @@
                 <div class="ps-photo-title">
                   <strong>{{ item.caption or item.original_name }}</strong>
                   <span>#{{ item.position }} · {{ item.width }}×{{ item.height }}</span>
-                  <button type="button" class="btn btn-ghost btn-sm ps-wa-one" data-ps-share-one
+                </div>
+                <div class="ps-photo-actions" data-ps-card-actions {% if item.verdict != 'selected' %}hidden{% endif %}>
+                  <button type="button" class="btn btn-soft btn-sm" data-ps-share-one
                           data-ps-photo-url="/seleksi-foto/sesi/{{ run.id }}/foto/{{ item.id }}"
                           data-ps-photo-name="{{ item.caption or item.original_name }}"
-                          {% if item.verdict != 'selected' %}hidden{% endif %}>
-                    {{ icon('send') }} Kirim
+                          aria-label="Kirim foto ini">
+                    {{ icon('send') }}<span>Kirim</span>
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" data-ps-download-one
+                          aria-label="Unduh foto ini">
+                    {{ icon('download') }}<span>Unduh</span>
                   </button>
                 </div>
                 <p class="ps-reason">{{ item.reason or item.error or 'Belum ada catatan dari agen.' }}</p>
@@ -220,6 +224,18 @@
             <button class="btn btn-primary btn-sm" type="submit">{{ icon('check') }} Simpan perubahan</button>
           </div>
         </form>
+
+        <div class="ps-mobile-actions" data-ps-mobile-actions {% if not run.selected_count %}hidden{% endif %}>
+          <div class="ps-mobile-count"><b data-ps-mobile-count>{{ run.selected_count }}</b><span>dipilih</span></div>
+          <div class="ps-mobile-buttons">
+            <button class="btn btn-soft btn-sm" type="button" data-ps-share-whatsapp aria-label="Kirim foto terpilih">
+              {{ icon('send') }}<span>Kirim</span>
+            </button>
+            <button class="btn btn-primary btn-sm" type="button" data-ps-download-all aria-label="Unduh foto terpilih">
+              {{ icon('download') }}<span>Unduh</span>
+            </button>
+          </div>
+        </div>
         {% else %}
         {{ empty_state('image', 'Tidak ada foto', 'Sesi ini belum memiliki foto.') }}
         {% endif %}

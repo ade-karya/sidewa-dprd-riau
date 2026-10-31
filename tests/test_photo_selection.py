@@ -599,6 +599,12 @@ def test_selected_photo_downloads_as_original_image(client):
     finally:
         db.close()
 
+    page = test_client.get(f"/seleksi-foto/sesi/{run_id}")
+    assert page.status_code == 200
+    assert "data-ps-mobile-actions" in page.text
+    assert "data-ps-download-one" in page.text
+    assert f'data-ps-photo-url="/seleksi-foto/sesi/{run_id}/foto/{item_id}"' in page.text
+
     response = test_client.get(f"/seleksi-foto/sesi/{run_id}/foto/{item_id}")
     assert response.status_code == 200
     content_type = response.headers["content-type"]

@@ -173,7 +173,10 @@ Alur kerja:
    `SIDEWA_PHOTO_SELECTION_MODEL` (default `gemini-3.5-flash-lite`). Jumlah foto
    yang diproses dibatasi kuota API, bukan kapasitas unggah.
 5. Tinjau hasil, ubah pilihan bila perlu, lalu terapkan ke kegiatan, kirim,
-   atau unduh foto aslinya (bukan tautan/teks/ZIP).
+   atau unduh foto aslinya (bukan tautan/teks/ZIP). Di Android dan iPhone,
+   tombol **Kirim** membuka lembar berbagi sistem dengan berkas gambar; bila
+   peramban tidak mendukung berbagi berkas (mis. peramban dalam aplikasi),
+   foto asli diunduh satu per satu agar dapat dilampirkan manual.
 
 Agen menunggu otomatis saat batas RPM tercapai dan menjeda sesi ketika RPD habis.
 Sesi dapat dilanjutkan setelah kuota direset. Kunci disimpan terenkripsi dengan

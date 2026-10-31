@@ -2557,6 +2557,14 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
 .ps-photo-body { padding: 11px 12px 12px; display: flex; flex-direction: column; gap: 7px; }
 .ps-photo-title strong { display: block; font-size: 11.5px; color: var(--ink); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ps-photo-title span { display: block; font-size: 9.5px; color: var(--muted-2); margin-top: 1px; }
+.ps-photo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ps-photo-actions .btn, .ps-filter-tab, .ps-verdict-option { touch-action: manipulation; }
+.ps-photo-actions[hidden] { display: none; }
+.ps-photo-actions .btn { height: 36px; padding: 0 10px; font-size: 11.5px; }
+.ps-photo-actions .btn .icon { width: 14px; height: 14px; }
+.ps-global-action[hidden] { display: none; }
+.ps-mobile-actions { display: none; }
+.ps-mobile-actions[hidden] { display: none; }
 .ps-reason { font-size: 10.5px; color: var(--muted); line-height: 1.45; }
 .ps-mini-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .ps-mini-metrics > span { position: relative; display: block; height: 4px; border-radius: 999px; background: #f0eaf3; }
@@ -2628,9 +2636,37 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
   .ps-run-row { flex-wrap: wrap; }
   .ps-run-stats { text-align: left; }
   .ps-run-arrow { display: none; }
-  .ps-filter-tabs { overflow-x: auto; flex-wrap: nowrap; }
-  .ps-filter-tab { white-space: nowrap; }
+  .ps-filter-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .ps-filter-tabs::-webkit-scrollbar { display: none; }
+  .ps-filter-tab { white-space: nowrap; min-height: 40px; padding: 8px 12px; font-size: 12px; }
   .ps-save-bar { position: static; }
+  .ps-photo-body { padding: 12px 13px 13px; }
+  .ps-photo-title strong { font-size: 13px; }
+  .ps-photo-title span { font-size: 10.5px; }
+  .ps-photo-actions { gap: 8px; }
+  .ps-photo-actions .btn { height: 46px; padding: 0 10px; font-size: 13px; border-radius: 12px; }
+  .ps-photo-actions .btn .icon { width: 16px; height: 16px; }
+  .ps-verdict-picker { gap: 5px; padding: 4px; }
+  .ps-verdict-option { min-height: 42px; font-size: 11px; }
+  .ps-mobile-actions {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+    align-items: center; gap: 10px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, .97); border-top: 1px solid var(--line);
+    box-shadow: 0 -10px 28px rgba(60, 35, 75, .12);
+    backdrop-filter: blur(14px);
+  }
+  .ps-mobile-count { flex: none; min-width: 44px; line-height: 1.15; text-align: center; }
+  .ps-mobile-count b { display: block; font-family: var(--font-display); font-size: 17px; color: var(--purple-700); }
+  .ps-mobile-count span { display: block; font-size: 9px; color: var(--muted); }
+  .ps-mobile-buttons { display: flex; flex: 1; gap: 8px; min-width: 0; }
+  .ps-mobile-buttons .btn { flex: 1 1 0; height: 44px; padding: 0 10px; touch-action: manipulation; }
+  .ps-run-page { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  body[data-page="photo_selection"] .guide-fab { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  body[data-page="photo_selection"] .toast-root { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 560px) {
+  body[data-page="photo_selection"] .topbar-actions .btn { width: 42px; height: 42px; }
 }
 @media (max-width: 430px) {
   .ps-hero-side { grid-template-columns: 1fr; }
