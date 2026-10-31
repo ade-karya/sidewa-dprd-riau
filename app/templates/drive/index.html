@@ -34,7 +34,7 @@
 <div class="global-error">{{ icon('alert') }}<span>{{ error }}</span></div>
 {% endif %}
 
-<div class="drive-switch">
+<div class="drive-switch" data-tour="drive-switch">
   <nav class="drive-tabs" aria-label="Pilih Drive">
     <a class="drive-tab {{ 'active' if scope != 'tim' and not viewing_staff }}" href="/drive">
       {{ icon('folder') }} Drive saya
@@ -66,7 +66,7 @@
 {% endif %}
 
 {% if quota %}
-<section class="card card-pad drive-quota-card">
+<section class="card card-pad drive-quota-card" data-tour="drive-quota">
   <div class="drive-quota-head">
     <h2>{{ icon('cloud') }} Kuota Drive pribadi</h2>
     <span class="badge {{ 'badge-red' if quota.full else ('badge-gold' if quota.warning else 'badge-purple') }}">{{ quota.used_percent }}% terpakai</span>
@@ -81,7 +81,7 @@
 </section>
 {% endif %}
 
-<div class="card card-pad drive-toolbar">
+<div class="card card-pad drive-toolbar" data-tour="drive-toolbar">
   <nav class="drive-crumbs" aria-label="Lokasi folder">
     {% for crumb in crumbs %}
     {% if loop.last %}
@@ -131,7 +131,7 @@
 {% endif %}
 
 {% if drive_ready %}
-<div class="drive-tools" id="unggah">
+<div class="drive-tools" id="unggah" data-tour="drive-tools">
   <section class="card card-pad">
     <h2>{{ icon('upload') }} Unggah berkas</h2>
     <p class="muted-small">

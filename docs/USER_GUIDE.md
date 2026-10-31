@@ -3,9 +3,21 @@
 ## Panduan visual
 - Halaman login menyediakan tombol **Kenali SIDEWA** untuk presentasi lengkap
   tentang tujuan, masalah, fitur, dan manfaat aplikasi.
-- Di ruang kerja Humas, direktori **Staf Humas**, dan **Seleksi Foto**, tombol
-  **Asisten SIDEWA** membuka tur halaman. Asisten menjelaskan setiap menu,
-  menyorot elemen yang sedang dibahas, dan dapat membacakan narasi suara.
+- Setelah masuk, tombol **Asisten SIDEWA** tersedia di seluruh halaman. Tur
+  menjelaskan dan menyorot bilah atas, ikon fitur (pencarian, unggah, peran,
+  profil), isi halaman yang sedang dibuka (hero, statistik, filter, kartu, tabel,
+  formulir, galeri, panel samping), lalu ringkasan sidebar dan setiap menunya.
+  Sorotan tidak dibatasi pada sidebar.
+- Halaman detail dan formulir memiliki langkah khusus, misalnya detail kegiatan,
+  profil anggota, sentimen anggota, detail komisi, rilis, pengguna, dan ruang
+  kerja staf Humas.
+- Panel panduan dapat diperluas, membacakan narasi suara, dan menautkan ke halaman
+  terkait. Tekan **Esc** atau tombol tutup untuk mengakhiri.
+- Di ponsel, panel tampil sebagai bottom sheet yang dapat diperluas; sidebar dibuka
+  melalui ikon menu. Panduan menyesuaikan tinggi layar, orientasi, dan perubahan
+  ukuran jendela, serta melewati elemen yang tidak tersedia.
+- Asisten memakai Gemini 3.8 Live untuk percakapan umum dan Gemini 3.8 Live
+  Extended Thinking untuk pertanyaan teknis.
 
 ## Anggota Dewan
 1. Buka halaman login, pilih tab **Face ID** → **Daftarkan Face ID**.

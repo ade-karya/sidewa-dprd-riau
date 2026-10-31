@@ -1938,7 +1938,9 @@ body.guide-open .guide-fab { opacity: 0; pointer-events: none; }
   content: ""; position: absolute; inset: -6px; border-radius: 999px; pointer-events: none;
   border: 1px solid rgba(126, 72, 144, .35); animation: guide-pulse 3s ease-out infinite;
 }
-body.tour-open { overflow: hidden; }
+/* Biarkan halaman tetap dapat digulir secara programatik agar target di luar
+   layar ikut tersorot — bukan hanya item sidebar. */
+body.tour-open { overflow: auto; overscroll-behavior: contain; }
 body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
 
 .tour-root { position: fixed; inset: 0; z-index: 120; pointer-events: none; }

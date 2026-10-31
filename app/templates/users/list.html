@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="card filter-card">
+<div class="card filter-card" data-tour="users-filter">
   <form class="filter-form" method="get" action="/pengguna">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -35,14 +35,14 @@
   </form>
 </div>
 
-<div class="filter-meta">
+<div class="filter-meta" data-tour="users-meta">
   <span class="result-count">
     {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> pengguna{% else %}Tidak ada pengguna{% endif %}
   </span>
   <span class="muted-small">{{ icon('shield') }} Peran menentukan akses konten dan administrasi</span>
 </div>
 
-<div class="table-card">
+<div class="table-card" data-tour="users-table">
   <div class="table-wrap">
     <table class="data">
       <thead>
@@ -117,7 +117,7 @@
   {% endif %}
 </div>
 
-<div class="card card-pad mt-3">
+<div class="card card-pad mt-3" data-tour="users-policy">
   <div class="flex-between">
     <div class="flex" style="align-items: flex-start; gap: 10px;">
       <span class="meta-icon">{{ icon('info') }}</span>

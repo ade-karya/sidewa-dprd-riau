@@ -6,7 +6,7 @@
 {% block page_subtitle %}Kelola identitas akun, kata sandi, dan token integrasi{% endblock %}
 
 {% block content %}
-<div class="card card-pad mb-2">
+<div class="card card-pad mb-2" data-tour="profile-hero">
   <div class="profile-hero">
     {{ avatar(user.full_name, user.avatar_path, 'xl') }}
     <div class="grow">
@@ -42,7 +42,7 @@
 
 <div class="profile-grid">
   <div class="detail-main">
-    <section class="card card-pad">
+    <section class="card card-pad" data-tour="profile-identity">
       <h2 style="font-size: 16px;">{{ icon('user') }} Identitas</h2>
       <p class="muted-small mb-2">Nama dan email tampil pada jejak audit dan dokumen internal.</p>
       <form class="profile-form" method="post" action="/profil" data-loading>
@@ -61,7 +61,7 @@
       </form>
     </section>
 
-    <section class="card card-pad">
+    <section class="card card-pad" data-tour="profile-password">
       <h2 style="font-size: 16px;">{{ icon('lock') }} Kata sandi</h2>
       <p class="muted-small mb-2">Gunakan minimal 10 karakter dengan huruf besar, huruf kecil, angka, dan simbol. Ganti secara berkala.</p>
       <form class="profile-form" method="post" action="/profil/password" data-loading>
@@ -95,7 +95,7 @@
       </form>
     </section>
 
-    <section class="card card-pad">
+    <section class="card card-pad" data-tour="profile-activity">
       <h2 style="font-size: 16px;">{{ icon('activity') }} Aktivitas saya</h2>
       <p class="muted-small mb-2">Sepuluh peristiwa terakhir yang tercatat atas nama Anda.</p>
       {% if my_audit %}
@@ -117,7 +117,7 @@
   </div>
 
   <aside class="detail-side">
-    <div class="card card-pad">
+    <div class="card card-pad" data-tour="profile-token">
       <div class="flex-between mb-1">
         <h2 style="font-size: 16px; margin: 0;">{{ icon('key') }} Token API</h2>
         <span class="badge badge-gray">{{ tokens|length }} token</span>

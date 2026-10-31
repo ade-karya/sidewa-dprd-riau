@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="card filter-card">
+<div class="card filter-card" data-tour="audit-filter">
   <form class="filter-form" method="get" action="/audit">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -32,14 +32,14 @@
   </form>
 </div>
 
-<div class="filter-meta">
+<div class="filter-meta" data-tour="audit-meta">
   <span class="result-count">
     {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> peristiwa{% else %}Tidak ada peristiwa{% endif %}
   </span>
   <span class="muted-small">{{ icon('shield') }} Log tidak dapat diubah atau dihapus</span>
 </div>
 
-<div class="table-card">
+<div class="table-card" data-tour="audit-table">
   <div class="table-wrap">
     <table class="data">
       <thead>
@@ -89,7 +89,7 @@
   {% endif %}
 </div>
 
-<div class="card card-pad mt-3">
+<div class="card card-pad mt-3" data-tour="audit-policy">
   <div class="flex-between">
     <div class="flex" style="align-items: flex-start; gap: 10px;">
       <span class="meta-icon">{{ icon('info') }}</span>

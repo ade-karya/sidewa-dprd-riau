@@ -6,7 +6,7 @@
 {% block page_subtitle %}Berdasarkan wajah, nama, jabatan, lokasi, atau kata kunci{% endblock %}
 
 {% block content %}
-<section class="search-hero">
+<section class="search-hero" data-tour="search-hero">
   <div class="search-tabs" role="tablist" aria-label="Metode pencarian">
     <a class="search-tab {{ 'active' if mode != 'face' }}" href="/cari">{{ icon('search') }} Teks &amp; nama</a>
     <a class="search-tab {{ 'active' if mode == 'face' }}" href="#wajah">{{ icon('scan') }} Wajah</a>
@@ -21,7 +21,7 @@
   </p>
 
   {% if mode != 'face' %}
-  <form method="get" action="/cari" style="margin-top: 18px; position: relative; z-index: 1;">
+  <form method="get" action="/cari" data-tour="search-text" style="margin-top: 18px; position: relative; z-index: 1;">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
         {{ icon('search') }}
@@ -68,7 +68,7 @@
 {% endif %}
 
 <div class="face-search-grid mt-3" id="wajah">
-  <div class="face-upload-card">
+  <div class="face-upload-card" data-tour="search-face">
     <div class="flex-between mb-1">
       <strong style="font-size: 12px;">{{ icon('camera') }} Foto pencarian wajah</strong>
       <span class="chip chip-purple">{{ icon('shield') }} Biometrik aman</span>
@@ -119,7 +119,7 @@
     </div>
   </div>
 
-  <div class="card card-pad">
+  <div class="card card-pad" data-tour="search-results">
     {% if face_result and face_result.matches %}
     <div class="flex-between mb-2">
       <div>

@@ -2,8 +2,8 @@
 
 Browser tidak pernah menerima API key. Halaman panduan membuka WebSocket ke
 ``/panduan/live``; router ini menjadi jembatan audio/tulisan dua arah ke Gemini
-Live. Pertanyaan teknis otomatis diarahkan ke model extended thinking, sedangkan
-pertanyaan presentasi biasa memakai model Live standar.
+Live. Pertanyaan teknis otomatis diarahkan ke Gemini 3.8 Live Extended Thinking,
+sedangkan pertanyaan presentasi biasa memakai Gemini 3.8 Live standar.
 
 Dua sesi Live dipelihara terpisah agar perpindahan model tidak memutus percakapan
 atau memaksa pengguna menunggu koneksi baru. Keduanya memakai pengetahuan aplikasi
@@ -305,10 +305,17 @@ APP_KNOWLEDGE = """
 - `/anggota` Direktori anggota; detail berisi jabatan, komisi, dapil, partai,
   kontak, bio, data wajah, dan Face ID login. Admin dapat menonaktifkan anggota
   atau menghapus data Face ID.
-- `/komisi` Daftar komisi dan anggotanya; admin dapat menyunting nama, bidang,
-  deskripsi, warna, dan urutan.
+- `/komisi` Daftar komisi dan anggotanya; detail komisi memuat anggota, dokumentasi,
+  staf, dan formulir penyuntingan bagi admin.
 - `/dashboard-anggota/{id}` Dasbor pribadi anggota: dokumentasi Humas, penampilan
   terverifikasi, tren enam bulan, kategori kegiatan, tugas & fungsi, sentimen.
+- `/dashboard-staf` dan `/dashboard-staf/{id}` Ruang kerja staf Humas: pintasan,
+  draf, rilis, statistik publikasi, tren unggahan, dan status Face ID.
+- `/staf-humas` Direktori staf Humas beserta jabatan, unggahan, dan status Face ID.
+- `/seleksi-foto` Kurasi foto berbantuan AI: unggah, penilaian kualitas, pemilihan
+  foto terbaik, lalu penerapan ke kegiatan.
+- `/drive` Penyimpanan berkas Humas di HF S3: unggah, cari, ubah nama, unduh, dan
+  kelola folder pribadi maupun tim.
 - `/sentimen` dan `/anggota/{id}/sentimen`: pemindaian serta riwayat pemberitaan.
 - `/pengguna` (admin) kelola akun, peran, komisi, status, reset kata sandi.
 - `/audit` log audit dan ekspor CSV; `/profil` profil, ganti sandi, token API.
@@ -377,6 +384,25 @@ APP_KNOWLEDGE = """
    - `/healthz` (liveness), `/readyz` (database + sinkronisasi), `/metrics`
      (opsional dilindungi `SIDEWA_METRICS_TOKEN`).
 
+### ASISTEN SIDEWA (PANDUAN VISUAL)
+- Tombol mengambang **Asisten SIDEWA** tersedia di seluruh halaman setelah pengguna
+  masuk, bukan hanya halaman Humas.
+- Setiap langkah menyorot satu elemen yang sedang dijelaskan: bilah atas, ikon
+  pencarian/unggah/peran/profil, isi halaman (hero, statistik, filter, kartu,
+  tabel, formulir, galeri, panel samping), lalu ringkasan sidebar dan seluruh
+  menu navigasinya. Sorotan tidak dibatasi pada sidebar.
+- Urutan panduan: sambutan → bilah atas dan ikon fitur → isi halaman yang sedang
+  dibuka → sidebar → peta menu → penutup. Halaman detail dan formulir memiliki
+  langkah khusus sesuai konteks.
+- Panel panduan dapat diperluas, menyediakan narasi suara, dan menampilkan tautan
+  untuk membuka halaman yang dijelaskan. Panduan dapat ditutup kapan saja dengan
+  Esc atau tombol tutup.
+- Di ponsel, sidebar bersifat off-canvas dan panel panduan tampil sebagai bottom
+  sheet yang dapat diperluas. Panduan menyesuaikan tinggi viewport, orientasi,
+  dan perubahan ukuran layar; target yang tersembunyi otomatis dilewati.
+- Jika elemen target tidak tersedia pada halaman tersebut, langkahnya dilewati
+  agar panduan tetap berjalan tanpa sorotan kosong.
+
 ### ARSITEKTUR TEKNIS
 - Backend: Python 3.12+, FastAPI, SQLAlchemy 2, Jinja2, Pillow, NumPy,
   dlib + face_recognition. Frontend: HTML, CSS, JavaScript vanilla tanpa build step.
@@ -392,9 +418,14 @@ APP_KNOWLEDGE = """
 - Pencarian wajah memakai encoding 128 dimensi dari face_recognition; jarak
   Euclidean dibandingkan dengan ambang toleransi. Detektor `hog` untuk CPU,
   `cnn` untuk GPU.
-- Asisten presentasi ini memakai Gemini Live API via WebSocket. Pertanyaan teknis
-  diarahkan ke model extended thinking; audio masukan 16 kHz PCM, audio keluaran
-  24 kHz PCM. API key hanya ada di server.
+- Asisten presentasi ini memakai Gemini Live API via WebSocket. Percakapan umum
+  memakai `gemini-3.8-live`; pertanyaan teknis diarahkan ke
+  `gemini-3.8-live-extended-thinking` (Gemini 3.8 Live Extended Thinking) dengan
+  `thinkingConfig.thinkingLevel` dari `SIDEWA_GEMINI_LIVE_THINKING_LEVEL`
+  (default `low`). Audio masukan 16 kHz PCM, audio keluaran 24 kHz PCM. API key
+  hanya ada di server.
+- Nama model dapat disesuaikan lewat `SIDEWA_GEMINI_LIVE_MODEL`,
+  `SIDEWA_GEMINI_LIVE_TECHNICAL_MODEL`, dan `SIDEWA_GEMINI_LIVE_THINKING_LEVEL`.
 - Model Gemini lain: `SIDEWA_GEMINI_MODEL` (default `gemini-3.5-flash-lite`) untuk
   analisis sentimen; Tavily untuk pencarian berita.
 
@@ -421,6 +452,11 @@ APP_KNOWLEDGE = """
 - Bahasa Indonesia sopan, tenang, jelas; hindari jargon yang tidak perlu.
 - Jawaban lisan biasanya 2-4 kalimat. Untuk permintaan "jelaskan halaman ini",
   susun narasi presentasi singkat: inti halaman, manfaat, lalu ajakan/langkah berikut.
+- Saat panduan visual aktif, kaitkan penjelasan dengan elemen yang sedang disorot
+  (bilah atas, ikon fitur, kartu isi halaman, atau menu sidebar) agar pengguna tahu
+  bagian mana yang dimaksud. Jangan menyebut elemen yang tidak disorot.
+- Di ponsel, ingatkan bahwa panel panduan dapat diperluas dan sidebar dibuka lewat
+  ikon menu.
 - Untuk pertanyaan teknis, ikuti panduan mode teknis di bawah: jawaban boleh lebih
   panjang, terstruktur, dan rinci, tetapi tetap jelaskan dampaknya bagi pengguna.
 - Jangan membahas topik di luar SIDEWA dan tugas DPRD; arahkan kembali dengan halus.
@@ -428,7 +464,7 @@ APP_KNOWLEDGE = """
 """.strip()
 
 TECHNICAL_SUFFIX = """
-### MODE TEKNIS (EXTENDED THINKING)
+### MODE TEKNIS (GEMINI 3.8 LIVE EXTENDED THINKING)
 Pengguna mengajukan pertanyaan teknis. Jawab dengan kedalaman yang memadai:
 - Jangan berhenti pada kalimat pembuka. Langsung berikan jawaban lengkap 4-7 kalimat.
 - Awali dengan ringkasan dampak bagi pengguna atau layanan.

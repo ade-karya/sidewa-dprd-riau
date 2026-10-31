@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="commission-hero" style="--commission-color: {{ commission.color }};">
+<section class="commission-hero" style="--commission-color: {{ commission.color }};" data-tour="commission-hero">
   <div class="flex-between" style="align-items: flex-start;">
     <div>
       <span class="chip chip-commission" style="--chip-color: {{ commission.color }};"><span class="chip-dot"></span>Komisi {{ commission.code }}</span>
@@ -35,7 +35,7 @@
   <a class="section-link" href="/anggota?commission={{ commission.code }}">Direktori anggota {{ icon('arrow-right') }}</a>
 </div>
 {% if members %}
-<div class="member-grid">
+<div class="member-grid" data-tour="commission-members">
   {% for member in members %}{{ member_card(member) }}{% endfor %}
 </div>
 {% else %}
@@ -50,7 +50,7 @@
   <a class="section-link" href="/kegiatan?commission={{ commission.code }}">Semua kegiatan {{ icon('arrow-right') }}</a>
 </div>
 {% if activities %}
-<div class="activity-grid">
+<div class="activity-grid" data-tour="commission-activities">
   {% for activity in activities %}{{ activity_card(activity) }}{% endfor %}
 </div>
 {% else %}
@@ -58,7 +58,7 @@
 {% endif %}
 
 <div class="detail-layout" style="margin-top: 30px;">
-  <div class="card card-pad">
+  <div class="card card-pad" data-tour="commission-staff">
     <h2 style="font-size: 16px;">{{ icon('users') }} Staf komisi</h2>
     <p class="muted-small mb-2">Pengguna dengan akses staf pada komisi ini.</p>
     {% if staff %}
@@ -87,7 +87,7 @@
   </div>
 
   {% if can_manage_users %}
-  <div class="card card-pad">
+  <div class="card card-pad" data-tour="commission-edit">
     <h2 style="font-size: 16px;">{{ icon('edit') }} Profil komisi</h2>
     <p class="muted-small mb-2">Perubahan berlaku pada seluruh halaman komisi.</p>
     <form method="post" action="/komisi/{{ commission.id }}/edit" data-loading>

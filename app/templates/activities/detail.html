@@ -20,7 +20,7 @@
 
 <div class="detail-layout">
   <div class="detail-main">
-    <section class="detail-hero">
+    <section class="detail-hero" data-tour="activity-hero">
       {% if activity.cover and activity.cover.file_path %}
       <img src="/media/{{ activity.cover.file_path }}" alt="{{ activity.title }}">
       {% endif %}
@@ -38,7 +38,7 @@
           <span>{{ icon('users') }} {{ activity.confirmed_member_count }} peserta</span>
           <span>{{ icon('eye') }} {{ activity.view_count }} dilihat</span>
         </div>
-        <div class="detail-actions">
+        <div class="detail-actions" data-tour="activity-actions">
           {% if can_manage_content %}
           <a class="btn btn-primary btn-sm" href="/kegiatan/{{ activity.id }}/edit">{{ icon('edit') }} Sunting</a>
           {% endif %}
@@ -79,7 +79,7 @@
     </div>
     {% endif %}
 
-    <section class="section-card">
+    <section class="section-card" data-tour="activity-description">
       <h2>{{ icon('file-text') }} Deskripsi kegiatan</h2>
       <div class="prose">
         {% for paragraph in activity.description.split('\n\n') if paragraph.strip() %}
@@ -90,7 +90,7 @@
       </div>
     </section>
 
-    <section class="section-card" id="galeri">
+    <section class="section-card" id="galeri" data-tour="activity-gallery">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('image') }} Galeri dokumentasi <span class="badge badge-gray">{{ photos|length }} foto</span></h2>
         <label class="switch">
@@ -141,7 +141,7 @@
             </div>
           </figcaption>
           {% if can_manage_content and detections_by_photo.get(photo.id) %}
-          <details style="padding: 0 11px 10px; background: #fff;">
+          <details style="padding: 0 11px 10px; background: #fff;" data-tour="activity-face-review">
             <summary class="link-btn" style="list-style: none; cursor: pointer; padding: 2px 0;">Tinjau {{ detections_by_photo[photo.id]|length }} deteksi wajah</summary>
             <div class="detection-list">
               {% for d in detections_by_photo[photo.id] %}
@@ -183,7 +183,7 @@
 
       {% if can_manage_content %}
       <hr class="divider">
-      <form method="post" action="/kegiatan/{{ activity.id }}/foto" enctype="multipart/form-data" data-loading>
+      <form method="post" action="/kegiatan/{{ activity.id }}/foto" enctype="multipart/form-data" data-loading data-tour="activity-upload">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="upload-zone">
           <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple
@@ -259,7 +259,7 @@
     {% endif %}
   </div>
 
-  <aside class="detail-side">
+  <aside class="detail-side" data-tour="activity-side">
     <div class="section-card">
       <h2>{{ icon('info') }} Informasi</h2>
       <div class="side-list">

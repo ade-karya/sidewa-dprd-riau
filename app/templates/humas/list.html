@@ -73,9 +73,4 @@
 {{ empty_state('book-open', 'Staf Humas tidak ditemukan', 'Ubah kata kunci pencarian atau tambahkan data staf Humas.') }}
 {% endif %}
 
-{% include "partials/humas_assistant.html" %}
-{% endblock %}
-
-{% block scripts %}
-<script src="/static/js/humas-assistant.js?v={{ app_version }}" defer></script>
 {% endblock %}

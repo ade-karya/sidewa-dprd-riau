@@ -11,32 +11,32 @@
   <link rel="stylesheet" href="/static/css/app.css?v={{ app_version }}">
   <link rel="manifest" href="/manifest.webmanifest">
 </head>
-<body class="app-body {% block body_class %}{% endblock %}" data-page="{{ active_nav }}">
+<body class="app-body {% block body_class %}{% endblock %}" data-page="{{ active_nav }}" data-path="{{ current_path }}">
   {% include "partials/icons.html" %}
   <a class="skip-link" href="#main-content">Lewati ke konten</a>
 
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
-      <a class="brand" href="/" aria-label="{{ app_name }} — Beranda">
+    <aside class="sidebar" id="sidebar" aria-label="Navigasi utama" data-tour="sidebar">
+      <a class="brand" href="/" aria-label="{{ app_name }} — Beranda" data-tour="sidebar-brand">
         <img src="/static/img/logo.svg" alt="" class="brand-mark">
         <span class="brand-name">{{ app_name }}</span>
       </a>
 
-      <nav class="side-nav">
+      <nav class="side-nav" data-tour="sidebar-nav">
         {% for item in nav_items %}
-        <a class="nav-item {{ 'active' if active_nav == item.key }}" href="{{ item.href }}" {% if active_nav == item.key %}aria-current="page"{% endif %}>
+        <a class="nav-item {{ 'active' if active_nav == item.key }}" href="{{ item.href }}" data-tour="nav-{{ item.key }}" {% if active_nav == item.key %}aria-current="page"{% endif %}>
           <span class="nav-icon">{{ icon(item.icon) }}</span>
           <span class="nav-label">{{ item.label }}</span>
         </a>
         {% endfor %}
       </nav>
 
-      <div class="side-bottom">
-        <a class="nav-item {{ 'active' if active_nav == 'profile' }}" href="/profil">
+      <div class="side-bottom" data-tour="sidebar-bottom">
+        <a class="nav-item {{ 'active' if active_nav == 'profile' }}" href="/profil" data-tour="nav-profile">
           <span class="nav-icon">{{ icon('user') }}</span>
           <span class="nav-label">Profil</span>
         </a>
-        <div class="side-user">
+        <div class="side-user" data-tour="sidebar-user">
           <a href="/profil" class="side-user-link" title="Buka profil">
             {{ avatar(user.full_name, user.avatar_path, 'sm') }}
             <span class="side-user-text">
@@ -55,22 +55,22 @@
     <div class="sidebar-overlay" data-sidebar-close></div>
 
     <div class="app-main">
-      <header class="topbar">
-        <button class="icon-btn menu-btn" type="button" data-sidebar-open aria-label="Buka menu">{{ icon('menu') }}</button>
-        <div class="topbar-heading">
+      <header class="topbar" data-tour="topbar">
+        <button class="icon-btn menu-btn" type="button" data-sidebar-open data-tour="topbar-menu" aria-label="Buka menu">{{ icon('menu') }}</button>
+        <div class="topbar-heading" data-tour="topbar-heading">
           <h1>{% block page_title %}Beranda{% endblock %}</h1>
           <p>{% block page_subtitle %}Dokumentasi kegiatan DPRD Provinsi Riau{% endblock %}</p>
         </div>
-        <div class="topbar-actions">
+        <div class="topbar-actions" data-tour="topbar-actions">
           {% block topbar_actions %}{% endblock %}
-          <a class="icon-btn topbar-search" href="/cari" title="Cari dokumentasi" aria-label="Cari dokumentasi">{{ icon('search') }}</a>
+          <a class="icon-btn topbar-search" href="/cari" data-tour="topbar-search" title="Cari dokumentasi" aria-label="Cari dokumentasi">{{ icon('search') }}</a>
           {% if can_manage_content and active_nav in ['dashboard', 'activities', 'search', 'members', 'commissions'] and current_path not in ['/kegiatan/baru', '/anggota/baru'] %}
-          <a class="btn btn-primary btn-sm topbar-upload" href="/kegiatan/baru" aria-label="Unggah kegiatan">{{ icon('plus') }}<span>Unggah</span></a>
+          <a class="btn btn-primary btn-sm topbar-upload" href="/kegiatan/baru" data-tour="topbar-upload" aria-label="Unggah kegiatan">{{ icon('plus') }}<span>Unggah</span></a>
           {% endif %}
-          <span class="role-chip" title="{{ role_labels.get(user.role, user.role) }}">
+          <span class="role-chip" data-tour="topbar-role" title="{{ role_labels.get(user.role, user.role) }}">
             {{ icon('shield') }}<span>{{ role_labels.get(user.role, user.role) }}</span>
           </span>
-          <a href="/profil" class="topbar-avatar" aria-label="Profil {{ user.full_name }}">
+          <a href="/profil" class="topbar-avatar" data-tour="topbar-avatar" aria-label="Profil {{ user.full_name }}">
             {{ avatar(user.full_name, user.avatar_path, 'sm') }}
           </a>
         </div>
@@ -93,7 +93,7 @@
 
         {% block content %}{% endblock %}
 
-        <footer class="app-footer">
+        <footer class="app-footer" data-tour="footer">
           <span>© {{ 2026 }} {{ organization }} · {{ app_name }} v{{ app_version }}</span>
           <span class="footer-dot">•</span>
           <span>Akses terbatas untuk pegawai berwenang</span>
@@ -104,7 +104,13 @@
 
   <div class="modal-root" id="modal-root" hidden></div>
   <div class="toast-root" id="toast-root" aria-live="polite"></div>
+  {% if user %}
+  {% include "partials/humas_assistant.html" %}
+  {% endif %}
   <script src="/static/js/app.js?v={{ app_version }}" defer></script>
+  {% if user %}
+  <script src="/static/js/humas-assistant.js?v={{ app_version }}" defer></script>
+  {% endif %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

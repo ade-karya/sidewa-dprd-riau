@@ -21,7 +21,7 @@
   <div class="global-error">{{ icon('alert') }}<span>{{ error }}</span></div>
   {% endif %}
 
-  <div class="card card-pad">
+  <div class="card card-pad" data-tour="activity-form-main">
     <div class="flex-between mb-2">
       <div>
         <div class="form-section-title">Informasi kegiatan</div>
@@ -97,7 +97,7 @@
     </div>
   </div>
 
-  <div class="card card-pad mt-3">
+  <div class="card card-pad mt-3" data-tour="activity-form-commission">
     <div class="form-section-title">Komisi terkait <span class="required" style="color: var(--red);">*</span></div>
     <p class="muted-small mb-2">Pilih satu atau lebih komisi yang terlibat dalam kegiatan ini.</p>
     <div class="role-option-grid cols-3">
@@ -116,7 +116,7 @@
   </div>
 
   {% if not mode == 'edit' %}
-  <div class="card card-pad mt-3">
+  <div class="card card-pad mt-3" data-tour="activity-form-photos">
     <div class="flex-between mb-2">
       <div>
         <div class="form-section-title">Foto dokumentasi</div>
@@ -138,7 +138,7 @@
     </div>
   </div>
   {% else %}
-  <div class="card card-pad mt-3">
+  <div class="card card-pad mt-3" data-tour="activity-form-photos">
     <div class="flex-between">
       <div>
         <div class="form-section-title">Foto dokumentasi</div>
@@ -149,7 +149,7 @@
   </div>
   {% endif %}
 
-  <div class="form-actions">
+  <div class="form-actions" data-tour="activity-form-actions">
     <a class="btn btn-ghost" href="{{ '/kegiatan/' ~ activity.id if mode == 'edit' else '/kegiatan' }}">Batal</a>
     <button class="btn btn-primary" type="submit">
       {{ icon('check') }} {{ 'Simpan perubahan' if mode == 'edit' else 'Simpan sebagai draf' }}

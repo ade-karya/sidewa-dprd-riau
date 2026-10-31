@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="card filter-card release-filter">
+<div class="card filter-card release-filter" data-tour="releases-filter">
   <form class="filter-form" method="get" action="/rilis">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -58,7 +58,7 @@
   </form>
 </div>
 
-<div class="release-stats">
+<div class="release-stats" data-tour="releases-stats">
   <div class="publication-stat"><b>{{ counts.get('published', 0) }}</b><span>Rilis terbit</span></div>
   {% if can_manage_content %}
   <div class="publication-stat"><b>{{ counts.get('draft', 0) }}</b><span>Draf rilis</span></div>
@@ -81,7 +81,7 @@
 </div>
 
 {% if result.items %}
-<div class="release-grid">
+<div class="release-grid" data-tour="releases-grid">
   {% for release in result.items %}
   <article class="release-card">
     <div class="release-top">

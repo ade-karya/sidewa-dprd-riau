@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="member-dash-hero">
+<section class="member-dash-hero" data-tour="member-dash-hero">
   <div class="member-dash-photo">
     {% if member.portrait_path %}
     <img src="/media/{{ member.portrait_path|media_full }}" alt="{{ member.full_name }}">
@@ -62,7 +62,7 @@
 
 <div class="member-dash-grid">
   <div class="member-dash-main">
-    <section class="section-card" id="sentimen">
+    <section class="section-card" id="sentimen" data-tour="member-dash-sentiment">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('chart') }} Sentimen pemberitaan media online</h2>
         <a class="section-link" href="/anggota/{{ member.id }}/sentimen">Semua pemberitaan {{ icon('arrow-right') }}</a>
@@ -185,7 +185,7 @@
       {% endif %}
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="member-dash-publication">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('sparkles') }} Publikasi &amp; dokumentasi Humas</h2>
         <a class="section-link" href="/kegiatan?q={{ member.full_name|urlencode }}">Semua dokumentasi {{ icon('arrow-right') }}</a>
@@ -237,7 +237,7 @@
       {% endif %}
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="member-dash-trend">
       <div class="chart-head">
         <h2 style="margin-bottom: 0;">{{ icon('calendar') }} Tren dokumentasi 6 bulan</h2>
         <span class="muted-small">{{ data.today|date_id }}</span>
@@ -262,7 +262,7 @@
       {% endif %}
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="member-dash-recent">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('calendar') }} Dokumentasi terbaru</h2>
         <a class="section-link" href="/kegiatan?q={{ member.full_name|urlencode }}">Lihat semua {{ icon('arrow-right') }}</a>
@@ -278,7 +278,7 @@
   </div>
 
   <aside class="member-dash-side">
-    <section class="section-card face-id-card">
+    <section class="section-card face-id-card" data-tour="member-dash-faceid">
       <div class="flex-between mb-1">
         <h2 style="margin-bottom: 0;">{{ icon('fingerprint') }} Face ID login</h2>
         {% if data.face_login %}
@@ -320,7 +320,7 @@
       </div>
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="member-dash-duties">
       <h2>{{ icon('layers') }} Tugas &amp; fungsi dewan</h2>
       <div class="duty-list">
         {% for duty in data.tugas_dewan %}

@@ -23,7 +23,7 @@
 
 <div class="detail-layout">
   <div class="detail-main">
-    <article class="section-card release-detail">
+    <article class="section-card release-detail" data-tour="release-content">
       <div class="chip-row mb-2">
         {{ status_badge(release.status) }}
         <span class="chip chip-gray">{{ icon('file-text') }} {{ release.code }}</span>
@@ -54,7 +54,7 @@
       </div>
       {% endif %}
 
-      <div class="release-actions">
+      <div class="release-actions" data-tour="release-actions">
         <button class="btn btn-outline btn-sm" type="button" data-print>{{ icon('printer') }} Cetak</button>
         <button class="btn btn-outline btn-sm" type="button" data-copy="{{ request.url }}">{{ icon('link') }} Salin tautan</button>
         {% if can_manage_content and release.status == 'draft' %}
@@ -85,7 +85,7 @@
     </article>
   </div>
 
-  <aside class="detail-side">
+  <aside class="detail-side" data-tour="release-side">
     <section class="section-card">
       <h2>{{ icon('file-text') }} Informasi rilis</h2>
       <div class="side-list">
@@ -129,7 +129,7 @@
     {% endif %}
 
     {% if related %}
-    <section class="section-card">
+    <section class="section-card" data-tour="release-related">
       <h2>{{ icon('send') }} Rilis lainnya</h2>
       <div class="humas-list">
         {% for item in related %}

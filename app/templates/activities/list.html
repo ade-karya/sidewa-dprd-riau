@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="card filter-card">
+<div class="card filter-card" data-tour="activities-filter">
   <form class="filter-form" method="get" action="/kegiatan">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -73,7 +73,7 @@
   </form>
 </div>
 
-<div class="filter-meta">
+<div class="filter-meta" data-tour="activities-meta">
   <span class="result-count">
     {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> kegiatan{% else %}Tidak ada kegiatan{% endif %}
   </span>
@@ -87,7 +87,7 @@
 </div>
 
 {% if result.items %}
-<div class="activity-grid">
+<div class="activity-grid" data-tour="activities-grid">
   {% for activity in result.items %}
   {{ activity_card(activity) }}
   {% endfor %}

@@ -19,7 +19,7 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
 - Dashboard statistik, log audit, ekspor CSV, health/metrics, API v1 + token Bearer.
 - Antarmuka bergaya fotoyu.com: sidebar ramping, aksen lavender, pill button, kartu rounded, tipografi Roboto/Quicksand.
-- **Panduan visual**: tombol **Kenali SIDEWA** di halaman login untuk presentasi aplikasi, serta **Asisten SIDEWA** di halaman Humas yang menjelaskan setiap menu sambil menyorot elemen terkait.
+- **Panduan visual**: tombol **Kenali SIDEWA** di halaman login untuk presentasi aplikasi, serta **Asisten SIDEWA** yang tersedia di seluruh halaman setelah masuk. Asisten menyorot bilah atas, ikon fitur, isi halaman, dan sidebar sambil menjelaskan setiap bagian; di ponsel panel panduan tampil sebagai bottom sheet.
 
 ## Tumpukan teknologi
 
@@ -219,6 +219,14 @@ Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Var
 - `SIDEWA_GEMINI_API_KEY` — API key Gemini untuk menilai relevansi dan sentimen.
 - `SIDEWA_GEMINI_MODEL` (default `gemini-3.5-flash-lite`), `SIDEWA_GEMINI_TIMEOUT`,
   `SIDEWA_GEMINI_MAX_OUTPUT_TOKENS` — model dan batas pemanggilan Gemini.
+- `SIDEWA_GEMINI_LIVE_ENABLED` — aktifkan Asisten SIDEWA berbasis Gemini Live.
+- `SIDEWA_GEMINI_LIVE_MODEL` (default `gemini-3.8-live`) — model Live untuk
+  percakapan panduan umum.
+- `SIDEWA_GEMINI_LIVE_TECHNICAL_MODEL` (default
+  `gemini-3.8-live-extended-thinking`) — model Gemini 3.8 Live Extended Thinking
+  untuk pertanyaan teknis.
+- `SIDEWA_GEMINI_LIVE_THINKING_LEVEL` (default `low`) — tingkat penalaran model
+  extended thinking; `SIDEWA_GEMINI_LIVE_VOICE` (default `Aoede`) — suara narasi.
 - `SIDEWA_GEMINI_REFINE_QUERY` — minta Gemini menyusun kueri Tavily yang lebih tepat.
 - `SIDEWA_GEMINI_FILTER_IRRELEVANT` — buang artikel yang tidak membahas anggota.
 - `SIDEWA_GEMINI_FILTER_IRRELEVANT` — buang artikel yang tidak membahas anggota.

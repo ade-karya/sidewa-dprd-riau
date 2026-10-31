@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="card filter-card">
+<div class="card filter-card" data-tour="members-filter">
   <form class="filter-form" method="get" action="/anggota">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -37,7 +37,7 @@
   </form>
 </div>
 
-<div class="filter-meta">
+<div class="filter-meta" data-tour="members-meta">
   <span class="result-count">
     {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> anggota{% else %}Tidak ada anggota{% endif %}
   </span>
@@ -45,7 +45,7 @@
 </div>
 
 {% if result.items %}
-<div class="member-grid">
+<div class="member-grid" data-tour="members-grid">
   {% for member in result.items %}{{ member_card(member) }}{% endfor %}
 </div>
 {{ pagination(result, request) }}

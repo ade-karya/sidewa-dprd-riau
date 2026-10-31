@@ -16,7 +16,7 @@
 </div>
 {% endif %}
 
-<div class="card filter-card">
+<div class="card filter-card" data-tour="sentiment-filter">
   <form class="filter-form" method="get" action="/sentimen">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -38,7 +38,7 @@
   </form>
 </div>
 
-<div class="filter-meta">
+<div class="filter-meta" data-tour="sentiment-meta">
   <span class="result-count">
     {% if result.total %}<b>{{ result.start }}–{{ result.end }}</b> dari <b>{{ result.total }}</b> anggota{% else %}Tidak ada anggota{% endif %}
   </span>
@@ -49,7 +49,7 @@
 </div>
 
 {% if result.items %}
-<div class="table-card">
+<div class="table-card" data-tour="sentiment-table">
   <div class="table-wrap">
     <table class="data sentiment-table">
       <thead>

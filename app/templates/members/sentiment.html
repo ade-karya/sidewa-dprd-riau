@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="section-card mb-2">
+<div class="section-card mb-2" data-tour="member-sentiment-summary">
   <div class="flex-between mb-2">
     <div>
       <h2 style="margin-bottom: 4px;">{{ icon('chart') }} Ringkasan sentimen</h2>
@@ -85,7 +85,7 @@
   {% endif %}
 
   {% if can_search_sentiment %}
-  <form class="mt-2" method="post" action="/anggota/{{ member.id }}/sentimen/cari" data-loading>
+  <form class="mt-2" method="post" action="/anggota/{{ member.id }}/sentimen/cari" data-loading data-tour="member-sentiment-actions">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button class="btn btn-primary btn-sm" type="submit" {{ 'disabled' if not tavily_configured else '' }}>
       {{ icon('search') }} {{ 'Pindai ulang pemberitaan' if summary.has_data else 'Pindai pemberitaan' }}
@@ -97,7 +97,7 @@
   {% endif %}
 </div>
 
-<div class="card filter-card mb-2">
+<div class="card filter-card mb-2" data-tour="member-sentiment-filter">
   <form class="filter-form" method="get" action="/anggota/{{ member.id }}/sentimen">
     <div class="filter-row">
       <div class="input-icon-wrap filter-search">
@@ -128,7 +128,7 @@
 </div>
 
 {% if result.items %}
-<div class="section-card">
+<div class="section-card" data-tour="member-sentiment-list">
   <div class="mention-list">
     {% for mention in result.items %}
     <div class="mention-item">

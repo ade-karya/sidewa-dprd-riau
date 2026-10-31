@@ -16,7 +16,7 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
   <div class="profile-grid">
-    <div class="card card-pad">
+    <div class="card card-pad" data-tour="user-form-identity">
       <div class="form-section-title">Identitas akun</div>
       <p class="muted-small mb-2">Gunakan nama asli agar jejak audit mudah ditelusuri.</p>
       <div class="form-grid">
@@ -49,6 +49,7 @@
         {% endif %}
       </div>
 
+      <div data-tour="user-form-role">
       <hr class="divider">
       <div class="form-section-title">Peran &amp; akses</div>
       <p class="muted-small mb-2">Peran menentukan halaman dan tindakan yang dapat dilakukan pengguna.</p>
@@ -74,10 +75,11 @@
         </select>
         <span class="form-hint">Wajib dipilih untuk peran Staf Komisi.</span>
       </div>
+      </div>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 16px;">
-      <div class="card card-pad">
+      <div class="card card-pad" data-tour="user-form-policy">
         <div class="flex" style="align-items: flex-start; gap: 10px;">
           <span class="meta-icon">{{ icon('shield') }}</span>
           <div>

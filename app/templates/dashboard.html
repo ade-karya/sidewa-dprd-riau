@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="dashboard-hero">
+<section class="dashboard-hero" data-tour="dash-hero">
   <div class="hero-copy">
     <span class="hero-eyebrow">{{ icon('sparkles') }} Dokumentasi resmi dewan</span>
     <h2>Selamat datang, {{ user.full_name.split()[0] if user.full_name else user.username }}.</h2>
@@ -45,7 +45,7 @@
 </div>
 {% endif %}
 
-<div class="stat-grid">
+<div class="stat-grid" data-tour="dash-stats">
   <div class="stat-card">
     <div class="stat-top">
       <div class="stat-icon">{{ icon('calendar') }}</div>
@@ -89,7 +89,7 @@
   </div>
   <a class="section-link" href="/komisi">Semua komisi {{ icon('arrow-right') }}</a>
 </div>
-<div class="commission-strip">
+<div class="commission-strip" data-tour="dash-commissions">
   {% for item in stats.commission_stats %}
   <a class="commission-mini" href="/komisi/{{ item.commission.id }}" style="--commission-color: {{ item.commission.color }};">
     <span class="cm-code">Komisi {{ item.commission.code }}</span>
@@ -103,7 +103,7 @@
 </div>
 
 <div class="dashboard-split">
-  <div class="card chart-card">
+  <div class="card chart-card" data-tour="dash-trend">
     <div class="chart-head">
       <h3>Tren dokumentasi 6 bulan</h3>
       <span>{{ stats.today|date_id }}</span>
@@ -128,7 +128,7 @@
     </div>
   </div>
 
-  <div class="card chart-card">
+  <div class="card chart-card" data-tour="dash-top-members">
     <div class="chart-head">
       <h3>Anggota paling terdokumentasi</h3>
       <span>Berdasarkan jumlah kegiatan</span>
@@ -161,7 +161,7 @@
   <a class="section-link" href="/kegiatan">Semua kegiatan {{ icon('arrow-right') }}</a>
 </div>
 {% if stats.recent_activities %}
-<div class="activity-grid">
+<div class="activity-grid" data-tour="dash-recent">
   {% for activity in stats.recent_activities %}
   {{ activity_card(activity) }}
   {% endfor %}
@@ -171,7 +171,7 @@
 {% endif %}
 
 <div class="dashboard-split">
-  <div class="card chart-card">
+  <div class="card chart-card" data-tour="dash-categories">
     <div class="chart-head">
       <h3>Kategori kegiatan</h3>
       <span>Distribusi dokumentasi</span>
@@ -201,7 +201,7 @@
     {% endif %}
   </div>
 
-  <div class="card chart-card">
+  <div class="card chart-card" data-tour="dash-audit">
     <div class="chart-head">
       <h3>Aktivitas sistem</h3>
       <span>Jejak audit terbaru</span>

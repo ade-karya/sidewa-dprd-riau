@@ -64,7 +64,7 @@
         <h2 style="margin-bottom: 0;">{{ icon('presentation') }} Ruang kerja saya</h2>
         <span class="badge badge-purple">{{ data.today|date_id }}</span>
       </div>
-      <div class="workspace-flow">
+      <div class="workspace-flow" data-tour="humas-flow">
         <span class="workspace-flow-label">Alur kerja</span>
         <a class="workspace-flow-step" href="/seleksi-foto">{{ icon('sparkles') }} Seleksi foto</a>
         <span class="workspace-flow-arrow">{{ icon('arrow-right') }}</span>
@@ -178,7 +178,7 @@
       </div>
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="humas-activity">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('upload') }} Unggahan dokumentasi saya</h2>
         <a class="section-link" href="/kegiatan">Lihat semua {{ icon('arrow-right') }}</a>
@@ -257,7 +257,7 @@
       {% endif %}
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="humas-team">
       <div class="flex-between mb-2">
         <h2 style="margin-bottom: 0;">{{ icon('users') }} Aktivitas terbaru tim Humas</h2>
         <a class="section-link" href="/kegiatan">Semua kegiatan {{ icon('arrow-right') }}</a>
@@ -325,7 +325,7 @@
       </div>
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="humas-photo">
       <h2>{{ icon('image') }} Foto profil</h2>
       {% if staff.portrait_path %}
       <img class="staff-portrait-preview" src="/media/{{ staff.portrait_path|media_full }}" alt="{{ staff.full_name }}">
@@ -360,7 +360,7 @@
       </div>
     </section>
 
-    <section class="section-card">
+    <section class="section-card" data-tour="humas-team-summary">
       <h2>{{ icon('building') }} Ringkasan tim</h2>
       <div class="side-list">
         <div class="side-item">
@@ -385,9 +385,4 @@
   </aside>
 </div>
 
-{% include "partials/humas_assistant.html" %}
-{% endblock %}
-
-{% block scripts %}
-<script src="/static/js/humas-assistant.js?v={{ app_version }}" defer></script>
 {% endblock %}

@@ -56,6 +56,26 @@
         "Daftarkan Face ID dari halaman login agar bisa masuk tanpa kata sandi.",
       ],
     },
+    "/dashboard-anggota": {
+      title: "Dashboard Anggota",
+      body:
+        "Ruang pribadi anggota dewan: dokumentasi Humas, penampilan terverifikasi, tren kegiatan, sentimen media, dan tugas dewan.",
+      tips: [
+        "Mulai dari kartu identitas untuk memeriksa status Face ID.",
+        "Gulir ke bagian sentimen untuk membaca pemberitaan terkait.",
+        "Gunakan tombol Cetak bila ringkasan perlu dibagikan.",
+      ],
+    },
+    "/drive": {
+      title: "Drive Humas",
+      body:
+        "Penyimpanan berkas pribadi dan tim Humas di HF S3. Unggah, cari, ubah nama, unduh, dan kelola folder tanpa membebani server aplikasi.",
+      tips: [
+        "Periksa bilah kuota sebelum mengunggah berkas besar.",
+        "Gunakan tab Drive tim untuk berkas bersama.",
+        "Klik nama folder untuk masuk dan remah folder untuk kembali.",
+      ],
+    },
     "/staf-humas": {
       title: "Staf Humas",
       body:
@@ -169,6 +189,97 @@
   };
 
   const PAGE_STEPS = {
+    dashboard: [
+      {
+        selector: '[data-tour="dash-hero"]',
+        kicker: "Halaman ini · Ringkasan",
+        title: "Pusat ringkasan SIDEWA",
+        body:
+          "Hero ini menjelaskan peran aplikasi dan menyediakan aksi tercepat: cari dokumentasi, unggah kegiatan, atau jelajahi arsip.",
+        tips: [
+          "Gunakan Cari dokumentasi untuk membuka pencarian wajah dan teks.",
+          "Tombol Unggah kegiatan hanya tampil bagi pengelola konten.",
+          "Panel kanan menampilkan status mesin pengenalan wajah.",
+        ],
+      },
+      {
+        selector: '[data-tour="dash-stats"]',
+        kicker: "Halaman ini · Angka kunci",
+        title: "Empat kartu statistik",
+        body:
+          "Setiap kartu memakai ikon fitur: kalender untuk dokumentasi, centang untuk foto terbit, pengguna untuk penampilan anggota, dan basis data untuk penyimpanan.",
+        tips: [
+          "Bandingkan jumlah dokumentasi dengan foto untuk menilai kelengkapan arsip.",
+          "Kartu penyimpanan membantu memantau kapasitas media.",
+        ],
+      },
+      {
+        selector: '[data-tour="dash-commissions"]',
+        kicker: "Halaman ini · Ikon komisi",
+        title: "Jelajahi dokumentasi per komisi",
+        body:
+          "Deretan kartu komisi memakai warna dan ikon masing-masing. Klik satu kartu untuk membuka komisi beserta dokumentasinya.",
+        tips: [
+          "Gunakan kartu komisi untuk mempersempit pencarian sesuai bidang.",
+          "Warna kartu konsisten di seluruh halaman komisi.",
+        ],
+      },
+      {
+        selector: '[data-tour="dash-trend"]',
+        kicker: "Halaman ini · Tren",
+        title: "Tren dokumentasi enam bulan",
+        body:
+          "Grafik batang memperlihatkan ritme publikasi. Kategori terbanyak muncul di bawah grafik sebagai bahan evaluasi.",
+        tips: [
+          "Gunakan tren untuk merencanakan unggahan bulan berikutnya.",
+          "Klik Lihat semua untuk membuka daftar kegiatan.",
+        ],
+      },
+      {
+        selector: '[data-tour="dash-top-members"]',
+        kicker: "Halaman ini · Partisipasi",
+        title: "Anggota paling terdokumentasi",
+        body:
+          "Peringkat ini dihitung dari jumlah kegiatan yang menampilkan anggota. Klik nama untuk membuka profil atau dashboard anggota.",
+        tips: [
+          "Gunakan daftar ini untuk melihat keterlibatan anggota.",
+          "Buka dashboard anggota untuk sentimen pemberitaan terkait.",
+        ],
+      },
+      {
+        selector: '[data-tour="dash-recent"]',
+        kicker: "Halaman ini · Dokumentasi",
+        title: "Dokumentasi terbaru",
+        body:
+          "Kartu kegiatan menampilkan foto sampul, judul, tanggal, komisi, dan jumlah foto. Klik kartu untuk membuka detail.",
+        tips: [
+          "Perhatikan komisi dan tanggal sebelum membuka detail.",
+          "Gunakan kartu untuk menelusuri dokumentasi terbaru.",
+        ],
+      },
+      {
+        selector: '[data-tour="dash-categories"]',
+        kicker: "Halaman ini · Kategori",
+        title: "Distribusi kategori kegiatan",
+        body:
+          "Panel ini merangkum kategori yang paling sering didokumentasikan beserta persentasenya.",
+        tips: [
+          "Gunakan filter kategori di halaman kegiatan untuk menindaklanjuti.",
+          "Kategori dominan membantu menyusun rencana liputan.",
+        ],
+      },
+      {
+        selector: '[data-tour="dash-audit"]',
+        kicker: "Halaman ini · Aktivitas",
+        title: "Jejak aktivitas sistem",
+        body:
+          "Umpan audit menampilkan peristiwa terakhir yang tercatat, lengkap dengan aktor dan waktu.",
+        tips: [
+          "Buka log audit untuk menelusuri kronologi lengkap.",
+          "Perhatikan aktivitas sensitif seperti perubahan pengguna.",
+        ],
+      },
+    ],
     staff_dashboard: [
       {
         selector: '[data-tour="humas-hero"]',
@@ -182,11 +293,22 @@
         ],
       },
       {
+        selector: '[data-tour="humas-flow"]',
+        kicker: "Halaman ini · Alur kerja",
+        title: "Alur kerja harian",
+        body:
+          "Pita alur menghubungkan seleksi foto, penulisan rilis, dan pengelolaan kegiatan dalam tiga langkah cepat.",
+        tips: [
+          "Ikuti alur dari kiri ke kanan sesuai tugas hari ini.",
+          "Klik salah satu langkah untuk langsung membuka halamannya.",
+        ],
+      },
+      {
         selector: '[data-tour="humas-shortcuts"]',
         kicker: "Halaman ini · Pintasan",
         title: "Pintasan ruang kerja",
         body:
-          "Setiap ubin membuka tugas yang paling sering dipakai tim Humas, dari unggah dokumentasi sampai seleksi foto.",
+          "Setiap ubin memakai ikon fitur dan membuka tugas yang paling sering dipakai tim Humas, dari unggah dokumentasi sampai seleksi foto.",
         tips: [
           "Mulai dari pintasan yang sesuai tugas hari ini.",
           "Arahkan kursor untuk membaca ringkasan tiap pintasan.",
@@ -238,6 +360,17 @@
         ],
       },
       {
+        selector: '[data-tour="humas-activity"]',
+        kicker: "Halaman ini · Unggahan",
+        title: "Dokumentasi pribadi",
+        body:
+          "Daftar ini memperlihatkan kegiatan yang Anda unggah atau kelola, lengkap dengan status dan jumlah foto.",
+        tips: [
+          "Klik kegiatan untuk memeriksa metadata dan galeri.",
+          "Gunakan Lihat semua untuk membuka arsip lengkap.",
+        ],
+      },
+      {
         selector: '[data-tour="humas-trend"]',
         kicker: "Halaman ini · Tren",
         title: "Tren unggahan enam bulan",
@@ -246,6 +379,17 @@
         tips: [
           "Gunakan tren untuk merencanakan dokumentasi bulan berikutnya.",
           "Klik Kelola kegiatan untuk menindaklanjuti data.",
+        ],
+      },
+      {
+        selector: '[data-tour="humas-team"]',
+        kicker: "Halaman ini · Tim",
+        title: "Aktivitas terbaru tim Humas",
+        body:
+          "Kartu kegiatan tim membantu Anda melihat publikasi terbaru dan menjaga konsistensi dokumentasi.",
+        tips: [
+          "Buka kartu untuk melihat detail kegiatan tim.",
+          "Gunakan halaman ini sebagai referensi gaya dokumentasi.",
         ],
       },
       {
@@ -260,6 +404,17 @@
         ],
       },
       {
+        selector: '[data-tour="humas-photo"]',
+        kicker: "Halaman ini · Foto profil",
+        title: "Foto profil staf",
+        body:
+          "Foto resmi tampil di direktori dan kartu staf. Administrator dapat menggantinya dari panel ini.",
+        tips: [
+          "Gunakan foto frontal dengan pencahayaan yang baik.",
+          "Foto baru langsung tampil di seluruh direktori.",
+        ],
+      },
+      {
         selector: '[data-tour="humas-duties"]',
         kicker: "Halaman ini · Tugas",
         title: "Tugas dan fungsi Humas",
@@ -268,6 +423,17 @@
         tips: [
           "Gunakan daftar ini sebagai acuan pembagian kerja.",
           "Sesuaikan prioritas dengan arahan pimpinan.",
+        ],
+      },
+      {
+        selector: '[data-tour="humas-team-summary"]',
+        kicker: "Halaman ini · Ringkasan tim",
+        title: "Ringkasan tim Humas",
+        body:
+          "Panel ini merangkum jumlah staf aktif, cakupan Face ID, kegiatan tim, dan publikasi terbit.",
+        tips: [
+          "Gunakan angka ini untuk menilai kapasitas tim.",
+          "Buka direktori staf untuk melihat detail tiap anggota tim.",
         ],
       },
     ],
@@ -376,7 +542,966 @@
         ],
       },
     ],
+    activities: [
+      {
+        selector: '[data-tour="activities-filter"]',
+        kicker: "Halaman ini · Filter",
+        title: "Filter dokumentasi",
+        body:
+          "Gabungkan kata kunci, komisi, kategori, lokasi, tanggal, dan status untuk menemukan kegiatan yang tepat.",
+        tips: [
+          "Buka Filter lanjutan untuk lokasi, tanggal, dan status.",
+          "Gunakan Reset untuk menghapus semua filter.",
+        ],
+      },
+      {
+        selector: '[data-tour="activities-meta"]',
+        kicker: "Halaman ini · Hasil",
+        title: "Ringkasan hasil dan ekspor",
+        body:
+          "Bagian ini menunjukkan jumlah hasil, filter aktif, dan tombol Ekspor CSV sesuai filter yang dipakai.",
+        tips: [
+          "Periksa filter aktif sebelum mengekspor.",
+          "Gunakan ekspor untuk laporan kegiatan ke pimpinan.",
+        ],
+      },
+      {
+        selector: '[data-tour="activities-grid"]',
+        kicker: "Halaman ini · Kartu kegiatan",
+        title: "Daftar kegiatan",
+        body:
+          "Setiap kartu memuat sampul, judul, tanggal, lokasi, komisi, dan status. Klik untuk membuka detail kegiatan.",
+        tips: [
+          "Perhatikan status draf atau terbit sebelum bertindak.",
+          "Gunakan tombol Unggah di bilah atas untuk menambah kegiatan.",
+        ],
+      },
+    ],
+    search: [
+      {
+        selector: '[data-tour="search-hero"]',
+        kicker: "Halaman ini · Pencarian",
+        title: "Dua cara menemukan dokumentasi",
+        body:
+          "Tab di bagian atas memisahkan pencarian teks dan pencarian wajah. Pilih metode sesuai informasi yang Anda miliki.",
+        tips: [
+          "Gunakan Teks & nama bila tahu nama, jabatan, atau lokasi.",
+          "Gunakan Wajah bila hanya memiliki foto.",
+        ],
+      },
+      {
+        selector: '[data-tour="search-text"]',
+        kicker: "Halaman ini · Teks",
+        title: "Pencarian teks dan filter",
+        body:
+          "Kata kunci, komisi, kategori, lokasi, dan rentang tanggal dapat digabungkan untuk hasil yang presisi.",
+        tips: [
+          "Buka Filter lanjutan untuk kriteria tambahan.",
+          "Kosongkan filter untuk melihat hasil yang lebih luas.",
+        ],
+      },
+      {
+        selector: '[data-tour="search-face"]',
+        kicker: "Halaman ini · Wajah",
+        title: "Unggah foto wajah",
+        body:
+          "Unggah foto frontal, pilih tingkat kemiripan, lalu jalankan pencarian. Hasil menampilkan skor kecocokan yang tetap perlu diverifikasi.",
+        tips: [
+          "Gunakan foto dengan wajah jelas dan tidak terpotong.",
+          "Tingkat seimbang disarankan untuk hasil terbaik.",
+          "Periksa hasil sebelum memakainya sebagai bukti.",
+        ],
+      },
+      {
+        selector: '[data-tour="search-results"]',
+        kicker: "Halaman ini · Hasil",
+        title: "Hasil pencarian",
+        body:
+          "Kartu hasil menampilkan kegiatan, komisi, tanggal, dan kecocokan wajah. Gunakan hasil sebagai petunjuk awal.",
+        tips: [
+          "Buka detail kegiatan untuk melihat konteks lengkap.",
+          "Verifikasi hasil wajah secara manusiawi.",
+        ],
+      },
+    ],
+    members: [
+      {
+        selector: '[data-tour="members-filter"]',
+        kicker: "Halaman ini · Filter",
+        title: "Cari anggota dewan",
+        body:
+          "Gunakan nama, komisi, dan status untuk mempersempit direktori anggota.",
+        tips: [
+          "Kosongkan kata kunci untuk menampilkan semua anggota.",
+          "Gunakan Reset bila hasil terlalu sempit.",
+        ],
+      },
+      {
+        selector: '[data-tour="members-meta"]',
+        kicker: "Halaman ini · Hasil",
+        title: "Ringkasan direktori",
+        body:
+          "Menampilkan jumlah anggota yang cocok dan pengingat bahwa wajah terdaftar memungkinkan pencarian otomatis.",
+        tips: [
+          "Periksa jumlah hasil sebelum membuka profil.",
+          "Gunakan status untuk memisahkan anggota aktif.",
+        ],
+      },
+      {
+        selector: '[data-tour="members-grid"]',
+        kicker: "Halaman ini · Kartu anggota",
+        title: "Direktori anggota",
+        body:
+          "Setiap kartu memuat foto, jabatan, komisi, daerah pemilihan, dan status Face ID.",
+        tips: [
+          "Klik kartu untuk membuka profil lengkap.",
+          "Administrator dapat menambah anggota dari bilah atas.",
+        ],
+      },
+    ],
+    commissions: [
+      {
+        selector: '[data-tour="commissions-intro"]',
+        kicker: "Halaman ini · Pengantar",
+        title: "Komisi dan bidang kerja",
+        body:
+          "Ringkasan ini menjelaskan bahwa setiap komisi membidangi ruang lingkup tertentu dan menjadi acuan pengelompokan dokumentasi.",
+        tips: [
+          "Gunakan jumlah komisi aktif sebagai indikator cakupan.",
+          "Pilih komisi untuk melihat anggota dan kegiatannya.",
+        ],
+      },
+      {
+        selector: '[data-tour="commissions-list"]',
+        kicker: "Halaman ini · Daftar",
+        title: "Daftar komisi",
+        body:
+          "Setiap baris menampilkan lambang, nama, bidang, jumlah anggota, dan dokumentasi terkait.",
+        tips: [
+          "Klik baris komisi untuk membuka detail.",
+          "Perhatikan warna aksen yang konsisten di seluruh aplikasi.",
+        ],
+      },
+    ],
+    releases: [
+      {
+        selector: '[data-tour="releases-filter"]',
+        kicker: "Halaman ini · Filter",
+        title: "Cari siaran pers",
+        body:
+          "Filter rilis berdasarkan kata kunci, status, rilis milik Anda, dan rentang tanggal.",
+        tips: [
+          "Centang Rilis saya untuk fokus pada karya sendiri.",
+          "Gunakan Reset untuk kembali ke semua rilis.",
+        ],
+      },
+      {
+        selector: '[data-tour="releases-stats"]',
+        kicker: "Halaman ini · Angka kunci",
+        title: "Statistik rilis",
+        body:
+          "Ringkasan jumlah rilis terbit, draf, arsip, dan hasil filter saat ini.",
+        tips: [
+          "Bandingkan draf dan terbit untuk mengukur ketuntasan.",
+          "Gunakan angka hasil filter untuk memastikan pencarian tepat.",
+        ],
+      },
+      {
+        selector: '[data-tour="releases-grid"]',
+        kicker: "Halaman ini · Kartu rilis",
+        title: "Daftar rilis",
+        body:
+          "Setiap kartu memuat kode, judul, ringkasan, tag, status, dan tautan baca. Pengelola konten dapat langsung menyunting.",
+        tips: [
+          "Buka rilis untuk membaca naskah lengkap.",
+          "Gunakan Tulis rilis di bilah atas untuk membuat rilis baru.",
+        ],
+      },
+    ],
+    sentiment: [
+      {
+        selector: '[data-tour="sentiment-filter"]',
+        kicker: "Halaman ini · Filter",
+        title: "Cari anggota dan komisi",
+        body:
+          "Cari nama anggota atau pilih komisi untuk menampilkan ringkasan sentimen pemberitaan.",
+        tips: [
+          "Kosongkan filter untuk melihat semua anggota.",
+          "Gunakan Reset untuk kembali ke tampilan awal.",
+        ],
+      },
+      {
+        selector: '[data-tour="sentiment-meta"]',
+        kicker: "Halaman ini · Catatan",
+        title: "Cara membaca sentimen",
+        body:
+          "Sentimen dinilai dari judul dan kutipan berita, bukan penilaian resmi lembaga. Panel ini juga menandai bila Gemini belum dikonfigurasi.",
+        tips: [
+          "Gunakan hasil sebagai indikator awal.",
+          "Buka pemberitaan untuk membaca konteks lengkap.",
+        ],
+      },
+      {
+        selector: '[data-tour="sentiment-table"]',
+        kicker: "Halaman ini · Tabel",
+        title: "Tabel sentimen per anggota",
+        body:
+          "Tabel menampilkan gauge, jumlah berita, sebaran positif-netral-negatif, status pemindaian, dan aksi cepat.",
+        tips: [
+          "Klik ikon daftar untuk membaca semua pemberitaan.",
+          "Ikon bagan membuka dashboard anggota.",
+          "Gunakan ikon Refresh untuk memindai berita terbaru.",
+        ],
+      },
+    ],
+    users: [
+      {
+        selector: '[data-tour="users-filter"]',
+        kicker: "Halaman ini · Filter",
+        title: "Cari pengguna",
+        body:
+          "Filter akun berdasarkan nama, peran, dan status aktif.",
+        tips: [
+          "Gunakan peran untuk memeriksa akses tertentu.",
+          "Reset filter untuk melihat seluruh pengguna.",
+        ],
+      },
+      {
+        selector: '[data-tour="users-meta"]',
+        kicker: "Halaman ini · Hasil",
+        title: "Ringkasan pengguna",
+        body:
+          "Menampilkan jumlah akun yang cocok dan pengingat bahwa peran menentukan akses.",
+        tips: [
+          "Periksa peran sebelum mengubah akun.",
+          "Gunakan status untuk menemukan akun nonaktif.",
+        ],
+      },
+      {
+        selector: '[data-tour="users-table"]',
+        kicker: "Halaman ini · Tabel",
+        title: "Tabel pengguna dan aksi",
+        body:
+          "Setiap baris memuat identitas, peran, status, dan aksi sunting, reset kata sandi, serta aktif/nonaktif.",
+        tips: [
+          "Nonaktifkan akun yang tidak lagi bertugas.",
+          "Reset kata sandi hanya bila pengguna kehilangan akses.",
+        ],
+      },
+      {
+        selector: '[data-tour="users-policy"]',
+        kicker: "Halaman ini · Kebijakan",
+        title: "Kebijakan akun",
+        body:
+          "Akun baru wajib mengganti kata sandi saat pertama masuk. Akun nonaktif tidak dapat login dan sesinya berakhir.",
+        tips: [
+          "Tinjau kebijakan ini sebelum memberi akses baru.",
+          "Buka log audit untuk memantau perubahan akun.",
+        ],
+      },
+    ],
+    audit: [
+      {
+        selector: '[data-tour="audit-filter"]',
+        kicker: "Halaman ini · Filter",
+        title: "Telusuri jejak audit",
+        body:
+          "Filter berdasarkan kata kunci, jenis aksi, dan rentang tanggal untuk menemukan peristiwa tertentu.",
+        tips: [
+          "Gunakan jenis aksi untuk mempersempit hasil.",
+          "Reset filter untuk melihat semua peristiwa.",
+        ],
+      },
+      {
+        selector: '[data-tour="audit-meta"]',
+        kicker: "Halaman ini · Hasil",
+        title: "Ringkasan dan ekspor",
+        body:
+          "Bagian ini menunjukkan jumlah peristiwa dan menegaskan bahwa log tidak dapat diubah atau dihapus.",
+        tips: [
+          "Ekspor CSV bila laporan perlu diserahkan.",
+          "Periksa jumlah hasil sebelum menelusuri kronologi.",
+        ],
+      },
+      {
+        selector: '[data-tour="audit-table"]',
+        kicker: "Halaman ini · Tabel",
+        title: "Tabel peristiwa",
+        body:
+          "Setiap baris memuat waktu, aktor, aksi, ringkasan, dan alamat IP. Warna badge membantu membedakan aksi penting.",
+        tips: [
+          "Periksa kronologi sebelum mengambil tindakan.",
+          "Gunakan detail aktor untuk menelusuri perubahan terkait.",
+        ],
+      },
+      {
+        selector: '[data-tour="audit-policy"]',
+        kicker: "Halaman ini · Retensi",
+        title: "Tentang log audit",
+        body:
+          "Semua tindakan penting dicatat lengkap dengan waktu, aktor, dan alamat IP, lalu disimpan secara permanen.",
+        tips: [
+          "Gunakan log untuk investigasi dan kepatuhan.",
+          "Jangan bagikan data audit ke pihak yang tidak berwenang.",
+        ],
+      },
+    ],
+    profile: [
+      {
+        selector: '[data-tour="profile-hero"]',
+        kicker: "Halaman ini · Profil",
+        title: "Identitas akun",
+        body:
+          "Kartu ini menampilkan nama, peran, komisi, waktu masuk terakhir, dan status keamanan akun.",
+        tips: [
+          "Pastikan nama dan peran sudah benar.",
+          "Perhatikan penanda wajib ganti kata sandi.",
+        ],
+      },
+      {
+        selector: '[data-tour="profile-identity"]',
+        kicker: "Halaman ini · Identitas",
+        title: "Data identitas",
+        body:
+          "Nama dan email tampil pada jejak audit dan dokumen internal. Perbarui bila ada perubahan.",
+        tips: [
+          "Gunakan email resmi agar jejak audit mudah ditelusuri.",
+          "Simpan setelah selesai mengubah data.",
+        ],
+      },
+      {
+        selector: '[data-tour="profile-password"]',
+        kicker: "Halaman ini · Keamanan",
+        title: "Ganti kata sandi",
+        body:
+          "Gunakan minimal 10 karakter dengan huruf besar, huruf kecil, angka, dan simbol.",
+        tips: [
+          "Ganti kata sandi secara berkala.",
+          "Jangan gunakan kata sandi yang sama dengan layanan lain.",
+        ],
+      },
+      {
+        selector: '[data-tour="profile-token"]',
+        kicker: "Halaman ini · API",
+        title: "Token API",
+        body:
+          "Token baru hanya ditampilkan sekali. Gunakan header Authorization Bearer untuk integrasi.",
+        tips: [
+          "Simpan token di tempat aman.",
+          "Cabut token yang tidak lagi digunakan.",
+        ],
+      },
+      {
+        selector: '[data-tour="profile-activity"]',
+        kicker: "Halaman ini · Aktivitas",
+        title: "Aktivitas akun",
+        body:
+          "Sepuluh peristiwa terakhir yang tercatat atas nama Anda membantu memantau penggunaan akun.",
+        tips: [
+          "Periksa aktivitas yang tidak Anda kenali.",
+          "Hubungi administrator bila ada kejanggalan.",
+        ],
+      },
+    ],
+    member_dashboard: [
+      {
+        selector: '[data-tour="member-dash-hero"]',
+        kicker: "Halaman ini · Identitas",
+        title: "Kartu anggota dewan",
+        body:
+          "Kartu ini memuat foto, jabatan, komisi, daerah pemilihan, status Face ID, dan angka kegiatan Anda.",
+        tips: [
+          "Periksa status Face ID untuk memastikan login wajah aktif.",
+          "Gunakan tombol Cetak untuk membagikan ringkasan.",
+        ],
+      },
+      {
+        selector: '[data-tour="member-dash-sentiment"]',
+        kicker: "Halaman ini · Sentimen",
+        title: "Sentimen pemberitaan",
+        body:
+          "Gauge dan bilah menunjukkan sebaran positif, netral, dan negatif. Daftar berita di bawahnya memberi konteks.",
+        tips: [
+          "Gunakan hasil sebagai indikator awal.",
+          "Buka artikel untuk membaca konteks lengkap.",
+        ],
+      },
+      {
+        selector: '[data-tour="member-dash-publication"]',
+        kicker: "Halaman ini · Publikasi",
+        title: "Publikasi dan dokumentasi Humas",
+        body:
+          "Ringkasan ini menunjukkan kegiatan tertaut, yang sudah terbit, unggahan Humas, dan aktivitas 90 hari terakhir.",
+        tips: [
+          "Buka dokumentasi untuk melihat foto dan detail kegiatan.",
+          "Gunakan angka ini untuk menilai keterlibatan Anda.",
+        ],
+      },
+      {
+        selector: '[data-tour="member-dash-trend"]',
+        kicker: "Halaman ini · Tren",
+        title: "Tren dokumentasi",
+        body:
+          "Grafik batang memperlihatkan ritme kegiatan Anda selama enam bulan terakhir.",
+        tips: [
+          "Gunakan tren untuk melihat periode paling aktif.",
+          "Klik Telusuri untuk membuka dokumentasi terkait.",
+        ],
+      },
+      {
+        selector: '[data-tour="member-dash-recent"]',
+        kicker: "Halaman ini · Dokumentasi",
+        title: "Dokumentasi terbaru",
+        body:
+          "Kartu kegiatan menampilkan dokumentasi terbaru yang melibatkan Anda.",
+        tips: [
+          "Klik kartu untuk membuka detail kegiatan.",
+          "Gunakan Lihat semua untuk menelusuri arsip lengkap.",
+        ],
+      },
+      {
+        selector: '[data-tour="member-dash-faceid"]',
+        kicker: "Halaman ini · Keamanan",
+        title: "Face ID login",
+        body:
+          "Panel ini menunjukkan status wajah dan akun login yang tertaut. Data wajah disimpan sebagai encoding biometrik.",
+        tips: [
+          "Daftarkan wajah dari halaman login bila belum aktif.",
+          "Administrator dapat menghapus Face ID bila diperlukan.",
+        ],
+      },
+      {
+        selector: '[data-tour="member-dash-duties"]',
+        kicker: "Halaman ini · Tugas",
+        title: "Tugas dan fungsi dewan",
+        body:
+          "Daftar ini mengingatkan peran anggota dewan dalam fungsi legislasi, anggaran, dan pengawasan.",
+        tips: [
+          "Gunakan daftar sebagai acuan kegiatan.",
+          "Sesuaikan prioritas dengan arahan pimpinan.",
+        ],
+      },
+    ],
+    drive: [
+      {
+        selector: '[data-tour="drive-switch"]',
+        kicker: "Halaman ini · Drive",
+        title: "Drive pribadi dan Drive tim",
+        body:
+          "Tab di atas memisahkan berkas pribadi dan berkas bersama. Administrator juga dapat membuka Drive staf lain.",
+        tips: [
+          "Gunakan Drive tim untuk template dan aset bersama.",
+          "Berkas pribadi tidak pernah muncul di Drive tim.",
+        ],
+      },
+      {
+        selector: '[data-tour="drive-quota"]',
+        kicker: "Halaman ini · Kuota",
+        title: "Pemakaian ruang",
+        body:
+          "Bilah kuota menunjukkan ruang terpakai, sisa, dan peringatan bila hampir penuh.",
+        tips: [
+          "Hapus berkas yang tidak dipakai bila ruang menipis.",
+          "Periksa sisa ruang sebelum mengunggah berkas besar.",
+        ],
+      },
+      {
+        selector: '[data-tour="drive-toolbar"]',
+        kicker: "Halaman ini · Navigasi",
+        title: "Remah folder dan pencarian",
+        body:
+          "Gunakan remah folder untuk kembali dan kolom pencarian untuk menemukan nama berkas di seluruh Drive.",
+        tips: [
+          "Klik nama folder untuk masuk.",
+          "Gunakan Reset untuk menghapus kata kunci.",
+        ],
+      },
+      {
+        selector: '[data-tour="drive-tools"]',
+        kicker: "Halaman ini · Berkas",
+        title: "Unggah dan kelola berkas",
+        body:
+          "Unggah beberapa berkas sekaligus, buat folder baru, ubah nama, unduh, atau hapus dari panel ini.",
+        tips: [
+          "Maksimal 100 MB per berkas dan tidak melebihi sisa kuota.",
+          "Gunakan unduh untuk mengambil berkas langsung dari CDN.",
+        ],
+      },
+    ],
   };
+
+  const DETAIL_STEPS = [
+    {
+      test: /^\/kegiatan\/\d+$/,
+      steps: [
+        {
+          selector: '[data-tour="activity-hero"]',
+          kicker: "Halaman ini · Detail",
+          title: "Identitas kegiatan",
+          body:
+            "Hero menampilkan kode, judul, status, kategori, tanggal, lokasi, dan komisi terkait.",
+          tips: [
+            "Periksa status sebelum menerbitkan atau mengarsipkan.",
+            "Gunakan breadcrumb untuk kembali ke daftar.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-actions"]',
+          kicker: "Halaman ini · Aksi",
+          title: "Aksi dokumentasi",
+          body:
+            "Dari sini Anda dapat menyunting, menerbitkan, mengarsipkan, mencetak, menyalin tautan, dan mengelola foto.",
+          tips: [
+            "Aksi yang tersedia mengikuti peran dan status kegiatan.",
+            "Konfirmasi tindakan yang berdampak sebelum melanjutkan.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-description"]',
+          kicker: "Halaman ini · Deskripsi",
+          title: "Deskripsi kegiatan",
+          body:
+            "Deskripsi membantu pencarian teks dan memberi konteks kepada pembaca dokumentasi.",
+          tips: [
+            "Pastikan deskripsi menjelaskan tujuan dan hasil kegiatan.",
+            "Perbaiki bila ada informasi yang kurang tepat.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-gallery"]',
+          kicker: "Halaman ini · Galeri",
+          title: "Galeri dokumentasi",
+          body:
+            "Galeri menampilkan foto, kotak wajah, jumlah wajah terdeteksi, dan aksi proses ulang atau hapus.",
+          tips: [
+            "Aktifkan Kotak wajah untuk melihat posisi deteksi.",
+            "Klik foto untuk memperbesar.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-face-review"]',
+          kicker: "Halaman ini · Deteksi",
+          title: "Tinjauan deteksi wajah",
+          body:
+            "Setiap deteksi dapat dikonfirmasi ke anggota yang tepat atau ditolak bila bukan orang yang sesuai.",
+          tips: [
+            "Verifikasi nama sebelum mengonfirmasi.",
+            "Tolak deteksi yang meragukan agar data tetap bersih.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-upload"]',
+          kicker: "Halaman ini · Unggah",
+          title: "Tambah foto",
+          body:
+            "Unggah foto baru langsung dari halaman detail. Sistem mendeteksi wajah secara otomatis.",
+          tips: [
+            "Patuhi batas jumlah dan ukuran foto.",
+            "Gunakan foto beresolusi baik agar deteksi akurat.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-side"]',
+          kicker: "Halaman ini · Samping",
+          title: "Anggota dan konteks",
+          body:
+            "Panel samping merangkum anggota tertaut, komisi, dan konteks lain yang membantu verifikasi.",
+          tips: [
+            "Periksa anggota tertaut sebelum menerbitkan.",
+            "Gunakan tautan anggota untuk membuka profil.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/kegiatan\/(baru|\d+\/edit)$/,
+      steps: [
+        {
+          selector: '[data-tour="activity-form-main"]',
+          kicker: "Formulir · Informasi",
+          title: "Metadata kegiatan",
+          body:
+            "Isi judul, kategori, tanggal, waktu, lokasi, dan deskripsi. Metadata ini menjadi dasar pencarian dan laporan.",
+          tips: [
+            "Gunakan judul resmi seperti pada undangan.",
+            "Lengkapi deskripsi agar pencarian lebih akurat.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-form-commission"]',
+          kicker: "Formulir · Komisi",
+          title: "Komisi terkait",
+          body:
+            "Pilih satu atau lebih komisi yang terlibat agar dokumentasi terkelompok dengan benar.",
+          tips: [
+            "Pilih komisi sesuai bidang kegiatan.",
+            "Komisi menentukan penelusuran di halaman komisi.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-form-photos"]',
+          kicker: "Formulir · Foto",
+          title: "Foto dokumentasi",
+          body:
+            "Unggah foto JPG, PNG, atau WEBP. Deteksi wajah berjalan otomatis setelah foto tersimpan.",
+          tips: [
+            "Perhatikan batas jumlah dan ukuran foto.",
+            "Gunakan foto yang jelas untuk hasil deteksi terbaik.",
+          ],
+        },
+        {
+          selector: '[data-tour="activity-form-actions"]',
+          kicker: "Formulir · Simpan",
+          title: "Simpan kegiatan",
+          body:
+            "Simpan sebagai draf atau terbitkan sesuai alur. Periksa kembali seluruh isian sebelum menyimpan.",
+          tips: [
+            "Gunakan Batal untuk kembali tanpa menyimpan.",
+            "Lengkapi foto sebelum menerbitkan.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/anggota\/\d+$/,
+      steps: [
+        {
+          selector: '[data-tour="member-hero"]',
+          kicker: "Halaman ini · Profil",
+          title: "Identitas anggota",
+          body:
+            "Hero menampilkan foto, jabatan, komisi, partai, dapil, kontak, status wajah, dan Face ID.",
+          tips: [
+            "Periksa status wajah sebelum mencari dokumentasi.",
+            "Gunakan aksi cepat untuk membuka dashboard atau pencarian.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-bio"]',
+          kicker: "Halaman ini · Biodata",
+          title: "Profil dan metadata",
+          body:
+            "Bagian ini memuat bio singkat serta metadata komisi, partai, dapil, dan persetujuan biometrik.",
+          tips: [
+            "Pastikan data keanggotaan sudah benar.",
+            "Perbarui bio bila ada informasi baru.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-activities"]',
+          kicker: "Halaman ini · Dokumentasi",
+          title: "Kegiatan tertaut",
+          body:
+            "Kartu kegiatan menampilkan dokumentasi yang melibatkan anggota ini.",
+          tips: [
+            "Buka kegiatan untuk melihat foto dan deteksi wajah.",
+            "Gunakan Lihat semua untuk menelusuri arsip.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-sentiment"]',
+          kicker: "Halaman ini · Sentimen",
+          title: "Sentimen pemberitaan",
+          body:
+            "Gauge dan bilah merangkum pemberitaan positif, netral, dan negatif terkait anggota.",
+          tips: [
+            "Gunakan hasil sebagai indikator awal.",
+            "Buka semua pemberitaan untuk konteks lengkap.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-faces"]',
+          kicker: "Halaman ini · Wajah",
+          title: "Data wajah",
+          body:
+            "Panel ini menampilkan encoding wajah dan formulir penambahan foto. Data disimpan sebagai encoding, bukan foto mentah.",
+          tips: [
+            "Tambahkan variasi sudut dan pencahayaan untuk akurasi.",
+            "Hapus encoding yang tidak valid bila perlu.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-faceid"]',
+          kicker: "Halaman ini · Face ID",
+          title: "Face ID login",
+          body:
+            "Status Face ID dan akun login yang tertaut ditampilkan di sini. Administrator dapat menghapusnya.",
+          tips: [
+            "Anggota dapat mendaftar ulang dari halaman login.",
+            "Periksa status sebelum membantu proses login.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/anggota\/\d+\/sentimen$/,
+      steps: [
+        {
+          selector: '[data-tour="member-sentiment-summary"]',
+          kicker: "Halaman ini · Ringkasan",
+          title: "Ringkasan sentimen anggota",
+          body:
+            "Gauge, sebaran sentimen, topik, dan tren pemberitaan dirangkum di bagian atas.",
+          tips: [
+            "Gunakan ringkasan untuk membaca kondisi umum.",
+            "Perhatikan tanggal pembaruan terakhir.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-sentiment-actions"]',
+          kicker: "Halaman ini · Pemindaian",
+          title: "Pindai berita terbaru",
+          body:
+            "Jalankan pemindaian untuk memperbarui pemberitaan. Tombol nonaktif bila Tavily belum dikonfigurasi.",
+          tips: [
+            "Pemindaian memakai Tavily dan Gemini.",
+            "Baca catatan bila pemindaian terakhir gagal.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-sentiment-filter"]',
+          kicker: "Halaman ini · Filter",
+          title: "Filter pemberitaan",
+          body:
+            "Cari berita berdasarkan kata kunci dan sentimen positif, netral, atau negatif.",
+          tips: [
+            "Gunakan Reset untuk kembali ke semua berita.",
+            "Filter sentimen membantu menemukan isu tertentu.",
+          ],
+        },
+        {
+          selector: '[data-tour="member-sentiment-list"]',
+          kicker: "Halaman ini · Daftar",
+          title: "Daftar pemberitaan",
+          body:
+            "Setiap item memuat sumber, judul, kutipan, sentimen, skor, dan tautan artikel.",
+          tips: [
+            "Buka artikel untuk memverifikasi konteks.",
+            "Gunakan skor sebagai indikator awal, bukan penilaian resmi.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/komisi\/\d+$/,
+      steps: [
+        {
+          selector: '[data-tour="commission-hero"]',
+          kicker: "Halaman ini · Komisi",
+          title: "Profil komisi",
+          body:
+            "Hero menampilkan nama, bidang, deskripsi, dan angka anggota, dokumentasi, serta staf komisi.",
+          tips: [
+            "Periksa bidang komisi untuk konteks dokumentasi.",
+            "Gunakan tautan direktori untuk melihat anggota.",
+          ],
+        },
+        {
+          selector: '[data-tour="commission-members"]',
+          kicker: "Halaman ini · Anggota",
+          title: "Anggota komisi",
+          body:
+            "Kartu anggota menampilkan foto, jabatan, dan status wajah.",
+          tips: [
+            "Klik kartu untuk membuka profil anggota.",
+            "Gunakan direktori untuk pencarian lebih luas.",
+          ],
+        },
+        {
+          selector: '[data-tour="commission-activities"]',
+          kicker: "Halaman ini · Dokumentasi",
+          title: "Kegiatan komisi",
+          body:
+            "Kartu kegiatan menampilkan dokumentasi terbaru yang terkait dengan komisi ini.",
+          tips: [
+            "Buka kegiatan untuk melihat galeri dan deteksi wajah.",
+            "Gunakan Lihat semua untuk menelusuri arsip komisi.",
+          ],
+        },
+        {
+          selector: '[data-tour="commission-staff"]',
+          kicker: "Halaman ini · Staf",
+          title: "Staf komisi",
+          body:
+            "Tabel ini menampilkan pengguna dengan akses staf pada komisi tersebut.",
+          tips: [
+            "Periksa peran sebelum mengubah akses.",
+            "Hubungi administrator bila ada staf yang tidak sesuai.",
+          ],
+        },
+        {
+          selector: '[data-tour="commission-edit"]',
+          kicker: "Halaman ini · Pengaturan",
+          title: "Sunting profil komisi",
+          body:
+            "Administrator dapat mengubah nama, bidang, deskripsi, dan warna aksen komisi.",
+          tips: [
+            "Perubahan berlaku di seluruh halaman komisi.",
+            "Gunakan warna yang konsisten dengan identitas komisi.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/rilis\/\d+$/,
+      steps: [
+        {
+          selector: '[data-tour="release-content"]',
+          kicker: "Halaman ini · Rilis",
+          title: "Naskah siaran pers",
+          body:
+            "Artikel ini memuat judul, ringkasan, penulis, tanggal, isi, tag, dan tautan kegiatan terkait.",
+          tips: [
+            "Periksa kode dan status sebelum menerbitkan.",
+            "Gunakan tautan kegiatan untuk membuka konteks dokumentasi.",
+          ],
+        },
+        {
+          selector: '[data-tour="release-actions"]',
+          kicker: "Halaman ini · Aksi",
+          title: "Terbitkan dan kelola rilis",
+          body:
+            "Aksi mencakup cetak, salin tautan, terbitkan, arsipkan, pulihkan, dan hapus sesuai peran.",
+          tips: [
+            "Konfirmasi tindakan yang berdampak permanen.",
+            "Gunakan arsip untuk menyimpan referensi tanpa menampilkan rilis.",
+          ],
+        },
+        {
+          selector: '[data-tour="release-side"]',
+          kicker: "Halaman ini · Samping",
+          title: "Metadata rilis",
+          body:
+            "Panel samping merangkum penulis, tanggal rilis, waktu terbit, dan pembaruan terakhir.",
+          tips: [
+            "Periksa tanggal sebelum membagikan rilis.",
+            "Gunakan data ini untuk laporan publikasi.",
+          ],
+        },
+        {
+          selector: '[data-tour="release-related"]',
+          kicker: "Halaman ini · Terkait",
+          title: "Kegiatan dan rilis lain",
+          body:
+            "Tautan ke kegiatan terkait dan rilis lain membantu pembaca menelusuri konteks publikasi.",
+          tips: [
+            "Buka kegiatan untuk melihat dokumentasi foto.",
+            "Gunakan rilis lain sebagai referensi gaya penulisan.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/rilis\/(baru|\d+\/edit)$/,
+      steps: [
+        {
+          selector: '[data-tour="release-form-main"]',
+          kicker: "Formulir · Naskah",
+          title: "Susun siaran pers",
+          body:
+            "Isi judul, tanggal, ringkasan, isi, tag, dan kegiatan terkait. Ringkasan minimal 40 karakter.",
+          tips: [
+            "Awali judul dengan subjek utama.",
+            "Pisahkan paragraf dengan satu baris kosong.",
+          ],
+        },
+        {
+          selector: '[data-tour="release-form-side"]',
+          kicker: "Formulir · Panduan",
+          title: "Panduan penulisan",
+          body:
+            "Panel samping mengingatkan struktur rilis: judul jelas, teras berita, kutipan, dan tautan kegiatan.",
+          tips: [
+            "Gunakan fakta dan angka yang akurat.",
+            "Tautkan rilis ke kegiatan agar konteks lengkap.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/pengguna\/(baru|\d+\/edit)$/,
+      steps: [
+        {
+          selector: '[data-tour="user-form-identity"]',
+          kicker: "Formulir · Identitas",
+          title: "Identitas pengguna",
+          body:
+            "Isi nama, email, dan kata sandi awal. Pengguna wajib mengganti kata sandi saat pertama masuk.",
+          tips: [
+            "Gunakan email resmi.",
+            "Kata sandi minimal 10 karakter.",
+          ],
+        },
+        {
+          selector: '[data-tour="user-form-role"]',
+          kicker: "Formulir · Akses",
+          title: "Peran dan komisi",
+          body:
+            "Peran menentukan halaman dan tindakan yang dapat dilakukan. Staf komisi wajib memilih komisi.",
+          tips: [
+            "Berikan akses sesuai kebutuhan tugas.",
+            "Tinjau akses secara berkala melalui log audit.",
+          ],
+        },
+        {
+          selector: '[data-tour="user-form-policy"]',
+          kicker: "Formulir · Kebijakan",
+          title: "Prinsip akses minimal",
+          body:
+            "Panel ini menjelaskan batas akses tiap peran agar data dewan tetap terlindungi.",
+          tips: [
+            "Hindari memberikan peran administrator tanpa kebutuhan.",
+            "Catat alasan perubahan akses.",
+          ],
+        },
+      ],
+    },
+    {
+      test: /^\/(staf-humas|dashboard-staf)\/\d+$/,
+      steps: [
+        {
+          selector: '[data-tour="humas-hero"]',
+          kicker: "Halaman ini · Staf",
+          title: "Profil staf Humas",
+          body:
+            "Hero menampilkan foto, jabatan, unit, status Face ID, dan angka unggahan staf.",
+          tips: [
+            "Periksa status Face ID sebelum membantu login.",
+            "Gunakan aksi cepat untuk membuka ruang kerja.",
+          ],
+        },
+        {
+          selector: '[data-tour="humas-shortcuts"]',
+          kicker: "Halaman ini · Ruang kerja",
+          title: "Ruang kerja staf",
+          body:
+            "Bagian ini merangkum pintasan, draf, rilis, publikasi, dan tren unggahan staf.",
+          tips: [
+            "Gunakan pintasan untuk memahami alur kerja staf.",
+            "Periksa draf yang perlu diselesaikan.",
+          ],
+        },
+        {
+          selector: '[data-tour="humas-faceid"]',
+          kicker: "Halaman ini · Keamanan",
+          title: "Face ID staf",
+          body:
+            "Panel ini menunjukkan status wajah dan akun login staf. Administrator dapat menghapus Face ID.",
+          tips: [
+            "Penghapusan memaksa staf mendaftar ulang.",
+            "Data wajah disimpan sebagai encoding biometrik.",
+          ],
+        },
+      ],
+    },
+  ];
+
+  function detailStepsFor(path) {
+    for (const entry of DETAIL_STEPS) {
+      if (entry.test.test(path)) return entry.steps;
+    }
+    return [];
+  }
 
   const steps = [];
 
@@ -385,19 +1510,165 @@
     return (label ? label.textContent : el.textContent || "").trim();
   }
 
+  function firstVisible(selectors) {
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (isVisible(el)) return el;
+    }
+    return null;
+  }
+
   function buildSteps() {
     steps.push({
       kicker: "Asisten SIDEWA",
       title: "Mengenal SIDEWA",
       body:
-        "Saya akan memandu Anda mengenali halaman-halaman SIDEWA dan cara memakainya. Setiap langkah akan menyorot bagian layar yang sedang dijelaskan.",
+        "Saya akan memandu Anda mengenali seluruh antarmuka SIDEWA: bilah atas, isi halaman, ikon fitur, dan sidebar. Setiap langkah menyorot elemen yang sedang dijelaskan.",
       tips: [
         "Gunakan tombol Berikutnya atau tombol panah untuk berpindah langkah.",
         "Tekan Esc kapan saja untuk menutup panduan.",
         "Nyalakan narasi suara bila ingin penjelasan dibacakan.",
+        "Di ponsel, panduan tampil sebagai panel bawah yang bisa diperluas.",
       ],
       target: null,
     });
+
+    /* Bilah atas dan ikon aksi cepat. */
+    const topbar = firstVisible(['[data-tour="topbar"]', ".topbar"]);
+    if (topbar) {
+      steps.push({
+        kicker: "Navigasi · Bilah atas",
+        title: "Judul halaman dan aksi cepat",
+        body:
+          "Bilah atas menampilkan judul halaman, pencarian, tombol unggah, peran akun, dan foto profil. Ikon di sini selalu tersedia di halaman mana pun.",
+        tips: [
+          "Judul dan subjudul menjelaskan halaman yang sedang dibuka.",
+          "Aksi di kanan mengikuti peran dan kewenangan Anda.",
+        ],
+        target: topbar,
+      });
+    }
+
+    const topbarSearch = firstVisible(['[data-tour="topbar-search"]']);
+    if (topbarSearch) {
+      steps.push({
+        kicker: "Ikon fitur · Pencarian",
+        title: "Ikon pencarian",
+        body:
+          "Ikon kaca pembesar membuka halaman pencarian wajah dan teks dari halaman mana pun.",
+        tips: [
+          "Gunakan pencarian wajah bila hanya memiliki foto.",
+          "Gunakan pencarian teks untuk nama, jabatan, atau lokasi.",
+        ],
+        target: topbarSearch,
+      });
+    }
+
+    const topbarMenu = firstVisible(['[data-tour="topbar-menu"]']);
+    if (topbarMenu) {
+      steps.push({
+        kicker: "Navigasi · Menu",
+        title: "Ikon menu di ponsel",
+        body:
+          "Pada layar kecil, sidebar disembunyikan dan dibuka lewat ikon menu ini.",
+        tips: [
+          "Ketuk ikon menu untuk melihat seluruh navigasi.",
+          "Ketuk area gelap untuk menutup sidebar.",
+        ],
+        target: topbarMenu,
+      });
+    }
+
+    const topbarUpload = firstVisible(['[data-tour="topbar-upload"]']);
+    if (topbarUpload) {
+      steps.push({
+        kicker: "Ikon fitur · Unggah",
+        title: "Tombol unggah cepat",
+        body:
+          "Tombol unggah membuka formulir kegiatan baru tanpa meninggalkan konteks halaman.",
+        tips: [
+          "Lengkapi metadata dan foto sebelum menerbitkan.",
+          "Tombol hanya tampil untuk pengelola konten.",
+        ],
+        target: topbarUpload,
+      });
+    }
+
+    const roleChip = firstVisible(['[data-tour="topbar-role"]', ".role-chip"]);
+    if (roleChip) {
+      steps.push({
+        kicker: "Ikon fitur · Peran",
+        title: "Peran dan hak akses",
+        body:
+          "Chip peran menunjukkan kewenangan akun Anda. Menu dan aksi di seluruh aplikasi mengikuti peran ini.",
+        tips: [
+          "Peran menentukan halaman yang dapat dibuka.",
+          "Hubungi administrator bila peran tidak sesuai tugas.",
+        ],
+        target: roleChip,
+      });
+    }
+
+    const avatar = firstVisible(['[data-tour="topbar-avatar"]', ".topbar-avatar"]);
+    if (avatar) {
+      steps.push({
+        kicker: "Ikon fitur · Profil",
+        title: "Foto profil dan pengaturan akun",
+        body:
+          "Klik foto profil untuk membuka halaman profil, mengganti kata sandi, dan mengelola token API.",
+        tips: [
+          "Perbarui data profil agar jejak audit akurat.",
+          "Cabut token API yang tidak lagi digunakan.",
+        ],
+        target: avatar,
+      });
+    }
+
+    /* Isi halaman yang sedang dibuka. */
+    const path = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+    const page = document.body.dataset.page || "";
+    const detailSteps = detailStepsFor(path);
+    const pageSteps = detailSteps.length ? detailSteps : PAGE_STEPS[page] || [];
+    let pageStepCount = 0;
+    pageSteps.forEach((step) => {
+      const target = step.selector ? document.querySelector(step.selector) : null;
+      if (step.selector && !isVisible(target)) return;
+      steps.push({ ...step, target });
+      pageStepCount += 1;
+    });
+
+    if (!pageStepCount) {
+      const main = firstVisible(["#main-content", ".content"]);
+      if (main) {
+        steps.push({
+          kicker: "Halaman ini",
+          title: "Area kerja utama",
+          body:
+            "Semua konten halaman ditampilkan di area ini. Gunakan filter, kartu, dan tombol aksi yang tersedia untuk menyelesaikan tugas Anda.",
+          tips: [
+            "Mulai dari filter atau kartu ringkasan di bagian atas.",
+            "Gunakan bilah atas untuk pencarian dan aksi cepat.",
+          ],
+          target: main,
+        });
+      }
+    }
+
+    /* Sidebar dan seluruh ikon navigasi. */
+    const sidebar = firstVisible(['[data-tour="sidebar"]', "#sidebar", ".sidebar"]);
+    if (sidebar) {
+      steps.push({
+        kicker: "Navigasi · Sidebar",
+        title: "Sidebar dengan ikon fitur",
+        body:
+          "Setiap menu memakai ikon dan label. Ikon membantu mengenali fitur dengan cepat, sedangkan label memperjelas tujuan halaman.",
+        tips: [
+          "Menu aktif ditandai dengan latar dan warna aksen.",
+          "Pada layar kecil, sidebar dibuka lewat ikon menu.",
+        ],
+        target: sidebar,
+      });
+    }
 
     const seen = new Set();
     const navEls = Array.from(
@@ -413,7 +1684,7 @@
         tips: ["Buka halaman untuk melihat fitur yang tersedia."],
       };
       steps.push({
-        kicker: "Peta halaman",
+        kicker: "Peta halaman · Sidebar",
         title: info.title,
         body: info.body,
         tips: info.tips,
@@ -424,23 +1695,15 @@
       });
     });
 
-    const page = document.body.dataset.page || "";
-    const pageSteps = PAGE_STEPS[page] || [];
-    pageSteps.forEach((step) => {
-      const target = step.selector ? document.querySelector(step.selector) : null;
-      if (step.selector && !target) return;
-      steps.push({ ...step, target });
-    });
-
     steps.push({
       kicker: "Selesai",
       title: "Siap bekerja dengan SIDEWA",
       body:
-        "Panduan singkat ini bisa dibuka kapan saja lewat tombol Asisten SIDEWA di sudut kanan bawah.",
+        "Panduan ini menyorot bilah atas, isi halaman, ikon fitur, dan sidebar. Buka kapan saja lewat tombol Asisten SIDEWA di sudut kanan bawah.",
       tips: [
-        "Mulai dari Ruang Kerja untuk tugas harian Humas.",
+        "Setiap halaman memiliki sorotan fitur yang berbeda.",
         "Gunakan pencarian dan filter untuk menemukan data lebih cepat.",
-        "Buka panduan Kenali SIDEWA di halaman login untuk presentasi lengkap.",
+        "Di ponsel, perluas panel bawah untuk membaca penjelasan lengkap.",
       ],
       target: null,
     });
@@ -556,7 +1819,7 @@
 
   function stepLabel() {
     const step = steps[index];
-    return step && step.nav ? "Peta halaman SIDEWA" : "Pemandu halaman Humas";
+    return step && step.nav ? "Peta halaman SIDEWA" : "Pemandu halaman SIDEWA";
   }
 
   function updateStatus() {
@@ -921,6 +2184,13 @@
     return null;
   }
 
+  function viewportHeight() {
+    if (window.visualViewport && window.visualViewport.height) {
+      return Math.min(window.innerHeight, window.visualViewport.height);
+    }
+    return window.innerHeight;
+  }
+
   function scrollPageTarget(target) {
     let rect = target.getBoundingClientRect();
     const scroller = scrollableAncestor(target);
@@ -932,6 +2202,7 @@
       }
     }
     const topbar = document.querySelector(".topbar");
+    const vh = viewportHeight();
     let topLimit = 14;
     if (topbar) {
       const style = window.getComputedStyle(topbar);
@@ -939,12 +2210,16 @@
         topLimit = topbar.getBoundingClientRect().bottom + 14;
       }
     }
-    let bottomLimit = window.innerHeight - 14;
-    if (isSmall() && card) {
+    let bottomLimit = vh - 14;
+    if (card) {
       const cr = card.getBoundingClientRect();
-      if (cr.height && cr.top < window.innerHeight) bottomLimit = Math.min(bottomLimit, cr.top - 14);
+      const bottomSheet = isSmall() || (cr.width > window.innerWidth * 0.55 && cr.top > vh * 0.35);
+      // Panel bawah (mobile) tidak boleh menutup target yang sedang dijelaskan.
+      if (bottomSheet && cr.height && cr.top < vh) {
+        bottomLimit = Math.min(bottomLimit, cr.top - 16);
+      }
     }
-    if (bottomLimit <= topLimit + 64) bottomLimit = window.innerHeight - 14;
+    if (bottomLimit <= topLimit + 64) bottomLimit = vh - 14;
 
     const behavior = reducedMotion ? "auto" : "smooth";
     if (rect.height >= bottomLimit - topLimit) {
@@ -1227,6 +2502,18 @@
 
   window.addEventListener("resize", schedulePlace);
   window.addEventListener("scroll", schedulePlace, { passive: true });
+  window.addEventListener("orientationchange", schedulePlace);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", schedulePlace);
+    window.visualViewport.addEventListener("scroll", schedulePlace);
+  }
+  const smallScreen = window.matchMedia("(max-width: 760px)");
+  if (smallScreen.addEventListener) {
+    smallScreen.addEventListener("change", () => {
+      if (!isSmall()) setExpanded(false);
+      schedulePlace();
+    });
+  }
 
   if (supportsSpeech) {
     window.speechSynthesis.addEventListener?.("voiceschanged", () => {
