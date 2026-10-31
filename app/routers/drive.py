@@ -454,6 +454,53 @@ def remove_many(
     return _redirect(scope, owner, parent)
 
 
+@router.get("/pratinjau")
+def preview(
+    path: str = "",
+    scope: str = "pribadi",
+    owner: int | None = None,
+    user: User = Depends(MEMBER),
+    db: Session = Depends(get_db),
+):
+    """Tampilkan pratinjau gambar Drive secara inline (tanpa memaksa unduh)."""
+    scope = _scope(scope)
+    try:
+        root, _, _ = _resolve(db, user, scope, owner)
+    except HTTPException:
+        raise
+    except drive.DriveError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    try:
+        relative = drive.validate_path(path)
+    except drive.DriveError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not relative or not drive.is_previewable(relative.rsplit("/", 1)[-1]):
+        raise HTTPException(
+            status_code=404, detail="Pratinjau hanya tersedia untuk berkas gambar."
+        )
+
+    # Alirkan lewat server agar URL tetap same-origin dan tidak melanggar CSP
+    # `img-src 'self'`. Respons memakai disposition inline, bukan unduhan.
+    try:
+        temporary, name, mime = drive.download_file(root, relative)
+    except drive.DriveError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not mime.startswith("image/") or mime == "image/svg+xml":
+        _cleanup(temporary)
+        raise HTTPException(
+            status_code=404, detail="Pratinjau hanya tersedia untuk berkas gambar."
+        )
+    return FileResponse(
+        temporary,
+        media_type=mime,
+        filename=name,
+        content_disposition_type="inline",
+        headers={"Cache-Control": "private, max-age=300"},
+        background=BackgroundTask(_cleanup, temporary),
+    )
+
+
 @router.get("/unduh")
 def download(
     path: str = "",

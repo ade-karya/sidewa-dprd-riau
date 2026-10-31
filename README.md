@@ -129,6 +129,9 @@ dan diakses langsung lewat `boto3` — tidak ada metadata tambahan di database.
   HF S3 (berlaku 30 menit), jadi berkas diambil langsung dari CDN tanpa melewati
   server aplikasi. Berkas HTML/SVG/teks tetap dialirkan lewat server sebagai
   lampiran agar tidak dirender inline oleh browser.
+- **Pratinjau foto**: berkas gambar (JPEG, PNG, WebP, GIF, BMP, AVIF) tampil
+  sebagai thumbnail dan dapat diperbesar; aliran pratinjau tetap lewat server
+  agar sesuai CSP `img-src 'self'`. SVG sengaja tidak dipratinjau demi keamanan.
 - Batas ukuran per berkas diatur `SIDEWA_DRIVE_MAX_UPLOAD_MB` (default **90 MB**,
   di bawah batas 100 MB Cloudflare). Banyak berkas sekaligus diunggah satu per
   satu dari browser sehingga tiap permintaan tetap kecil dan tidak kena

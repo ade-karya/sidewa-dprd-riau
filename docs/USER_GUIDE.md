@@ -65,6 +65,9 @@ kegiatan.
    berkas diambil dari CDN tanpa membebani server aplikasi. Berkas teks, HTML,
    dan SVG tetap diunduh sebagai lampiran. Ikon pensil mengubah nama, ikon tempat
    sampah menghapus berkas atau folder beserta isinya.
+7. Berkas gambar (JPEG, PNG, WebP, GIF, BMP, AVIF) menampilkan thumbnail di
+   daftar dan hasil pencarian; klik thumbnail untuk memperbesar foto. Pratinjau
+   SVG dinonaktifkan demi keamanan.
 7. Bila nama berkas sama, sistem menambahkan akhiran ` (2)`, ` (3)`, dan
    seterusnya agar tidak ada berkas yang tertimpa.
 

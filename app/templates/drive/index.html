@@ -15,6 +15,10 @@
 /drive/unduh?scope={{ scope }}{% if owner and scope != 'tim' %}&owner={{ owner }}{% endif %}&path={{ p|urlencode }}
 {%- endmacro %}
 
+{% macro preview_url(p) -%}
+/drive/pratinjau?scope={{ scope }}{% if owner and scope != 'tim' %}&owner={{ owner }}{% endif %}&path={{ p|urlencode }}
+{%- endmacro %}
+
 {% block title %}Drive Humas{% endblock %}
 {% block page_title %}Drive{% endblock %}
 {% block page_subtitle %}
@@ -115,7 +119,17 @@
   <ul class="drive-results">
     {% for item in search.results %}
     <li>
-      <span class="drive-result-name">{{ icon('file') }}<span>{{ item.name }}</span></span>
+      <span class="drive-result-name">
+        {% if item.is_image %}
+        <button class="drive-thumb drive-thumb-sm" type="button" data-lightbox data-caption="{{ item.name }}"
+                title="Pratinjau {{ item.name }}" aria-label="Pratinjau {{ item.name }}">
+          <img src="{{ preview_url(item.path) }}" alt="" loading="lazy" decoding="async">
+        </button>
+        {% else %}
+        {{ icon('file') }}
+        {% endif %}
+        <span>{{ item.name }}</span>
+      </span>
       <span class="drive-result-folder">{{ item.folder or label }}</span>
       <a class="btn btn-soft btn-sm" href="{{ download_url(item.path) }}">{{ icon('download') }} Unduh</a>
     </li>
@@ -228,7 +242,14 @@
               {% if entry.is_dir %}
               <a href="{{ scope_url(entry.path) }}">{{ icon('folder') }}<strong>{{ entry.name }}</strong></a>
               {% else %}
+              {% if entry.is_image %}
+              <button class="drive-thumb" type="button" data-lightbox data-caption="{{ entry.name }}"
+                      title="Pratinjau {{ entry.name }}" aria-label="Pratinjau {{ entry.name }}">
+                <img src="{{ preview_url(entry.path) }}" alt="" loading="lazy" decoding="async">
+              </button>
+              {% else %}
               <span class="drive-file-icon">{{ icon('file') }}</span>
+              {% endif %}
               <strong>{{ entry.name }}</strong>
               {% endif %}
             </div>

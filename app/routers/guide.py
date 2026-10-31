@@ -314,8 +314,9 @@ APP_KNOWLEDGE = """
 - `/staf-humas` Direktori staf Humas beserta jabatan, unggahan, dan status Face ID.
 - `/seleksi-foto` Kurasi foto berbantuan AI: unggah, penilaian kualitas, pemilihan
   foto terbaik, lalu penerapan ke kegiatan.
-- `/drive` Penyimpanan berkas Humas di HF S3: unggah, cari, ubah nama, unduh, dan
-  kelola folder pribadi maupun tim.
+- `/drive` Penyimpanan berkas Humas di HF S3: unggah, cari, ubah nama, unduh,
+  pratinjau foto (JPEG/PNG/WebP/GIF/BMP/AVIF), dan kelola folder pribadi maupun
+  tim. Pratinjau SVG dinonaktifkan demi keamanan.
 - `/sentimen` dan `/anggota/{id}/sentimen`: pemindaian serta riwayat pemberitaan.
 - `/pengguna` (admin) kelola akun, peran, komisi, status, reset kata sandi.
 - `/audit` log audit dan ekspor CSV; `/profil` profil, ganti sandi, token API.

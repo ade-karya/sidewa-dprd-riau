@@ -47,11 +47,30 @@ STREAM_INLINE_MIME = frozenset(
     }
 )
 
+# Jenis gambar yang aman dipratinjau langsung di browser. SVG sengaja tidak
+# dimasukkan karena dapat memuat skrip.
+PREVIEW_MIME = frozenset(
+    {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "image/bmp",
+        "image/avif",
+    }
+)
+
 
 def should_stream(name: str) -> bool:
     """True bila berkas harus dialirkan lewat server, bukan dialihkan ke S3."""
     mime = mimetypes.guess_type(name)[0] or ""
     return mime.startswith("text/") or mime in STREAM_INLINE_MIME
+
+
+def is_previewable(name: str) -> bool:
+    """True bila berkas berupa gambar yang aman ditampilkan sebagai pratinjau."""
+    mime = mimetypes.guess_type(name)[0] or ""
+    return mime in PREVIEW_MIME
 
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
@@ -263,6 +282,7 @@ def _entries(root: str, directory: str) -> list[dict[str, Any]]:
             "name": name,
             "path": _join(directory, name),
             "is_dir": False,
+            "is_image": is_previewable(name),
             "size": int(obj.get("Size") or 0),
             "modified": None,
             "modified_label": "—",
@@ -285,6 +305,7 @@ def _entries(root: str, directory: str) -> list[dict[str, Any]]:
                 "name": name,
                 "path": _join(directory, name),
                 "is_dir": True,
+                "is_image": False,
                 "size": 0,
                 "modified": None,
                 "modified_label": "—",
@@ -499,6 +520,7 @@ def search(root: str, query: str) -> dict[str, Any]:
                     "path": relative,
                     "folder": folder,
                     "is_dir": False,
+                    "is_image": is_previewable(name),
                     "size": int(obj.get("Size") or 0),
                     "mime": mimetypes.guess_type(name)[0] or "application/octet-stream",
                 }
