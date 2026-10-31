@@ -42,10 +42,28 @@
 ## Rilis & siaran pers
 1. Buka `/rilis` atau pintasan **Tulis rilis** pada ruang kerja staf Humas.
 2. Isi judul, tanggal rilis, ringkasan, isi naskah, tag, dan kegiatan terkait.
-3. Simpan sebagai draf untuk ditinjau kembali. Draf hanya terlihat oleh pengelola konten.
-4. Terbitkan rilis dari halaman detail. Rilis terbit tampil di daftar dan ruang kerja.
-5. Gunakan **Arsipkan** untuk menyimpan rilis sebagai referensi tanpa menampilkannya
+3. Ingin lebih cepat? Unggah **rekaman audio** wawancara atau rapat pada kartu
+   *Isi otomatis dari rekaman audio*. Rekaman divalidasi dan disimpan lebih dulu
+   ke **Drive pribadi** Anda di folder `Rilis/Audio`, lalu Gemini 3.8 Flash
+   menyusun judul, ringkasan, isi 5W1H, tag, tanggal, dan kegiatan yang paling
+   cocok. Periksa dan sesuaikan hasilnya sebelum menyimpan.
+4. Simpan sebagai draf untuk ditinjau kembali. Draf hanya terlihat oleh pengelola konten.
+5. Terbitkan rilis dari halaman detail. Rilis terbit tampil di daftar dan ruang kerja.
+6. Gunakan **Arsipkan** untuk menyimpan rilis sebagai referensi tanpa menampilkannya
    sebagai rilis aktif. Administrator dapat menghapus rilis secara permanen.
+
+Format audio yang diterima: MP3, WAV, M4A, OGG, FLAC, AAC, atau AIFF. Tidak ada
+batas ukuran khusus selama Gemini mampu memprosesnya: rekaman besar diunggah
+lewat Gemini Files API (hingga 2 GB per berkas) dan tetap disimpan lebih dulu ke
+Drive pribadi. Batas praktisnya adalah sisa kuota Drive Anda. Bila Gemini gagal
+menyusun draf, rekaman tetap tersimpan di Drive dan dapat dipakai lagi.
+
+### Skill bersama rilis
+Humas memiliki **satu skill bersama** bernama *Gaya Rilis Humas* (`/rilis/skill`).
+Skill ini bukan diatur manual per pengguna: setiap rilis diterbitkan, diarsipkan,
+disunting, atau dihapus, panduannya dihitung ulang dari rilis yang sedang terbit
+saat itu. Skill dipakai Gemini ketika menyusun draf dari rekaman audio agar gaya
+judul, ringkasan, isi, dan tag konsisten dengan publikasi terbaru Humas.
 
 ## Drive Humas
 Setiap staf Humas memiliki **Drive pribadi** berkuota **100 GB** di menu

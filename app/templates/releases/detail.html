@@ -40,6 +40,17 @@
         {% if release.status == 'published' %}<span>{{ icon('eye') }} {{ release.view_count }} dilihat</span>{% endif %}
       </div>
 
+      {% if can_manage_content %}
+      <div class="release-mobile-edit" aria-label="Sunting bagian rilis">
+        <a class="btn btn-outline btn-sm" href="/rilis/{{ release.id }}/edit#summary">
+          {{ icon('edit') }} Sunting ringkasan
+        </a>
+        <a class="btn btn-outline btn-sm" href="/rilis/{{ release.id }}/edit#body">
+          {{ icon('edit') }} Sunting isi rilis
+        </a>
+      </div>
+      {% endif %}
+
       <div class="prose release-prose">
         {% for paragraph in release.body.split('\n\n') if paragraph.strip() %}
         <p>{{ paragraph }}</p>

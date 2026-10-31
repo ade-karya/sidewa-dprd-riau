@@ -182,6 +182,29 @@ class Settings:
         default_factory=lambda: _float("SIDEWA_GEMINI_SCORE_WEIGHT", 0.7)
     )
 
+    # ── Draf rilis otomatis dari rekaman audio ──────────────────────────────
+    # Rekaman disimpan lebih dulu di Drive pribadi pengguna, lalu dikirim ke
+    # Gemini untuk disusun menjadi judul, ringkasan, isi, tag, dan metadata.
+    gemini_release_enabled: bool = field(
+        default_factory=lambda: _bool("SIDEWA_GEMINI_RELEASE_ENABLED", True)
+    )
+    gemini_release_model: str = field(
+        default_factory=lambda: os.getenv(
+            "SIDEWA_GEMINI_RELEASE_MODEL", "gemini-3.8-flash"
+        )
+    )
+    gemini_release_folder: str = field(
+        default_factory=lambda: os.getenv(
+            "SIDEWA_GEMINI_RELEASE_FOLDER", "Rilis/Audio"
+        ).strip("/")
+    )
+    gemini_release_max_audio_mb: int = field(
+        default_factory=lambda: _int("SIDEWA_GEMINI_RELEASE_MAX_AUDIO_MB", 0)
+    )
+    gemini_release_timeout: int = field(
+        default_factory=lambda: _int("SIDEWA_GEMINI_RELEASE_TIMEOUT", 900)
+    )
+
     # ── Resolusi identitas anggota untuk penyaringan berita ─────────────────
     member_identity_file: Path = field(
         default_factory=lambda: Path(
@@ -329,6 +352,21 @@ class Settings:
     @property
     def gemini_live_available(self) -> bool:
         return bool(self.gemini_api_key and self.gemini_live_enabled)
+
+    @property
+    def gemini_release_available(self) -> bool:
+        return bool(
+            self.gemini_api_key
+            and self.gemini_release_enabled
+            and self.gemini_release_model.strip()
+        )
+
+    @property
+    def gemini_release_max_audio_bytes(self) -> int:
+        """Batas tambahan dari admin; ``0`` berarti tanpa batas khusus."""
+        if self.gemini_release_max_audio_mb <= 0:
+            return 0
+        return self.gemini_release_max_audio_mb * 1024 * 1024
 
     @property
     def hf_s3_configured(self) -> bool:

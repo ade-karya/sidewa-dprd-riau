@@ -114,6 +114,7 @@
         "Cari rilis berdasarkan judul, status, atau rentang tanggal.",
         "Buka detail untuk membaca isi dan mengunduh rilis.",
         "Tautkan rilis ke kegiatan terkait agar konteksnya lengkap.",
+        "Lihat Skill rilis untuk panduan gaya yang diperbarui otomatis dari rilis terbit.",
       ],
     },
     "/cari": {

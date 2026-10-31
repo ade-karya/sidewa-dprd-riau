@@ -673,6 +673,33 @@ class PressRelease(Base, TimestampMixin):
     )
 
 
+class ReleaseSkill(Base, TimestampMixin):
+    """Satu skill bersama untuk gaya penulisan rilis Humas.
+
+    Skill ini tidak dimiliki satu pengguna. Isinya diperbarui otomatis dari
+    kumpulan rilis yang sedang terbit, sehingga panduan gaya selalu mengikuti
+    publikasi terbaru tim Humas.
+    """
+
+    __tablename__ = "release_skills"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(
+        String(60), unique=True, index=True, default="gaya-rilis-humas", nullable=False
+    )
+    name: Mapped[str] = mapped_column(
+        String(80), default="Gaya Rilis Humas", nullable=False
+    )
+    description: Mapped[str] = mapped_column(String(220), default="", nullable=False)
+    instructions: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    learned_preferences: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    source_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    auto_update: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    auto_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_shared: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
 class ActivityPhoto(Base):
     __tablename__ = "activity_photos"
 

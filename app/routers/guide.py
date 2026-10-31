@@ -314,6 +314,11 @@ APP_KNOWLEDGE = """
 - `/staf-humas` Direktori staf Humas beserta jabatan, unggahan, dan status Face ID.
 - `/seleksi-foto` Kurasi foto berbantuan AI: unggah, penilaian kualitas, pemilihan
   foto terbaik, lalu penerapan ke kegiatan.
+- `/rilis/baru` Tulis rilis Humas. Unggahan rekaman audio disimpan lebih dulu ke
+  Drive pribadi (`Rilis/Audio`), lalu Gemini 3.8 Flash menyusun judul, ringkasan,
+  isi 5W1H, tag, tanggal, dan kegiatan terkait.
+- `/rilis/skill` Skill bersama *Gaya Rilis Humas*: satu panduan gaya untuk semua
+  pengguna yang diperbarui otomatis dari rilis yang sedang terbit.
 - `/drive` Penyimpanan berkas Humas di HF S3: unggah, cari, ubah nama, unduh,
   pratinjau foto (JPEG/PNG/WebP/GIF/BMP/AVIF), dan kelola folder pribadi maupun
   tim. Pratinjau SVG dinonaktifkan demi keamanan.

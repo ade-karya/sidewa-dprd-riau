@@ -24,6 +24,92 @@
 
   <div class="release-form-layout">
     <div class="release-form-main" data-tour="release-form-main">
+      {% if mode == 'create' %}
+      <section class="card card-pad release-audio-card" data-release-audio
+               data-max-bytes="{{ settings.gemini_release_max_audio_bytes }}">
+        <div class="flex-between mb-2 release-audio-head">
+          <div>
+            <div class="form-section-title">{{ icon('mic') }} Isi otomatis dari rekaman audio</div>
+            <p class="muted-small">
+              Unggah rekaman wawancara atau rapat. Rekaman disimpan lebih dulu di
+              <strong>Drive pribadi Anda</strong>, lalu Gemini
+              {{ settings.gemini_release_model }} menyusun judul, ringkasan, isi 5W1H,
+              tag, tanggal, dan kegiatan terkait.
+            </p>
+          </div>
+          <span class="chip chip-purple">{{ icon('sparkles') }} AI</span>
+        </div>
+
+        <div class="release-audio-grid">
+          <div class="upload-zone release-audio-zone">
+            <input id="release-audio" type="file" name="release_audio"
+                   accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,audio/ogg,audio/flac,audio/aac,audio/aiff,.mp3,.wav,.m4a,.mp4,.ogg,.oga,.flac,.aac,.aiff"
+                   aria-label="Pilih rekaman audio untuk draf rilis"
+                   data-release-audio-input>
+            <div class="upload-icon">{{ icon('mic') }}</div>
+            <h4>Pilih rekaman audio</h4>
+            <p>MP3, WAV, M4A, OGG, FLAC, AAC, atau AIFF ·
+              {% if settings.gemini_release_max_audio_mb > 0 %}maks. {{ settings.gemini_release_max_audio_mb }} MB{% else %}tanpa batas ukuran khusus; rekaman besar diproses lewat Files API Gemini (hingga 2 GB per berkas, selama kuota Drive mencukupi){% endif %}</p>
+          </div>
+
+          <div class="release-audio-side">
+            <div class="release-audio-file" data-release-audio-file hidden>
+              <span class="release-audio-file-icon">{{ icon('file') }}</span>
+              <span class="release-audio-file-copy">
+                <strong data-release-audio-name>—</strong>
+                <small data-release-audio-size></small>
+              </span>
+            </div>
+            <button class="btn btn-primary" type="button" data-release-audio-run disabled>
+              {{ icon('sparkles') }} Isi draf dengan Gemini
+            </button>
+            <p class="muted-small release-audio-status" data-release-audio-status aria-live="polite">
+              Pilih rekaman terlebih dahulu. Rekaman akan tersimpan di Drive
+              {% if settings.gemini_release_folder %}<code>{{ settings.gemini_release_folder }}</code>{% endif %}.
+            </p>
+            <div class="release-audio-saved" data-release-audio-saved hidden>
+              {{ icon('cloud') }}
+              <span>
+                Tersimpan di Drive:
+                <a href="#" target="_blank" rel="noopener" data-release-audio-link>lihat folder</a>
+              </span>
+            </div>
+            <details class="release-audio-details" data-release-audio-transcript hidden>
+              <summary>Lihat transkripsi untuk verifikasi</summary>
+              <p data-release-audio-transcript-text></p>
+            </details>
+            <p class="release-audio-notes" data-release-audio-notes hidden></p>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if release_skill %}
+      <section class="card card-pad release-skill-card" id="skill-rilis">
+        <div class="flex-between mb-2 release-audio-head">
+          <div>
+            <div class="form-section-title">{{ icon('sparkles') }} Skill bersama: {{ release_skill.name }}</div>
+            <p class="muted-small">
+              Satu panduan gaya untuk seluruh tim Humas. Isinya diperbarui otomatis dari
+              <strong>{{ release_skill.source_count }} rilis yang sedang terbit</strong>,
+              sehingga Gemini mengikuti gaya publikasi terbaru.
+            </p>
+          </div>
+          <a class="btn btn-ghost btn-sm" href="/rilis/skill">
+            {{ icon('book-open') }} <span>Lihat skill</span>
+          </a>
+        </div>
+        <details class="release-audio-details release-skill-details">
+          <summary>Lihat panduan gaya yang dipelajari otomatis</summary>
+          <p>{{ release_skill.learned_preferences }}</p>
+        </details>
+        <p class="muted-small mt-1">
+          {{ icon('refresh') }} Terakhir diperbarui:
+          {{ release_skill.auto_updated_at|datetime_id if release_skill.auto_updated_at else 'menunggu rilis pertama' }}.
+        </p>
+      </section>
+      {% endif %}
+
       <div class="card card-pad">
         <div class="flex-between mb-2">
           <div>
@@ -61,7 +147,7 @@
 
           <div class="form-group full">
             <label class="form-label" for="summary">Ringkasan / teras berita</label>
-            <textarea class="textarea" id="summary" name="summary" rows="3" maxlength="500"
+            <textarea class="textarea release-summary-input" id="summary" name="summary" rows="3" maxlength="500"
                       placeholder="Satu atau dua kalimat yang merangkum inti rilis…">{{ form.summary }}</textarea>
             <span class="form-hint">Maksimal 500 karakter. Tampil sebagai cuplikan pada daftar rilis.</span>
           </div>
@@ -136,4 +222,10 @@
     </aside>
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+{% if mode == 'create' %}
+<script src="/static/js/release-audio.js?v={{ app_version }}" defer></script>
+{% endif %}
 {% endblock %}

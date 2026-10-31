@@ -14,6 +14,8 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
   dipadukan dengan leksikon sentimen Bahasa Indonesia.
 - Unggah dokumentasi kegiatan: metadata, komisi terkait, lokasi, tanggal, foto; deteksi wajah otomatis.
 - **Rilis & siaran pers Humas**: susun draf, tautkan ke kegiatan, terbitkan, arsipkan, dan pantau rilis terbaru langsung dari ruang kerja staf Humas (`/rilis`).
+- **Draf rilis dari rekaman audio**: unggah rekaman wawancara/rapat di halaman **Tulis rilis**. Rekaman disimpan lebih dulu ke Drive pribadi pengguna, lalu Gemini 3.8 Flash mengisi judul, ringkasan, isi 5W1H, tag, tanggal, dan kegiatan terkait.
+- **Skill bersama rilis**: satu panduan gaya untuk seluruh tim Humas yang diperbarui otomatis dari rilis yang sedang terbit. Skill dipakai Gemini saat menyusun draf dan dapat dilihat di `/rilis/skill`.
 - **Drive Humas** (`/drive`): setiap pengelola konten punya ruang pribadi **100 GB** di HF S3 (unggah banyak berkas, folder, cari, ubah nama, unduh, hapus) plus area **Drive tim** bersama di `/drive/tim`.
 - Pencarian berdasarkan wajah (unggah foto), nama/jabatan, kategori, komisi, lokasi, dan rentang tanggal.
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
@@ -222,6 +224,16 @@ Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Var
 - `SIDEWA_GEMINI_API_KEY` — API key Gemini untuk menilai relevansi dan sentimen.
 - `SIDEWA_GEMINI_MODEL` (default `gemini-3.5-flash-lite`), `SIDEWA_GEMINI_TIMEOUT`,
   `SIDEWA_GEMINI_MAX_OUTPUT_TOKENS` — model dan batas pemanggilan Gemini.
+- `SIDEWA_GEMINI_RELEASE_ENABLED` (default `true`) dan
+  `SIDEWA_GEMINI_RELEASE_MODEL` (default `gemini-3.8-flash`) — draf rilis
+  otomatis dari rekaman audio. Rekaman disimpan lebih dulu ke Drive pribadi
+  pengguna (`Rilis/Audio`), lalu dikirim ke Gemini.
+- `SIDEWA_GEMINI_RELEASE_MAX_AUDIO_MB` (default `0` = tanpa batas tambahan),
+  `SIDEWA_GEMINI_RELEASE_TIMEOUT` (default `900` detik), dan
+  `SIDEWA_GEMINI_RELEASE_FOLDER` (default `Rilis/Audio`) — batas opsional,
+  waktu tunggu, dan folder Drive untuk rekaman rilis. Batas praktis mengikuti
+  kuota Drive dan batas Gemini Files API (2 GB per berkas); rekaman besar
+  diunggah lewat Files API, bukan `inlineData`.
 - `SIDEWA_GEMINI_LIVE_ENABLED` — aktifkan Asisten SIDEWA berbasis Gemini Live.
 - `SIDEWA_GEMINI_LIVE_MODEL` (default `gemini-3.8-live`) — model Live untuk
   percakapan panduan umum.

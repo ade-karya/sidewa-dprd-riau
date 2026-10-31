@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import tempfile
 from datetime import date
+from pathlib import Path
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from ..audit import audit
+from ..config import settings
 from ..constants import (
     ADMIN_ROLES,
     CONTENT_MANAGER_ROLES,
@@ -21,6 +25,13 @@ from ..constants import (
 from ..database import get_db
 from ..deps import csrf_protect, flash, require_roles, require_user
 from ..models import Activity, PressRelease, User, utcnow
+from ..services import drive, release_draft, release_skills
+from ..services.gemini import (
+    GeminiAuthError,
+    GeminiError,
+    GeminiQuotaError,
+    GeminiUnavailableError,
+)
 from ..services.releases import (
     apply_filters,
     next_code,
@@ -30,7 +41,7 @@ from ..services.releases import (
 )
 from ..services.search import Page, paginate
 from ..templating import render
-from ..utils import local_now
+from ..utils import human_filesize, local_now
 
 router = APIRouter(dependencies=[Depends(csrf_protect)])
 
@@ -56,6 +67,69 @@ def _activity_options(db: Session) -> list[Activity]:
         .order_by(Activity.activity_date.desc(), Activity.id.desc())
         .limit(200)
         .all()
+    )
+
+
+def _audio_folder() -> str:
+    try:
+        return drive.normalize_dir(settings.gemini_release_folder or "Rilis/Audio")
+    except drive.DriveError:
+        return "Rilis/Audio"
+
+
+def _drive_audio_response() -> dict[str, str]:
+    folder = _audio_folder()
+    return {
+        "folder": folder,
+        "url": "/drive?" + urlencode({"path": folder}),
+    }
+
+
+def _save_audio_to_drive(
+    user: User, audio: release_draft.PreparedAudio
+) -> str:
+    """Simpan rekaman ke Drive pribadi pengguna sebelum dikirim ke Gemini."""
+    if not drive.available():
+        raise drive.DriveUnavailable(
+            "Drive pribadi belum siap. Rekaman tidak dapat disimpan, jadi draf "
+            "otomatis dibatalkan. Hubungi administrator."
+        )
+    root = drive.personal_root(user.id)
+    folder = _audio_folder()
+    total = drive.quota_bytes()
+    used = drive.usage_cached(root)
+    if used + audio.size > total:
+        raise drive.DriveQuotaExceeded(
+            "Rekaman tidak muat di Drive pribadi. Sisa ruang "
+            f"{human_filesize(max(0, total - used))} dari "
+            f"{human_filesize(total)}. Hapus berkas lain lebih dulu."
+        )
+
+    name = drive.upload_file(root, folder, audio.filename, audio.path)
+    drive.prime_usage(root, used + audio.size)
+    return f"{folder}/{name}" if folder else name
+
+
+def _refresh_skill(
+    db: Session, request: Request, user: User, reason: str
+) -> None:
+    """Perbarui satu skill rilis bersama setelah perubahan status publikasi."""
+    row, changed = release_skills.refresh_shared_skill(db)
+    if not changed:
+        return
+    audit(
+        db,
+        request,
+        "RELEASE_SKILL_UPDATE",
+        actor=user,
+        entity_type="release_skill",
+        summary=f"Memperbarui skill rilis otomatis ({reason})",
+        detail={
+            "source_count": row.source_count,
+            "auto_updated_at": row.auto_updated_at.isoformat()
+            if row.auto_updated_at
+            else None,
+        },
     )
 
 
@@ -230,7 +304,50 @@ def new_release(
         form=_form_values(),
         activities=_activity_options(db),
         mode="create",
+        release_skill=release_skills.ensure_shared_skill(db),
     )
+
+
+@router.get("/rilis/skill")
+def release_skill(
+    request: Request,
+    user: User = Depends(MANAGER),
+    db: Session = Depends(get_db),
+):
+    """Tampilkan satu skill bersama yang dipelajari dari rilis terbit."""
+    row = release_skills.ensure_shared_skill(db)
+    examples = release_skills.published_examples(db)
+    return render(
+        request,
+        "releases/skill.html",
+        user=user,
+        skill=release_skills.skill_payload(row),
+        examples=examples,
+    )
+
+
+@router.post("/rilis/skill/perbarui")
+def refresh_release_skill(
+    request: Request,
+    user: User = Depends(MANAGER),
+    db: Session = Depends(get_db),
+):
+    row, changed = release_skills.refresh_shared_skill(db, commit=True)
+    if changed:
+        audit(
+            db,
+            request,
+            "RELEASE_SKILL_UPDATE",
+            actor=user,
+            entity_type="release_skill",
+            summary="Memperbarui skill rilis bersama secara manual",
+            detail={"source_count": row.source_count},
+        )
+        db.commit()
+        flash(request, f"Skill rilis diperbarui dari {row.source_count} rilis terbit.", "success")
+    else:
+        flash(request, "Skill rilis sudah sesuai dengan rilis yang terbit.", "info")
+    return RedirectResponse("/rilis/skill", status_code=303)
 
 
 @router.post("/rilis")
@@ -302,6 +419,189 @@ def create_release(
         )
     flash(request, f"Draf rilis {release.code} berhasil dibuat.", "success")
     return RedirectResponse(f"/rilis/{release.id}", status_code=303)
+
+
+UPLOAD_CHUNK = 1024 * 1024
+
+
+async def _spool_upload(audio: UploadFile) -> Path:
+    """Salin unggahan ke berkas sementara sambil menegakkan batas praktis.
+
+    Rekaman tidak pernah dimuat seluruhnya ke memori, sehingga rekaman besar
+    (mis. rapat berjam-jam) tetap dapat diproses selama Gemini mampu.
+    """
+    limit = release_draft.max_audio_bytes()
+    suffix = Path(audio.filename or "").suffix.lower()
+    if not suffix.isalnum() and not suffix.startswith("."):
+        suffix = ""
+    temporary = tempfile.NamedTemporaryFile(
+        prefix="sidewa-release-audio-", suffix=suffix[:12], delete=False
+    )
+    path = Path(temporary.name)
+    size = 0
+    try:
+        with temporary:
+            while True:
+                chunk = await audio.read(UPLOAD_CHUNK)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > limit:
+                    raise release_draft.limit_error(limit)
+                temporary.write(chunk)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+    return path
+
+
+@router.post("/rilis/draf-ai")
+async def draft_release_from_audio(
+    request: Request,
+    audio: UploadFile = File(...),
+    user: User = Depends(MANAGER),
+    db: Session = Depends(get_db),
+):
+    """Simpan rekaman ke Drive pengguna, lalu susun draf rilis dengan Gemini."""
+    drive_info = _drive_audio_response()
+    drive_path = ""
+    temp_path: Path | None = None
+    prepared: release_draft.PreparedAudio | None = None
+    try:
+        try:
+            temp_path = await _spool_upload(audio)
+            prepared = release_draft.prepare_audio(temp_path, audio.filename)
+            drive_path = await run_in_threadpool(
+                _save_audio_to_drive, user, prepared
+            )
+            audit(
+                db,
+                request,
+                "DRIVE_UPLOAD",
+                actor=user,
+                entity_type="drive",
+                summary=f"Menyimpan rekaman rilis ke Drive pribadi: {drive_path}",
+                detail={
+                    "scope": "pribadi",
+                    "path": drive_path,
+                    "source": "release_audio_draft",
+                    "size": prepared.size,
+                    "mime": prepared.mime,
+                },
+            )
+            db.commit()
+        except release_draft.ReleaseAudioError as exc:
+            db.rollback()
+            return JSONResponse(
+                {"ok": False, "error": str(exc), "drive": drive_info},
+                status_code=422,
+            )
+        except drive.DriveQuotaExceeded as exc:
+            db.rollback()
+            return JSONResponse(
+                {"ok": False, "error": str(exc), "drive": drive_info},
+                status_code=507,
+            )
+        except drive.DriveUnavailable as exc:
+            db.rollback()
+            return JSONResponse(
+                {"ok": False, "error": str(exc), "drive": drive_info},
+                status_code=503,
+            )
+        except drive.DriveError as exc:
+            db.rollback()
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": f"Rekaman gagal disimpan ke Drive. {exc}",
+                    "drive": drive_info,
+                },
+                status_code=502,
+            )
+        finally:
+            await audio.close()
+
+        assert prepared is not None
+        drive_info["path"] = drive_path
+        skill_text = release_skills.prompt_block(db)
+        try:
+            draft = await run_in_threadpool(
+                release_draft.draft_from_audio,
+                prepared,
+                _activity_options(db),
+                skill_text=skill_text,
+            )
+        except GeminiQuotaError as exc:
+            db.rollback()
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "drive": drive_info,
+                    "saved": True,
+                },
+                status_code=429,
+            )
+        except (GeminiAuthError, GeminiUnavailableError) as exc:
+            db.rollback()
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "drive": drive_info,
+                    "saved": True,
+                },
+                status_code=503,
+            )
+        except release_draft.ReleaseDraftError as exc:
+            db.rollback()
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "drive": drive_info,
+                    "saved": True,
+                },
+                status_code=422,
+            )
+        except GeminiError as exc:
+            db.rollback()
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": release_draft.friendly_error(exc),
+                    "drive": drive_info,
+                    "saved": True,
+                },
+                status_code=502,
+            )
+
+        audit(
+            db,
+            request,
+            "RELEASE_AI_DRAFT",
+            actor=user,
+            entity_type="release",
+            summary=f"Menyusun draf rilis dari rekaman audio: {drive_path}",
+            detail={
+                "drive_path": drive_path,
+                "model": settings.gemini_release_model,
+                "activity_id": draft.get("activity_id"),
+                "drive_url": drive_info.get("url"),
+            },
+        )
+        db.commit()
+        return JSONResponse(
+            {
+                "ok": True,
+                "draft": draft,
+                "drive": drive_info,
+                "model": settings.gemini_release_model,
+            }
+        )
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 @router.get("/rilis/{release_id}")
@@ -397,6 +697,8 @@ def update_release(
         release.release_date = values["release_date"]
         release.activity_id = values["activity"].id if values["activity"] else None
         release.tags = values["tags"] or None
+        if release.status == STATUS_PUBLISHED:
+            _refresh_skill(db, request, user, "rilis terbit disunting")
         audit(
             db,
             request,
@@ -437,6 +739,7 @@ def publish_release(
         return RedirectResponse(f"/rilis/{release.id}/edit", status_code=303)
     release.status = STATUS_PUBLISHED
     release.published_at = utcnow()
+    _refresh_skill(db, request, user, "rilis diterbitkan")
     audit(
         db,
         request,
@@ -460,6 +763,7 @@ def archive_release(
 ):
     release = _release_or_404(db, release_id)
     release.status = STATUS_ARCHIVED
+    _refresh_skill(db, request, user, "rilis diarsipkan")
     audit(
         db,
         request,
@@ -484,6 +788,7 @@ def restore_release(
     release = _release_or_404(db, release_id)
     release.status = STATUS_DRAFT
     release.published_at = None
+    _refresh_skill(db, request, user, "rilis dikembalikan ke draf")
     audit(
         db,
         request,
@@ -516,6 +821,7 @@ def delete_release(
         summary=f"Menghapus rilis {release.code}: {release.title}",
     )
     db.delete(release)
+    _refresh_skill(db, request, user, "rilis dihapus")
     db.commit()
     flash(request, "Rilis telah dihapus.", "success")
     return RedirectResponse("/rilis", status_code=303)

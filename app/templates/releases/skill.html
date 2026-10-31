@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import icon %}
+
+{% block title %}Skill Rilis Humas{% endblock %}
+{% block page_title %}Skill bersama rilis{% endblock %}
+{% block page_subtitle %}Satu panduan gaya untuk seluruh tim Humas{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-outline btn-sm" href="/rilis" aria-label="Daftar rilis">{{ icon('arrow-left') }}<span>Daftar rilis</span></a>
+<form method="post" action="/rilis/skill/perbarui" data-loading>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="btn btn-primary btn-sm" type="submit">
+    {{ icon('refresh') }}<span>Perbarui sekarang</span>
+  </button>
+</form>
+{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="/">Beranda</a>
+  <span>/</span>
+  <a href="/rilis">Rilis</a>
+  <span>/</span>
+  <span class="nowrap">Skill rilis</span>
+</nav>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    <article class="section-card release-skill-hero">
+      <div class="release-skill-hero-head">
+        <span class="release-skill-icon">{{ icon('sparkles') }}</span>
+        <div>
+          <div class="chip-row mb-1">
+            <span class="chip chip-purple">{{ icon('users') }} Skill bersama</span>
+            {% if skill.auto_update %}<span class="chip chip-blue">{{ icon('refresh') }} Adaptif</span>{% endif %}
+          </div>
+          <h2>{{ skill.name }}</h2>
+          <p class="muted">{{ skill.description }}</p>
+        </div>
+      </div>
+
+      <div class="release-skill-stats">
+        <div><b>{{ skill.source_count }}</b><span>Rilis terbit jadi acuan</span></div>
+        <div><b>{{ skill.auto_updated_at|datetime_id if skill.auto_updated_at else '—' }}</b><span>Terakhir diperbarui</span></div>
+        <div><b>{{ 'Otomatis' if skill.auto_update else 'Manual' }}</b><span>Mode pembaruan</span></div>
+      </div>
+
+      <p class="muted-small release-skill-note">
+        {{ icon('info') }}
+        Skill ini dipakai saat menyusun draf rilis dari rekaman audio. Setiap rilis
+        diterbitkan, diarsipkan, disunting, atau dihapus, panduannya dihitung ulang
+        dari rilis yang sedang terbit saat itu.
+      </p>
+    </article>
+
+    <article class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>{{ icon('book-open') }} Panduan gaya hasil pembelajaran</h2>
+          <p>Ringkasan statistik dan pola dari rilis terbit terbaru.</p>
+        </div>
+      </div>
+      <pre class="release-skill-pre">{{ skill.learned_preferences }}</pre>
+    </article>
+
+    <article class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>{{ icon('target') }} Prinsip dasar</h2>
+          <p>Aturan tetap yang selalu dipakai bersama hasil pembelajaran.</p>
+        </div>
+      </div>
+      <p class="prose">{{ skill.instructions }}</p>
+    </article>
+  </div>
+
+  <aside class="detail-side">
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>{{ icon('file-text') }} Contoh rilis terbit</h2>
+          <p>{{ examples|length }} rilis terbaru sebagai acuan.</p>
+        </div>
+      </div>
+      {% if examples %}
+      <div class="release-skill-examples">
+        {% for release in examples %}
+        <a href="/rilis/{{ release.id }}">
+          <strong>{{ release.title }}</strong>
+          <span>{{ release.release_date|date_short }} · {{ release.code }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted-small">Belum ada rilis terbit. Skill akan belajar otomatis setelah rilis pertama diterbitkan.</p>
+      {% endif %}
+    </section>
+
+    <section class="section-card">
+      <div class="prose">
+        <p class="muted-small">
+          Ingin menyesuaikan? Skill ini sengaja hanya satu untuk semua pengguna agar
+          gaya rilis Humas tetap konsisten. Perubahan gaya dilakukan dengan
+          menerbitkan atau menyunting rilis, bukan dengan mengubah skill secara manual.
+        </p>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}
