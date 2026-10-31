@@ -69,7 +69,7 @@
     "/drive": {
       title: "Drive Humas",
       body:
-        "Penyimpanan berkas pribadi dan tim Humas di HF S3. Unggah, cari, ubah nama, unduh, dan kelola folder tanpa membebani server aplikasi.",
+        "Penyimpanan berkas pribadi dan tim Humas di cloud. Unggah, cari, ubah nama, unduh, dan kelola folder tanpa membebani server aplikasi.",
       tips: [
         "Periksa bilah kuota sebelum mengunggah berkas besar.",
         "Gunakan tab Drive tim untuk berkas bersama.",

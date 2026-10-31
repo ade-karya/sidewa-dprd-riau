@@ -297,12 +297,12 @@
   </div>
   <div class="table-foot">
     <span class="muted-small">{{ folder_count }} folder · {{ file_count }} berkas · total {{ total_size|filesize }}</span>
-    <span class="badge">{{ icon('cloud') }} Hugging Face S3</span>
+    <span class="badge">{{ icon('cloud') }} Penyimpanan cloud</span>
   </div>
 </div>
 
 {% if not entries and not query and not drive_ready %}
-{{ empty_state('folder', 'Drive belum aktif', 'Isi SIDEWA_HF_S3_* lalu muat ulang halaman ini.') }}
+{{ empty_state('folder', 'Drive belum aktif', 'Isi konfigurasi penyimpanan lalu muat ulang halaman ini.') }}
 {% endif %}
 {% endblock %}
 
