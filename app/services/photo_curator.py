@@ -34,6 +34,7 @@ from typing import Any
 
 from PIL import Image, ImageFilter, ImageOps, ImageStat
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from ..config import settings
 from ..constants import (
@@ -155,7 +156,12 @@ SHARED_PHOTO_SKILL_INSTRUCTIONS = (
 
 
 def shared_photo_skill(db, *, create: bool = True):
-    """Ambil satu skill seleksi foto bersama untuk semua pengguna."""
+    """Ambil satu skill seleksi foto bersama untuk semua pengguna.
+
+    Baris skill bersama disimpan permanen saat pertama kali dibuat. Tanpa
+    commit, id yang ditampilkan di halaman akan hilang ketika sesi database
+    ditutup sehingga formulir mengirim kunci ``shared:<id>`` yang tidak ada.
+    """
     owner = (
         db.query(User)
         .filter(User.role.in_(ADMIN_ROLES))
@@ -166,28 +172,50 @@ def shared_photo_skill(db, *, create: bool = True):
         owner = db.query(User).order_by(User.id).first()
     if owner is None:
         return None
-    row = (
-        db.query(PhotoSelectionSkill)
-        .filter(
-            PhotoSelectionSkill.is_shared.is_(True),
-            PhotoSelectionSkill.name == SHARED_PHOTO_SKILL_NAME,
+
+    def _lookup():
+        return (
+            db.query(PhotoSelectionSkill)
+            .filter(
+                PhotoSelectionSkill.is_shared.is_(True),
+                PhotoSelectionSkill.name == SHARED_PHOTO_SKILL_NAME,
+            )
+            .order_by(
+                PhotoSelectionSkill.is_active.desc(),
+                PhotoSelectionSkill.id,
+            )
+            .first()
         )
-        .first()
+
+    row = _lookup()
+    if row is not None:
+        if create and not row.is_active:
+            row.is_active = True
+            db.commit()
+        return row
+    if not create:
+        return None
+    row = PhotoSelectionSkill(
+        user_id=owner.id,
+        name=SHARED_PHOTO_SKILL_NAME,
+        icon="sparkles",
+        description=SHARED_PHOTO_SKILL_DESCRIPTION,
+        instructions=SHARED_PHOTO_SKILL_INSTRUCTIONS,
+        target_count=0,
+        min_score=62,
+        auto_update=True,
+        is_shared=True,
+        is_active=True,
     )
-    if row is None and create:
-        row = PhotoSelectionSkill(
-            user_id=owner.id,
-            name=SHARED_PHOTO_SKILL_NAME,
-            icon="sparkles",
-            description=SHARED_PHOTO_SKILL_DESCRIPTION,
-            instructions=SHARED_PHOTO_SKILL_INSTRUCTIONS,
-            target_count=0,
-            min_score=62,
-            auto_update=True,
-            is_shared=True,
-        )
-        db.add(row)
-        db.flush()
+    db.add(row)
+    try:
+        db.commit()
+    except IntegrityError:
+        # Worker lain membuat baris yang sama lebih dahulu.
+        db.rollback()
+        row = _lookup()
+        if row is None:
+            raise
     return row
 
 
@@ -328,6 +356,14 @@ def resolve_skill(db, user: User, key: str) -> dict[str, Any]:
             query = query.filter(PhotoSelectionSkill.is_shared.is_(True))
         row = query.first()
         if not row:
+            if prefix == "shared":
+                # Kunci lama/transien (mis. id dari sesi database yang belum
+                # tersimpan) diarahkan ke skill bersama yang berlaku saat ini.
+                row = shared_photo_skill(db)
+                if row is not None:
+                    payload = _custom_skill_payload(row, shared=True)
+                    payload["key"] = f"shared:{row.id}"
+                    return payload
             raise SelectionError("Skill seleksi tidak ditemukan atau sudah tidak dibagikan.")
         payload = _custom_skill_payload(row, shared=prefix == "shared")
         payload["key"] = f"{prefix}:{row.id}"
