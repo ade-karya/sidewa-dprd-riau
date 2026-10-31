@@ -8,8 +8,8 @@
 {% block topbar_actions %}
 <a class="btn btn-outline btn-sm" href="/seleksi-foto">{{ icon('arrow-left') }}<span>Ruang seleksi</span></a>
 {% if run.selected_count %}
-<button class="btn btn-soft btn-sm" type="button" data-ps-download-all>{{ icon('download') }}<span>Unduh pilihan</span></button>
-<button class="btn btn-soft btn-sm" type="button" data-ps-share-whatsapp>{{ icon('send') }}<span>Bagikan via WhatsApp</span></button>
+<button class="btn btn-soft btn-sm" type="button" data-ps-download-all>{{ icon('download') }}<span>Unduh foto pilihan</span></button>
+<button class="btn btn-soft btn-sm" type="button" data-ps-share-whatsapp>{{ icon('send') }}<span>Kirim foto pilihan</span></button>
 {% endif %}
 {% endblock %}
 
@@ -82,7 +82,7 @@
         {{ icon('check') }}
         <div>
           <strong>Seleksi selesai</strong>
-          <p>Tinjau pilihan, lalu terapkan ke kegiatan atau unduh sebagai ZIP.</p>
+          <p>Tinjau pilihan, lalu terapkan ke kegiatan atau unduh foto aslinya.</p>
         </div>
       </div>
       {% elif run.status == 'cancelled' %}
@@ -167,10 +167,10 @@
                   <strong>{{ item.caption or item.original_name }}</strong>
                   <span>#{{ item.position }} · {{ item.width }}×{{ item.height }}</span>
                   <button type="button" class="btn btn-ghost btn-sm ps-wa-one" data-ps-share-one
-                          data-url="{{ request.base_url }}media/{{ item.file_path }}"
-                          data-caption="{{ item.caption or item.original_name }}"
+                          data-ps-photo-url="/seleksi-foto/sesi/{{ run.id }}/foto/{{ item.id }}"
+                          data-ps-photo-name="{{ item.caption or item.original_name }}"
                           {% if item.verdict != 'selected' %}hidden{% endif %}>
-                    {{ icon('send') }} WhatsApp
+                    {{ icon('send') }} Kirim
                   </button>
                 </div>
                 <p class="ps-reason">{{ item.reason or item.error or 'Belum ada catatan dari agen.' }}</p>
@@ -248,8 +248,8 @@
             {{ icon('upload') }} Terapkan <span data-ps-selected-count>{{ run.selected_count }}</span> foto
           </button>
         </form>
-        <a class="btn btn-outline btn-sm btn-block mt-1" href="#" data-ps-download-all>{{ icon('download') }} Unduh foto terpilih</a>
-        <button class="btn btn-soft btn-sm btn-block mt-1" type="button" data-ps-share-whatsapp>{{ icon('send') }} Bagikan via WhatsApp</button>
+        <button class="btn btn-outline btn-sm btn-block mt-1" type="button" data-ps-download-all>{{ icon('download') }} Unduh foto terpilih</button>
+        <button class="btn btn-soft btn-sm btn-block mt-1" type="button" data-ps-share-whatsapp>{{ icon('send') }} Kirim foto terpilih</button>
         <p class="form-hint mt-1">Maksimal {{ max_photos }} foto per kegiatan. {{ run.applied_count }} foto dari sesi ini sudah diterapkan.</p>
         {% else %}
         <p class="muted-small">Belum ada foto terpilih. Pilih minimal satu foto pada kartu di samping.</p>

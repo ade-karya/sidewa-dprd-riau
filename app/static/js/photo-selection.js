@@ -281,135 +281,187 @@
     });
   }
 
-  /* ── Bagikan foto terpilih (berkas asli, bukan tautan/teks) ───────────── */
-  const shareOne = async (button) => {
-    const url = button?.dataset.url || "";
-    if (!url) return;
-    const caption = (button.dataset.caption || "").trim() || "foto";
-    const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
-      let canShareSingle = false;
-      try {
-        canShareSingle = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-      } catch (error) {
-        canShareSingle = false;
-      }
-      if (canShareSingle) {
-        try {
-          await navigator.share({ files: [file], title: caption });
-          return;
-        } catch (error) {
-          if (error?.name === "AbortError") return;
-        }
-      }
-    } catch (error) {
-      console.warn("Gagal membagikan berkas:", error);
+  /* ── Kirim & unduh foto asli (bukan tautan, teks, atau ZIP) ──────────── */
+  const selectedCards = () =>
+    Array.from(document.querySelectorAll("[data-ps-card]")).filter(
+      (card) => card.dataset.verdict === "selected"
+    );
+
+  const photoButton = (card) => card?.querySelector("[data-ps-share-one]");
+
+  const extensionFor = (type, name = "") => {
+    const byType = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" };
+    if (byType[type]) return byType[type];
+    const match = String(name).match(/\.(jpe?g|png|webp)$/i);
+    if (!match) return ".jpg";
+    return `.${match[1].toLowerCase().replace("jpeg", "jpg")}`;
+  };
+
+  const filenameFor = (card, type) => {
+    const raw = (photoButton(card)?.dataset.psPhotoName || "").trim() || "foto";
+    const stem = raw
+      .replace(/\.[a-z0-9]{2,5}$/i, "")
+      .replace(/[\\/:*?"<>|\r\n]+/g, "-")
+      .trim()
+      .slice(0, 90);
+    return `${stem || "foto"}${extensionFor(type, raw)}`;
+  };
+
+  // Ambil berkas foto asli dari server dan pastikan isinya benar-benar gambar.
+  const fetchPhoto = async (card) => {
+    const url = photoButton(card)?.dataset.psPhotoUrl || "";
+    if (!url) throw new Error("URL foto tidak tersedia");
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      headers: { Accept: "image/*" },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const type = (blob.type || "").toLowerCase();
+    if (!type.startsWith("image/") || blob.size === 0) {
+      throw new Error("Berkas yang diterima bukan foto");
     }
+    return { blob, type, filename: filenameFor(card, type) };
+  };
+
+  const canShareFiles = (files) => {
+    if (typeof navigator.share !== "function") return false;
+    if (typeof navigator.canShare !== "function") return true;
+    try {
+      return !!navigator.canShare({ files });
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const savePhoto = (photo) => {
+    const href = URL.createObjectURL(photo.blob);
     const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
+    link.href = href;
+    link.download = photo.filename;
+    link.rel = "noopener";
     document.body.appendChild(link);
     link.click();
     link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(href), 4000);
   };
 
+  const withBusy = (button, task) => {
+    if (!button || button.dataset.psBusy === "1") return;
+    button.dataset.psBusy = "1";
+    button.disabled = true;
+    Promise.resolve()
+      .then(task)
+      .catch(() => toast("Foto tidak dapat disiapkan. Muat ulang halaman lalu coba lagi."))
+      .finally(() => {
+        button.disabled = false;
+        delete button.dataset.psBusy;
+      });
+  };
+
+  // Kirim satu foto lewat lembar berbagi perangkat; fallback mengunduh foto asli.
   document.querySelectorAll("[data-ps-share-one]").forEach((button) => {
     button.addEventListener("click", () => {
-      shareOne(button);
+      withBusy(button, async () => {
+        const card = button.closest("[data-ps-card]");
+        const photo = await fetchPhoto(card);
+        const file = new File([photo.blob], photo.filename, { type: photo.type });
+        if (canShareFiles([file])) {
+          try {
+            await navigator.share({ files: [file] });
+            return;
+          } catch (error) {
+            if (error?.name === "AbortError") return;
+          }
+        }
+        savePhoto(photo);
+        toast("Peramban belum bisa mengirim berkas langsung. Foto diunduh agar dapat dilampirkan manual.");
+      });
     });
   });
 
-  document.querySelectorAll("[data-ps-share-whatsapp]").forEach((shareAll) => {
-    shareAll.addEventListener("click", async () => {
-      const cards = Array.from(document.querySelectorAll("[data-ps-card]")).filter(
-        (card) => card.dataset.verdict === "selected"
-      );
-      if (!cards.length) {
-        toast("Belum ada foto berstatus Dipilih untuk dibagikan.");
-        return;
-      }
-      const files = [];
-      for (const card of cards) {
-        const button = card.querySelector("[data-ps-share-one]");
-        const url = button?.dataset.url || "";
-        if (!url) continue;
-        try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const caption = (button?.dataset.caption || "").trim() || "foto";
-          const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
-          files.push(new File([blob], filename, { type: blob.type || "image/jpeg" }));
-        } catch (error) {
-          console.warn("Gagal menyiapkan berkas:", error);
-        }
-      }
-      if (!files.length) {
-        toast("Gagal menyiapkan foto untuk dibagikan.");
-        return;
-      }
-      let canShare = false;
-      try {
-        canShare = !!(navigator.canShare && navigator.canShare({ files }));
-      } catch (error) {
-        canShare = false;
-      }
-      if (canShare) {
-        try {
-          await navigator.share({ files, title: "Foto terpilih" });
+  // Kirim semua foto terpilih sekaligus sebagai berkas gambar.
+  document.querySelectorAll("[data-ps-share-whatsapp]").forEach((button) => {
+    button.addEventListener("click", () => {
+      withBusy(button, async () => {
+        const cards = selectedCards();
+        if (!cards.length) {
+          toast("Belum ada foto berstatus Dipilih untuk dikirim.");
           return;
-        } catch (error) {
-          if (error?.name === "AbortError") return;
         }
-      }
-      // Fallback: unduh setiap foto asli satu per satu.
-      for (const card of cards) {
-        const button = card.querySelector("[data-ps-share-one]");
-        const url = button?.dataset.url || "";
-        if (!url) continue;
-        const caption = (button?.dataset.caption || "").trim() || "foto";
-        const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      }
+        const photos = [];
+        let failed = 0;
+        for (const card of cards) {
+          try {
+            photos.push(await fetchPhoto(card));
+          } catch (error) {
+            console.warn("Gagal menyiapkan foto:", error);
+            failed += 1;
+          }
+        }
+        if (!photos.length) {
+          toast("Foto terpilih tidak dapat disiapkan. Coba muat ulang halaman.");
+          return;
+        }
+        const files = photos.map(
+          (photo) => new File([photo.blob], photo.filename, { type: photo.type })
+        );
+        if (canShareFiles(files)) {
+          try {
+            await navigator.share({ files });
+            return;
+          } catch (error) {
+            if (error?.name === "AbortError") return;
+          }
+        }
+        // Peramban tanpa berbagi berkas: unduh foto aslinya satu per satu.
+        for (const photo of photos) {
+          savePhoto(photo);
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+        toast(
+          failed
+            ? `${photos.length} foto diunduh, ${failed} foto gagal disiapkan.`
+            : "Peramban belum bisa mengirim berkas langsung. Foto diunduh agar dapat dilampirkan manual."
+        );
+      });
     });
   });
 
-  // Unduh semua foto terpilih satu per satu (bukan ZIP).
+  // Unduh semua foto terpilih sebagai berkas gambar asli, bukan ZIP.
   document.querySelectorAll("[data-ps-download-all]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const cards = Array.from(document.querySelectorAll("[data-ps-card]")).filter(
-        (card) => card.dataset.verdict === "selected"
-      );
-      if (!cards.length) {
-        toast("Belum ada foto berstatus Dipilih untuk diunduh.");
-        return;
-      }
-      for (const card of cards) {
-        const shareButton = card.querySelector("[data-ps-share-one]");
-        const url = shareButton?.dataset.url || "";
-        if (!url) continue;
-        const caption = (shareButton?.dataset.caption || "").trim() || "foto";
-        const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      }
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      withBusy(button, async () => {
+        const cards = selectedCards();
+        if (!cards.length) {
+          toast("Belum ada foto berstatus Dipilih untuk diunduh.");
+          return;
+        }
+        let saved = 0;
+        let failed = 0;
+        for (const card of cards) {
+          try {
+            savePhoto(await fetchPhoto(card));
+            saved += 1;
+          } catch (error) {
+            console.warn("Gagal mengunduh foto:", error);
+            failed += 1;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+        if (!saved) {
+          toast("Foto terpilih tidak dapat diunduh. Coba muat ulang halaman.");
+        } else if (failed) {
+          toast(`${saved} foto diunduh, ${failed} foto gagal.`);
+        } else {
+          toast(`${saved} foto diunduh.`);
+        }
+      });
     });
   });
 
-  // Sembunyikan tombol WhatsApp pada kartu yang tidak berstatus Dipilih.
+  // Sembunyikan tombol kirim pada kartu yang tidak berstatus Dipilih.
   document.querySelectorAll("[data-ps-card]").forEach((card) => {
     const button = card.querySelector("[data-ps-share-one]");
     if (!button) return;

@@ -573,3 +573,37 @@ def test_selection_access_is_limited_to_content_roles(client):
     login(test_client, "staf-uji", "Riau#Test2026")
     response = test_client.get("/seleksi-foto")
     assert response.status_code == 403
+
+
+def test_selected_photo_downloads_as_original_image(client):
+    """Tombol unduh/kirim memakai berkas foto asli, bukan ZIP atau teks."""
+    test_client, _ = client
+    login(test_client, "superadmin", "Super#Test2026")
+
+    from app.database import SessionLocal
+    from app.models import PhotoSelectionItem, User
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == "superadmin").one()
+        run = _run_with_photos(db, user, total=1)
+        item = (
+            db.query(PhotoSelectionItem)
+            .filter(PhotoSelectionItem.run_id == run.id)
+            .one()
+        )
+        item.verdict = "selected"
+        item.caption = "Rapat Kerja"
+        db.commit()
+        run_id, item_id = run.id, item.id
+    finally:
+        db.close()
+
+    response = test_client.get(f"/seleksi-foto/sesi/{run_id}/foto/{item_id}")
+    assert response.status_code == 200
+    content_type = response.headers["content-type"]
+    disposition = response.headers["content-disposition"]
+    assert content_type.startswith("image/")
+    assert disposition.startswith("attachment;")
+    assert disposition.lower().endswith('.jpg"') or "filename*=utf-8''" in disposition
+    assert response.content[:2] == b"\xff\xd8"

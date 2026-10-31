@@ -7,14 +7,14 @@ memilih skill bawaan atau membuat skill sesuai preferensi mereka.
 
 from __future__ import annotations
 
-import io
 import math
+import mimetypes
 import re
-import zipfile
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -61,6 +61,18 @@ router = APIRouter(dependencies=[Depends(csrf_protect)])
 ACCESS = require_roles(*CONTENT_MANAGER_ROLES)
 
 TERMINAL_STATUSES = {SELECTION_DONE, SELECTION_FAILED, SELECTION_CANCELLED}
+
+DOWNLOAD_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+def _photo_download_name(item: PhotoSelectionItem, path: Path) -> str:
+    """Nama berkas ramah pengguna; tetap berekstensi foto asli."""
+    label = item.caption or item.original_name or f"foto-{item.position}"
+    label = Path(label).stem
+    label = re.sub(r'[\\/:*?"<>|\r\n]+', "-", label).strip(" .-_")
+    if not label:
+        label = f"foto-{item.position}"
+    return f"{label[:90]}{path.suffix or '.jpg'}"
 
 
 def _usage_context(db: Session, user: User, row) -> dict[str, Any]:
@@ -1037,54 +1049,41 @@ def apply_selection(
     return RedirectResponse(f"/kegiatan/{activity.id}#galeri", status_code=303)
 
 
-@router.get("/seleksi-foto/sesi/{run_id}/unduh")
-def download_selection(
+@router.get("/seleksi-foto/sesi/{run_id}/foto/{item_id}")
+def download_selection_photo(
     run_id: int,
-    request: Request,
+    item_id: int,
     user: User = Depends(ACCESS),
     db: Session = Depends(get_db),
 ):
+    """Sajikan satu foto asli sebagai lampiran, bukan tautan atau arsip ZIP."""
     run = _own_run_or_404(db, run_id, user)
-    selected = (
-        db.query(PhotoSelectionItem)
-        .filter(
-            PhotoSelectionItem.run_id == run.id,
-            PhotoSelectionItem.verdict == SELECTION_SELECTED,
-        )
-        .order_by(PhotoSelectionItem.position)
-        .all()
-    )
-    if not selected:
-        flash(request, "Belum ada foto terpilih untuk diunduh.", "warning")
-        return RedirectResponse(f"/seleksi-foto/sesi/{run.id}", status_code=303)
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        for index, item in enumerate(selected, start=1):
-            if not item.file_path:
-                continue
-            path = photo_curator.absolute_path(item.file_path)
-            if not path.is_file():
-                continue
-            suffix = path.suffix or ".jpg"
-            archive.write(
-                path,
-                arcname=f"{index:02d}_foto{suffix}",
-            )
+    item = db.get(PhotoSelectionItem, item_id)
+    if item is None or item.run_id != run.id or not item.file_path:
+        raise HTTPException(status_code=404, detail="Foto tidak ditemukan.")
 
-    audit(
-        db,
-        request,
-        "PHOTO_SELECTION_EXPORT",
-        actor=user,
-        entity_type="photo_selection_run",
-        entity_id=run.id,
-        summary=f"Mengunduh {len(selected)} foto pilihan dari sesi #{run.id}",
+    try:
+        path = photo_curator.absolute_path(item.file_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Foto tidak ditemukan.") from exc
+
+    if not path.is_file() and settings.media_cache_on_demand:
+        from ..services import media_sync
+
+        media_sync.download_to_cache(item.file_path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Berkas foto tidak tersedia.")
+
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    if media_type not in DOWNLOAD_IMAGE_TYPES:
+        raise HTTPException(status_code=404, detail="Berkas bukan foto yang didukung.")
+
+    return FileResponse(
+        path,
+        media_type=media_type,
+        filename=_photo_download_name(item, path),
+        headers={"Cache-Control": "private, max-age=3600"},
     )
-    db.commit()
-    headers = {
-        "Content-Disposition": f'attachment; filename="seleksi-foto-{run.id}.zip"'
-    }
-    return Response(buffer.getvalue(), media_type="application/zip", headers=headers)
 
 
 @router.post("/seleksi-foto/sesi/{run_id}/hapus")
