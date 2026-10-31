@@ -331,42 +331,81 @@
         toast("Belum ada foto berstatus Dipilih untuk dibagikan.");
         return;
       }
-      const runId = document.querySelector("[data-ps-run]")?.dataset.runId || "";
-      if (!runId) {
-        toast("Sesi seleksi tidak ditemukan.");
+      const files = [];
+      for (const card of cards) {
+        const button = card.querySelector("[data-ps-share-one]");
+        const url = button?.dataset.url || "";
+        if (!url) continue;
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const caption = (button?.dataset.caption || "").trim() || "foto";
+          const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
+          files.push(new File([blob], filename, { type: blob.type || "image/jpeg" }));
+        } catch (error) {
+          console.warn("Gagal menyiapkan berkas:", error);
+        }
+      }
+      if (!files.length) {
+        toast("Gagal menyiapkan foto untuk dibagikan.");
         return;
       }
-      const zipUrl = `/seleksi-foto/sesi/${runId}/unduh`;
-      const zipName = `seleksi-foto-${runId}.zip`;
+      let canShare = false;
       try {
-        const response = await fetch(zipUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const blob = await response.blob();
-        const file = new File([blob], zipName, { type: "application/zip" });
-        let canShare = false;
-        try {
-          canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-        } catch (error) {
-          canShare = false;
-        }
-        if (canShare) {
-          try {
-            await navigator.share({ files: [file], title: "Foto terpilih" });
-            return;
-          } catch (error) {
-            if (error?.name === "AbortError") return;
-          }
-        }
+        canShare = !!(navigator.canShare && navigator.canShare({ files }));
       } catch (error) {
-        console.warn("Gagal menyiapkan ZIP:", error);
+        canShare = false;
       }
-      // Fallback: unduh ZIP foto asli.
-      const link = document.createElement("a");
-      link.href = zipUrl;
-      link.download = zipName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      if (canShare) {
+        try {
+          await navigator.share({ files, title: "Foto terpilih" });
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+        }
+      }
+      // Fallback: unduh setiap foto asli satu per satu.
+      for (const card of cards) {
+        const button = card.querySelector("[data-ps-share-one]");
+        const url = button?.dataset.url || "";
+        if (!url) continue;
+        const caption = (button?.dataset.caption || "").trim() || "foto";
+        const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+    });
+  });
+
+  // Unduh semua foto terpilih satu per satu (bukan ZIP).
+  document.querySelectorAll("[data-ps-download-all]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const cards = Array.from(document.querySelectorAll("[data-ps-card]")).filter(
+        (card) => card.dataset.verdict === "selected"
+      );
+      if (!cards.length) {
+        toast("Belum ada foto berstatus Dipilih untuk diunduh.");
+        return;
+      }
+      for (const card of cards) {
+        const shareButton = card.querySelector("[data-ps-share-one]");
+        const url = shareButton?.dataset.url || "";
+        if (!url) continue;
+        const caption = (shareButton?.dataset.caption || "").trim() || "foto";
+        const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
     });
   });
 

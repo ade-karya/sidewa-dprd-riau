@@ -8,7 +8,7 @@
 {% block topbar_actions %}
 <a class="btn btn-outline btn-sm" href="/seleksi-foto">{{ icon('arrow-left') }}<span>Ruang seleksi</span></a>
 {% if run.selected_count %}
-<a class="btn btn-soft btn-sm" href="/seleksi-foto/sesi/{{ run.id }}/unduh">{{ icon('download') }}<span>Unduh pilihan</span></a>
+<button class="btn btn-soft btn-sm" type="button" data-ps-download-all>{{ icon('download') }}<span>Unduh pilihan</span></button>
 <button class="btn btn-soft btn-sm" type="button" data-ps-share-whatsapp>{{ icon('send') }}<span>Bagikan via WhatsApp</span></button>
 {% endif %}
 {% endblock %}
@@ -248,7 +248,7 @@
             {{ icon('upload') }} Terapkan <span data-ps-selected-count>{{ run.selected_count }}</span> foto
           </button>
         </form>
-        <a class="btn btn-outline btn-sm btn-block mt-1" href="/seleksi-foto/sesi/{{ run.id }}/unduh">{{ icon('download') }} Unduh ZIP pilihan</a>
+        <a class="btn btn-outline btn-sm btn-block mt-1" href="#" data-ps-download-all>{{ icon('download') }} Unduh foto terpilih</a>
         <button class="btn btn-soft btn-sm btn-block mt-1" type="button" data-ps-share-whatsapp>{{ icon('send') }} Bagikan via WhatsApp</button>
         <p class="form-hint mt-1">Maksimal {{ max_photos }} foto per kegiatan. {{ run.applied_count }} foto dari sesi ini sudah diterapkan.</p>
         {% else %}
