@@ -365,7 +365,14 @@
         }
       }
       const runId = document.querySelector("[data-ps-run]")?.dataset.runId || "";
-      if (runId) window.location.href = `/seleksi-foto/sesi/${runId}/unduh`;
+      if (runId) {
+        const link = document.createElement("a");
+        link.href = `/seleksi-foto/sesi/${runId}/unduh`;
+        link.download = `seleksi-foto-${runId}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
     });
   });
 
