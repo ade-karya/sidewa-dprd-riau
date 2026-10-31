@@ -281,20 +281,39 @@
     });
   }
 
-  /* ── Bagikan foto terpilih via WhatsApp ───────────────────────────────── */
-  const waUrl = (text) => `https://wa.me/?text=${encodeURIComponent(text)}`;
+  /* ── Bagikan foto terpilih (berkas asli, bukan tautan/teks) ───────────── */
+  const shareOne = async (button) => {
+    const url = button?.dataset.url || "";
+    if (!url) return;
+    const caption = (button.dataset.caption || "").trim() || "foto";
+    const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: caption });
+        return;
+      }
+    } catch (error) {
+      console.warn("Gagal membagikan berkas:", error);
+    }
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
 
   document.querySelectorAll("[data-ps-share-one]").forEach((button) => {
     button.addEventListener("click", () => {
-      const url = button.dataset.url || "";
-      const caption = (button.dataset.caption || "").trim();
-      const text = caption ? `${caption}\n${url}` : url;
-      window.open(waUrl(text), "_blank", "noopener");
+      shareOne(button);
     });
   });
 
   document.querySelectorAll("[data-ps-share-whatsapp]").forEach((shareAll) => {
-    shareAll.addEventListener("click", () => {
+    shareAll.addEventListener("click", async () => {
       const cards = Array.from(document.querySelectorAll("[data-ps-card]")).filter(
         (card) => card.dataset.verdict === "selected"
       );
@@ -302,15 +321,35 @@
         toast("Belum ada foto berstatus Dipilih untuk dibagikan.");
         return;
       }
-      const lines = cards.map((card) => {
+      const files = [];
+      for (const card of cards) {
         const button = card.querySelector("[data-ps-share-one]");
-        const url = button?.dataset.url || `${window.location.origin}${card.querySelector("img")?.getAttribute("src") || ""}`;
-        const caption = button?.dataset.caption || card.querySelector("strong")?.textContent || "";
-        return caption ? `${caption}: ${url}` : url;
-      });
+        const url = button?.dataset.url || "";
+        if (!url) continue;
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const caption = (button?.dataset.caption || "").trim() || "foto";
+          const filename = `${caption.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "foto"}.jpg`;
+          files.push(new File([blob], filename, { type: blob.type || "image/jpeg" }));
+        } catch (error) {
+          console.warn("Gagal menyiapkan berkas:", error);
+        }
+      }
+      if (!files.length) {
+        toast("Gagal menyiapkan foto untuk dibagikan.");
+        return;
+      }
+      if (navigator.canShare && navigator.canShare({ files })) {
+        try {
+          await navigator.share({ files, title: "Foto terpilih" });
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+        }
+      }
       const runId = document.querySelector("[data-ps-run]")?.dataset.runId || "";
-      const text = `Foto terpilih seleksi #${runId}\n\n${lines.join("\n")}`;
-      window.open(waUrl(text.trim()), "_blank", "noopener");
+      if (runId) window.location.href = `/seleksi-foto/sesi/${runId}/unduh`;
     });
   });
 
