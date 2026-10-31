@@ -26,6 +26,13 @@
   const statusEl = root.querySelector("[data-tour-status]");
   const headTitleEl = root.querySelector(".tour-id strong");
   const sidebarEl = document.getElementById("sidebar");
+  const launcher = document.querySelector("[data-tour-launcher]");
+  const hideLauncherBtn = document.querySelector("[data-tour-hide]");
+  const dock = document.querySelector("[data-tour-dock]");
+  const hidePanelBtn = root.querySelector("[data-tour-hide-panel]");
+  const resumeBtn = root.querySelector("[data-tour-resume]");
+  const resumeStepEl = root.querySelector("[data-tour-resume-step]");
+  const HIDE_KEY = "sidewa.assistant.hidden";
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const supportsSpeech =
@@ -1720,8 +1727,12 @@
   let expanded = false;
   let sidebarOpenedByTour = false;
   let raf = 0;
+  let minimized = false;
+  let suppressFabClick = false;
+  let hideTimer = 0;
 
   const isOpen = () => !root.hidden;
+  const isActive = () => isOpen() && !minimized;
 
   const dotEls = steps.map((step, i) => {
     const dot = document.createElement("button");
@@ -2346,7 +2357,7 @@
   }
 
   function place() {
-    if (!isOpen()) return;
+    if (!isActive()) return;
     const target = resolveTarget();
     root.classList.toggle("is-centered", !target);
     placeCard(target);
@@ -2354,7 +2365,7 @@
   }
 
   function schedulePlace() {
-    if (!isOpen() || raf) return;
+    if (!isActive() || raf) return;
     raf = window.requestAnimationFrame(() => {
       raf = 0;
       place();
@@ -2375,10 +2386,10 @@
       document.body.classList.remove("sidebar-open");
       sidebarOpenedByTour = false;
     }
-    if (isOpen()) narrateCurrent();
+    if (isActive()) narrateCurrent();
     if (nextBtn) {
       window.setTimeout(() => {
-        if (isOpen()) nextBtn.focus({ preventScroll: true });
+        if (isActive()) nextBtn.focus({ preventScroll: true });
       }, 60);
     }
   }
@@ -2392,12 +2403,155 @@
     if (index > 0) show(index - 1);
   }
 
+  function updateResumeLabel() {
+    if (!resumeStepEl) return;
+    resumeStepEl.textContent = `Langkah ${index + 1} dari ${total}`;
+  }
+
+  function minimizeTour() {
+    if (!isActive()) return;
+    minimized = true;
+    stopSpeech();
+    stopPlayback();
+    disconnectLive();
+    Live.speaking = false;
+    Live.pending = false;
+    if (isSmall()) setExpanded(false);
+    card.style.removeProperty("transform");
+    root.classList.add("is-minimized");
+    updateResumeLabel();
+    if (resumeBtn) {
+      resumeBtn.hidden = false;
+      window.setTimeout(() => {
+        if (minimized) resumeBtn.focus({ preventScroll: true });
+      }, reducedMotion ? 0 : 80);
+    }
+    if (liveEl) {
+      liveEl.textContent = "Asisten disembunyikan. Panduan dapat dilanjutkan kapan saja.";
+    }
+  }
+
+  function resumeTour() {
+    if (!isOpen() || !minimized) return;
+    minimized = false;
+    root.classList.remove("is-minimized");
+    if (resumeBtn) resumeBtn.hidden = true;
+    renderContent();
+    place();
+    const el = resolveTarget();
+    if (el) revealTarget(el);
+    window.setTimeout(place, reducedMotion ? 30 : 260);
+    if (voiceOn) narrateCurrent();
+    if (nextBtn) {
+      window.setTimeout(() => {
+        if (isActive()) nextBtn.focus({ preventScroll: true });
+      }, 60);
+    }
+  }
+
+  function applyLauncherState(hidden) {
+    if (launcher) launcher.hidden = hidden;
+    if (dock) dock.hidden = !hidden;
+    if (!hidden) {
+      if (launcher) {
+        launcher.style.removeProperty("transform");
+        launcher.style.removeProperty("opacity");
+        launcher.style.removeProperty("transition");
+      }
+      suppressFabClick = false;
+    }
+  }
+
+  function setLauncherHidden(hidden, persist = true) {
+    applyLauncherState(hidden);
+    if (hidden && launcher) {
+      window.clearTimeout(hideTimer);
+      launcher.classList.remove("is-dragging");
+      launcher.style.removeProperty("transform");
+      launcher.style.removeProperty("opacity");
+      launcher.style.removeProperty("transition");
+    }
+    if (!persist) return;
+    try {
+      window.localStorage.setItem(HIDE_KEY, hidden ? "1" : "0");
+    } catch {
+      /* mode privat — abaikan */
+    }
+  }
+
+  function swipeHides(dx, dy) {
+    if (isSmall()) return dy > 64 || dx > 110;
+    return Math.abs(dx) > 110 || dy > 140;
+  }
+
+  function attachSwipe(element, options) {
+    if (!element) return;
+    let pointerId = null;
+    let startX = 0;
+    let startY = 0;
+    let dx = 0;
+    let dy = 0;
+    let moved = false;
+
+    element.addEventListener("pointerdown", (event) => {
+      if (pointerId !== null) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      if (options.ignore && options.ignore(event)) return;
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startY = event.clientY;
+      dx = 0;
+      dy = 0;
+      moved = false;
+      element.classList.add("is-dragging");
+      try {
+        element.setPointerCapture(pointerId);
+      } catch {
+        /* abaikan */
+      }
+    });
+
+    element.addEventListener("pointermove", (event) => {
+      if (pointerId === null || event.pointerId !== pointerId) return;
+      dx = event.clientX - startX;
+      dy = event.clientY - startY;
+      if (!moved && Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+      if (!moved) return;
+      options.onMove(dx, dy);
+    });
+
+    const finish = (event, cancelled) => {
+      if (pointerId === null || event.pointerId !== pointerId) return;
+      const endX = dx;
+      const endY = dy;
+      const wasMoved = moved;
+      try {
+        element.releasePointerCapture(pointerId);
+      } catch {
+        /* abaikan */
+      }
+      pointerId = null;
+      moved = false;
+      dx = 0;
+      dy = 0;
+      element.classList.remove("is-dragging");
+      options.onEnd(endX, endY, wasMoved, cancelled);
+    };
+
+    element.addEventListener("pointerup", (event) => finish(event, false));
+    element.addEventListener("pointercancel", (event) => finish(event, true));
+  }
+
   function openTour(start = 0) {
     if (!isOpen()) {
       lastFocus = document.activeElement;
       root.hidden = false;
       document.body.classList.add("tour-open");
       if (isSmall() && supportsVoice) ensureAudioContext();
+    } else if (minimized) {
+      minimized = false;
+      root.classList.remove("is-minimized");
+      if (resumeBtn) resumeBtn.hidden = true;
     }
     show(start);
     if (isSmall() && supportsVoice && !voiceAutoStarted) {
@@ -2411,7 +2565,11 @@
     stopSpeech();
     stopPlayback();
     disconnectLive();
+    window.clearTimeout(hideTimer);
     if (isSmall()) setExpanded(false);
+    minimized = false;
+    root.classList.remove("is-minimized");
+    if (resumeBtn) resumeBtn.hidden = true;
     root.hidden = true;
     document.body.classList.remove("tour-open");
     if (sidebarOpenedByTour) {
@@ -2419,6 +2577,7 @@
       sidebarOpenedByTour = false;
     }
     if (spotlight) spotlight.hidden = true;
+    if (card) card.style.removeProperty("transform");
     if (lastFocus && typeof lastFocus.focus === "function") {
       lastFocus.focus({ preventScroll: true });
     }
@@ -2443,7 +2602,109 @@
     }
   }
 
-  if (fab) fab.addEventListener("click", () => openTour(0));
+  if (fab) {
+    fab.addEventListener("click", (event) => {
+      if (suppressFabClick) {
+        suppressFabClick = false;
+        event.preventDefault();
+        return;
+      }
+      openTour(0);
+    });
+
+    attachSwipe(fab, {
+      onMove: (dx, dy) => {
+        if (!launcher) return;
+        launcher.style.transition = "none";
+        launcher.style.transform = `translate(${dx}px, ${dy}px)`;
+      },
+      onEnd: (dx, dy, moved, cancelled) => {
+        if (!launcher) return;
+        launcher.style.removeProperty("transition");
+        if (moved && !cancelled) suppressFabClick = true;
+        if (!cancelled && moved && swipeHides(dx, dy)) {
+          const finishHide = () => {
+            launcher.style.removeProperty("transform");
+            launcher.style.removeProperty("opacity");
+            launcher.style.removeProperty("transition");
+            launcher.classList.remove("is-dragging");
+            setLauncherHidden(true);
+          };
+          if (reducedMotion) {
+            finishHide();
+          } else {
+            launcher.style.transition = "transform .18s ease, opacity .18s ease";
+            launcher.style.transform = `translate(${dx}px, ${dy}px) scale(.92)`;
+            launcher.style.opacity = "0";
+            window.clearTimeout(hideTimer);
+            hideTimer = window.setTimeout(finishHide, 180);
+          }
+          return;
+        }
+        if (moved && !reducedMotion) {
+          launcher.style.transition = "transform .18s ease, opacity .18s ease";
+          launcher.style.transform = "translate(0, 0)";
+          window.setTimeout(() => {
+            launcher.style.removeProperty("transform");
+            launcher.style.removeProperty("transition");
+          }, 190);
+          return;
+        }
+        launcher.style.removeProperty("transform");
+        launcher.style.removeProperty("opacity");
+      },
+    });
+  }
+
+  if (hideLauncherBtn) {
+    hideLauncherBtn.addEventListener("click", () => setLauncherHidden(true));
+  }
+
+  if (dock) {
+    dock.addEventListener("click", () => {
+      setLauncherHidden(false);
+      if (fab) fab.focus({ preventScroll: true });
+    });
+  }
+
+  if (hidePanelBtn) {
+    hidePanelBtn.addEventListener("click", minimizeTour);
+  }
+
+  if (resumeBtn) {
+    resumeBtn.addEventListener("click", resumeTour);
+  }
+
+  if (card) {
+    attachSwipe(card.querySelector(".tour-head"), {
+      ignore: (event) => Boolean(event.target.closest("button, a, input, select, textarea")),
+      onMove: (dx, dy) => {
+        const base =
+          !isSmall() && card.classList.contains("is-centered") ? "translate(-50%, -50%) " : "";
+        card.style.transform = `${base}translate(${dx}px, ${dy}px)`;
+      },
+      onEnd: (dx, dy, moved, cancelled) => {
+        if (!cancelled && moved && swipeHides(dx, dy)) {
+          card.style.removeProperty("transform");
+          minimizeTour();
+          return;
+        }
+        if (moved && !reducedMotion) {
+          const base =
+            !isSmall() && card.classList.contains("is-centered") ? "translate(-50%, -50%)" : "";
+          card.style.transition = "transform .18s ease";
+          card.style.transform = base;
+          window.setTimeout(() => {
+            card.style.removeProperty("transform");
+            card.style.removeProperty("transition");
+          }, 190);
+          return;
+        }
+        card.style.removeProperty("transform");
+      },
+    });
+  }
+
   root.querySelectorAll("[data-tour-close]").forEach((button) => {
     button.addEventListener("click", closeTour);
   });
@@ -2476,6 +2737,13 @@
 
   document.addEventListener("keydown", (event) => {
     if (!isOpen()) return;
+    if (minimized) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeTour();
+      }
+      return;
+    }
     const key = event.key;
     if (key === "Escape") {
       event.preventDefault();
@@ -2521,6 +2789,14 @@
       if (voiceOn && Live.failed) speakFallback();
     });
   }
+
+  let storedLauncherHidden = false;
+  try {
+    storedLauncherHidden = window.localStorage.getItem(HIDE_KEY) === "1";
+  } catch {
+    /* mode privat — abaikan */
+  }
+  applyLauncherState(storedLauncherHidden);
 
   window.SIDEWA = Object.assign(window.SIDEWA || {}, {
     openHumasAssistant: openTour,

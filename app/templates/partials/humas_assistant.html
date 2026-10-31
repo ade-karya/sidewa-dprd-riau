@@ -1,11 +1,20 @@
 {% from "macros/ui.html" import icon %}
 {# Asisten SIDEWA: tur terpandu yang menyorot elemen halaman di seluruh aplikasi. #}
-<button class="tour-fab" type="button" data-tour-open aria-haspopup="dialog" aria-controls="humas-assistant" aria-label="Buka Asisten SIDEWA">
-  <span class="tour-fab-icon">{{ icon('sparkles') }}</span>
-  <span class="tour-fab-text">
-    <strong>Asisten SIDEWA</strong>
-    <small>Panduan halaman · sorotan</small>
-  </span>
+<div class="tour-launcher" data-tour-launcher>
+  <button class="tour-fab" type="button" data-tour-open aria-haspopup="dialog" aria-controls="humas-assistant" aria-label="Buka Asisten SIDEWA" title="Buka Asisten SIDEWA · geser untuk menyembunyikan">
+    <span class="tour-fab-icon">{{ icon('sparkles') }}</span>
+    <span class="tour-fab-text">
+      <strong>Asisten SIDEWA</strong>
+      <small>Panduan halaman · sorotan</small>
+    </span>
+  </button>
+  <button class="tour-fab-hide" type="button" data-tour-hide aria-label="Sembunyikan Asisten SIDEWA" title="Sembunyikan asisten">
+    {{ icon('x') }}
+  </button>
+</div>
+
+<button class="tour-dock" type="button" data-tour-dock hidden aria-label="Tampilkan Asisten SIDEWA" title="Tampilkan Asisten SIDEWA">
+  {{ icon('sparkles') }}<span>Asisten</span>
 </button>
 
 <div class="tour-root" id="humas-assistant" data-tour-root hidden>
@@ -27,6 +36,9 @@
         </button>
         <button class="tour-tool" type="button" data-tour-voice aria-label="Nyalakan narasi suara" title="Narasi suara" aria-pressed="false">
           {{ icon('volume-off') }}
+        </button>
+        <button class="tour-tool tour-hide" type="button" data-tour-hide-panel aria-label="Sembunyikan asisten" title="Sembunyikan asisten · geser kartu">
+          {{ icon('minimize') }}
         </button>
         <button class="tour-tool" type="button" data-tour-close aria-label="Tutup Asisten SIDEWA" title="Tutup (Esc)">
           {{ icon('x') }}
@@ -63,4 +75,13 @@
 
     <p class="sr-only" aria-live="polite" data-tour-live></p>
   </section>
+
+  <button class="tour-resume" type="button" data-tour-resume hidden aria-label="Lanjutkan panduan Asisten SIDEWA" title="Lanjutkan panduan">
+    <span class="tour-resume-orb">{{ icon('sparkles') }}</span>
+    <span class="tour-resume-text">
+      <strong>Lanjutkan panduan</strong>
+      <small data-tour-resume-step>Langkah 1 dari 1</small>
+    </span>
+    {{ icon('arrow-right') }}
+  </button>
 </div>

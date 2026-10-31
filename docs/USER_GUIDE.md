@@ -13,6 +13,10 @@
   kerja staf Humas.
 - Panel panduan dapat diperluas, membacakan narasi suara, dan menautkan ke halaman
   terkait. Tekan **Esc** atau tombol tutup untuk mengakhiri.
+- Asisten dapat disembunyikan: tekan ikon **×** pada tombol atau geser tombolnya,
+  lalu gunakan tab **Asisten** di tepi kanan untuk memunculkan kembali. Saat panel
+  terbuka, tekan tombol sembunyikan atau geser kartu (ke bawah di ponsel, ke samping
+  di desktop); tombol **Lanjutkan panduan** mengembalikan panel ke langkah terakhir.
 - Di ponsel, panel tampil sebagai bottom sheet yang dapat diperluas; sidebar dibuka
   melalui ikon menu. Panduan menyesuaikan tinggi layar, orientasi, dan perubahan
   ukuran jendela, serta melewati elemen yang tidak tersedia.

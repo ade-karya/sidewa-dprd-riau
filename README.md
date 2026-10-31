@@ -21,7 +21,7 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
 - Dashboard statistik, log audit, ekspor CSV, health/metrics, API v1 + token Bearer.
 - Antarmuka bergaya fotoyu.com: sidebar ramping, aksen lavender, pill button, kartu rounded, tipografi Roboto/Quicksand.
-- **Panduan visual**: tombol **Kenali SIDEWA** di halaman login untuk presentasi aplikasi, serta **Asisten SIDEWA** yang tersedia di seluruh halaman setelah masuk. Asisten menyorot bilah atas, ikon fitur, isi halaman, dan sidebar sambil menjelaskan setiap bagian; di ponsel panel panduan tampil sebagai bottom sheet.
+- **Panduan visual**: tombol **Kenali SIDEWA** di halaman login untuk presentasi aplikasi, serta **Asisten SIDEWA** yang tersedia di seluruh halaman setelah masuk. Asisten menyorot bilah atas, ikon fitur, isi halaman, dan sidebar sambil menjelaskan setiap bagian; di ponsel panel panduan tampil sebagai bottom sheet. Tombol dan panel asisten dapat disembunyikan (tombol × atau gestur geser) lalu dimunculkan kembali lewat tab **Asisten** atau tombol **Lanjutkan panduan**.
 
 ## Tumpukan teknologi
 

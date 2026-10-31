@@ -2082,14 +2082,21 @@ body.guide-open .guide-fab { opacity: 0; pointer-events: none; }
    Asisten SIDEWA — tur halaman Humas dengan sorotan elemen
    ========================================================================== */
 
-.tour-fab {
+.tour-launcher {
   position: fixed; right: 24px; bottom: 24px; z-index: 90;
+  display: flex; align-items: center;
+}
+.tour-launcher[hidden] { display: none; }
+.tour-fab {
+  position: relative;
   display: inline-flex; align-items: center; gap: 12px;
   padding: 9px 18px 9px 9px; border: 0; border-radius: 999px;
   background: linear-gradient(135deg, #5d3470 0%, #7e4890 56%, #2f7f9d 100%);
   color: #fff; box-shadow: 0 16px 36px rgba(80, 45, 98, .3);
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+  touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
 }
+.tour-fab.is-dragging { cursor: grabbing; transition: none; }
 .tour-fab:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 20px 44px rgba(80, 45, 98, .38); }
 .tour-fab:active { transform: translateY(0); }
 .tour-fab-icon { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.16); display: grid; place-items: center; flex: none; }
@@ -2101,10 +2108,38 @@ body.guide-open .guide-fab { opacity: 0; pointer-events: none; }
   content: ""; position: absolute; inset: -6px; border-radius: 999px; pointer-events: none;
   border: 1px solid rgba(126, 72, 144, .35); animation: guide-pulse 3s ease-out infinite;
 }
+.tour-fab-hide {
+  position: absolute; top: -7px; right: -7px; z-index: 2;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #fff; color: var(--muted);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 12px rgba(22, 14, 28, .18);
+  transition: color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.tour-fab-hide:hover { color: var(--red); transform: scale(1.07); box-shadow: 0 6px 16px rgba(22, 14, 28, .24); }
+.tour-fab-hide .icon { width: 13px; height: 13px; }
+.tour-dock {
+  position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 90;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 12px 7px; border: 1px solid rgba(255,255,255,.42); border-right: 0;
+  border-radius: 14px 0 0 14px; color: #fff;
+  background: linear-gradient(160deg, #5d3470 0%, #7e4890 58%, #2f7f9d 100%);
+  box-shadow: 0 12px 30px rgba(80, 45, 98, .28);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.tour-dock[hidden] { display: none; }
+.tour-dock .icon { width: 17px; height: 17px; }
+.tour-dock span {
+  writing-mode: vertical-rl; text-orientation: mixed;
+  font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+}
+.tour-dock:hover { transform: translateY(-50%) translateX(-2px); box-shadow: 0 16px 36px rgba(80, 45, 98, .36); }
+.tour-dock:active { transform: translateY(-50%); }
 /* Biarkan halaman tetap dapat digulir secara programatik agar target di luar
    layar ikut tersorot — bukan hanya item sidebar. */
 body.tour-open { overflow: auto; overscroll-behavior: contain; }
-body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
+body.tour-open .tour-launcher { opacity: 0; pointer-events: none; }
 
 .tour-root { position: fixed; inset: 0; z-index: 120; pointer-events: none; }
 .tour-root[hidden] { display: none; }
@@ -2135,11 +2170,41 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
 @keyframes tour-card-in { from { opacity: 0; } to { opacity: 1; } }
 .tour-card :focus-visible { outline-color: rgba(126,72,144,.45); }
 
+/* Kartu dapat digeser (swipe) untuk disembunyikan, baik sentuh maupun mouse. */
+.tour-card.is-dragging { transition: none; }
+.tour-root.is-minimized .tour-blocker,
+.tour-root.is-minimized .tour-spotlight,
+.tour-root.is-minimized .tour-card { display: none !important; }
+
+.tour-resume {
+  position: fixed; right: 24px; bottom: 24px; z-index: 4; pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 14px 8px 8px; border: 0; border-radius: 999px;
+  background: linear-gradient(135deg, #5d3470 0%, #7e4890 56%, #2f7f9d 100%);
+  color: #fff; box-shadow: 0 16px 36px rgba(80, 45, 98, .3);
+  transition: transform .2s ease, box-shadow .2s ease;
+  animation: tour-card-in .2s ease;
+}
+.tour-resume[hidden] { display: none; }
+.tour-resume:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 20px 44px rgba(80, 45, 98, .38); }
+.tour-resume:active { transform: translateY(0); }
+.tour-resume-orb {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.16); flex: none;
+}
+.tour-resume-orb .icon { width: 18px; height: 18px; }
+.tour-resume-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; text-align: left; }
+.tour-resume-text strong { font-family: var(--font-display); font-size: 12.5px; font-weight: 700; }
+.tour-resume-text small { font-size: 9.5px; color: rgba(255,255,255,.72); margin-top: 2px; }
+.tour-resume > .icon { width: 15px; height: 15px; opacity: .8; }
+
 .tour-head {
   display: flex; align-items: center; gap: 12px; padding: 13px 15px;
   background: linear-gradient(120deg, #f6eef9, #eef9fd);
   border-bottom: 1px solid var(--line); flex: none;
+  cursor: grab; touch-action: none; user-select: none;
 }
+.tour-head.is-dragging { cursor: grabbing; }
 .tour-id { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
 .tour-orb {
   width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center;
@@ -2213,7 +2278,7 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
   .tour-card.is-centered {
     left: 10px !important; right: 10px !important; top: auto !important;
     bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-    width: auto; max-height: min(60vh, 520px); transform: none !important;
+    width: auto; max-height: min(60vh, 520px); transform: none;
     border-radius: 18px;
   }
   .tour-card:not(.is-expanded) { max-height: none; }
@@ -2222,7 +2287,11 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
     padding: 0 10px 9px; border-top: 0; background: transparent;
   }
   .tour-card:not(.is-expanded) .tour-dots { display: none; }
-  .tour-head { padding: 9px 10px; gap: 8px; }
+  .tour-head { position: relative; padding: 15px 10px 9px; gap: 8px; }
+  .tour-head::before {
+    content: ""; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 3px; border-radius: 999px; background: rgba(126, 72, 144, .3);
+  }
   .tour-orb { width: 32px; height: 32px; border-radius: 11px; }
   .tour-orb .icon { width: 16px; height: 16px; }
   .tour-id strong { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2256,20 +2325,26 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
     0% { transform: scale(.985); opacity: .9; }
     100% { transform: scale(1.055); opacity: 0; }
   }
-  .tour-fab { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 8px 14px 8px 8px; gap: 9px; }
+  .tour-fab { padding: 8px 14px 8px 8px; gap: 9px; }
   .tour-fab-icon { width: 40px; height: 40px; }
   .tour-fab-text small { display: none; }
   .tour-fab-text strong { font-size: 12.5px; }
+  .tour-launcher { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .tour-fab-hide { width: 24px; height: 24px; top: -6px; right: -6px; }
+  .tour-dock { top: 46%; }
+  .tour-resume { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .tour-resume-text strong { font-size: 12px; }
 }
 @media (max-width: 520px) {
   .tour-nav .btn span:not([data-tour-next-label]) { display: none; }
   .tour-nav .btn { padding: 0 11px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tour-fab::after, .tour-card, .tour-spotlight, .tour-spotlight::after, .tour-progress span { animation: none; transition: none; }
+  .tour-fab::after, .tour-card, .tour-spotlight, .tour-spotlight::after, .tour-progress span,
+  .tour-fab, .tour-dock, .tour-resume { animation: none; transition: none; }
 }
 @media print {
-  .tour-fab, .tour-root { display: none !important; }
+  .tour-launcher, .tour-dock, .tour-root { display: none !important; }
 }
 
 /* ==========================================================================
