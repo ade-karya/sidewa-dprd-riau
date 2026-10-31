@@ -149,10 +149,10 @@ def _selection_page(
     view: str = "dashboard",
 ) -> Any:
     row = photo_curator.get_settings_row(db, user.id)
+    row_default = row.default_skill_key if row else ""
     skills = photo_curator.skill_options(db, user)
-    row_default = row.default_skill_key if row else "jurnalistik"
-    if row_default not in {skill["key"] for skill in skills}:
-        row_default = "jurnalistik"
+    if not row_default or row_default not in {skill["key"] for skill in skills}:
+        row_default = skills[0]["key"] if skills else ""
     runs = _recent_runs(db, user)
     total_selected = sum(run.selected_count for run in runs)
     total_quota = sum(run.quota_used for run in runs)
@@ -807,8 +807,15 @@ async def update_verdicts(
         verdict = str(value or "").strip()
         if item is None or verdict not in valid:
             continue
+        reason = str(form.get(f"reason_{item_id}") or "").strip()[:500]
         if item.verdict != verdict:
             item.verdict = verdict
+            item.manual_override = True
+            if reason:
+                item.manual_reason = reason
+            changed += 1
+        elif reason and reason != item.manual_reason:
+            item.manual_reason = reason
             item.manual_override = True
             changed += 1
     learned = {"updated": False}

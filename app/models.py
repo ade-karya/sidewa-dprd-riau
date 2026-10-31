@@ -418,6 +418,7 @@ class PhotoSelectionItem(Base):
     )
     ai_verdict: Mapped[str] = mapped_column(String(16), default="", nullable=False)
     manual_override: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    manual_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
     reason: Mapped[str] = mapped_column(String(300), default="", nullable=False)
     caption: Mapped[str] = mapped_column(String(180), default="", nullable=False)
     tags: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)

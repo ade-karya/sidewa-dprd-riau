@@ -2566,6 +2566,8 @@ body.tour-open .tour-fab { opacity: 0; pointer-events: none; }
 .ps-weakness { font-size: 9.5px; color: #9a5b6b; line-height: 1.4; display: flex; gap: 4px; }
 .ps-weakness .icon { width: 11px; height: 11px; margin-top: 1px; flex: none; }
 .ps-verdict-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: #f7f3f9; border-radius: 10px; padding: 3px; margin-top: auto; }
+.ps-verdict-reason { margin-top: 6px; }
+.ps-verdict-reason .input { height: 34px; font-size: 12px; padding: 0 10px; border-radius: 9px; }
 .ps-verdict-option {
   display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 3px;
   border-radius: 7px; font-size: 9.5px; color: var(--muted); cursor: pointer; transition: .15s ease;

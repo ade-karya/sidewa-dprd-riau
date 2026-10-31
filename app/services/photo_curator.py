@@ -37,6 +37,7 @@ from sqlalchemy import func
 
 from ..config import settings
 from ..constants import (
+    ADMIN_ROLES,
     SELECTION_BACKUP,
     SELECTION_CANCELLED,
     SELECTION_DONE,
@@ -139,6 +140,92 @@ BUILTIN_SKILLS: list[dict[str, Any]] = [
     },
 ]
 
+SHARED_PHOTO_SKILL_KEY = "bersama"
+SHARED_PHOTO_SKILL_NAME = "Skill Seleksi Foto Bersama"
+SHARED_PHOTO_SKILL_DESCRIPTION = (
+    "Satu skill bersama untuk seluruh tim Humas. Instruksi dan preferensi "
+    "belajarnya diperbarui otomatis dari sesi seleksi foto yang diterapkan."
+)
+SHARED_PHOTO_SKILL_INSTRUCTIONS = (
+    "Utamakan foto yang menangkap momen penting, ekspresi natural, interaksi "
+    "antarpartisipan, dan konteks peristiwa yang jelas. Hindari foto pengulangan, "
+    "punggung orang, gestur canggung, atau momen tanpa informasi. Sesuaikan "
+    "selera dengan preferensi belajar yang diperbarui otomatis."
+)
+
+
+def shared_photo_skill(db, *, create: bool = True):
+    """Ambil satu skill seleksi foto bersama untuk semua pengguna."""
+    owner = (
+        db.query(User)
+        .filter(User.role.in_(ADMIN_ROLES))
+        .order_by(User.id)
+        .first()
+    )
+    if owner is None:
+        owner = db.query(User).order_by(User.id).first()
+    if owner is None:
+        return None
+    row = (
+        db.query(PhotoSelectionSkill)
+        .filter(
+            PhotoSelectionSkill.is_shared.is_(True),
+            PhotoSelectionSkill.name == SHARED_PHOTO_SKILL_NAME,
+        )
+        .first()
+    )
+    if row is None and create:
+        row = PhotoSelectionSkill(
+            user_id=owner.id,
+            name=SHARED_PHOTO_SKILL_NAME,
+            icon="sparkles",
+            description=SHARED_PHOTO_SKILL_DESCRIPTION,
+            instructions=SHARED_PHOTO_SKILL_INSTRUCTIONS,
+            target_count=0,
+            min_score=62,
+            auto_update=True,
+            is_shared=True,
+        )
+        db.add(row)
+        db.flush()
+    return row
+
+
+def _skill_row(db, user_id: int | None, skill_key: str):
+    """Ambil baris skill (custom/shared) dari kunci skill."""
+    if (skill_key or "").startswith("custom:"):
+        try:
+            skill_id = int(skill_key.split(":", 1)[1])
+        except (ValueError, IndexError):
+            return None
+        query = db.query(PhotoSelectionSkill).filter(
+            PhotoSelectionSkill.id == skill_id,
+        )
+        if user_id is not None:
+            query = query.filter(PhotoSelectionSkill.user_id == user_id)
+        return query.first()
+    if (skill_key or "").startswith("shared:"):
+        try:
+            skill_id = int(skill_key.split(":", 1)[1])
+        except (ValueError, IndexError):
+            return None
+        return (
+            db.query(PhotoSelectionSkill)
+            .filter(
+                PhotoSelectionSkill.id == skill_id,
+                PhotoSelectionSkill.is_shared.is_(True),
+            )
+            .first()
+        )
+    if skill_key in {SHARED_PHOTO_SKILL_KEY, "bersama"}:
+        return shared_photo_skill(db)
+    return None
+
+
+# Backward-compatible alias used by existing code/tests.
+_custom_skill_row = _skill_row
+
+
 _VERDICTS = {SELECTION_SELECTED, SELECTION_BACKUP, SELECTION_REJECTED}
 _ANALYSIS_KEYS = {
     "score",
@@ -205,42 +292,26 @@ def _custom_skill_payload(row: PhotoSelectionSkill, *, shared: bool) -> dict[str
 
 
 def skill_options(db, user: User, *, shared_limit: int = 30) -> list[dict[str, Any]]:
-    """Gabungkan preset bawaan, skill sendiri, dan skill komunitas Humas.
-
-    Skill milik anggota lain yang dibagikan diurutkan berdasarkan yang paling
-    banyak dipakai pengguna lain (``share_usage_count``).
-    """
-    own_rows = (
-        db.query(PhotoSelectionSkill)
-        .filter(
-            PhotoSelectionSkill.user_id == user.id,
-            PhotoSelectionSkill.is_active.is_(True),
-        )
-        .order_by(PhotoSelectionSkill.name)
-        .all()
-    )
-    shared_rows = (
-        db.query(PhotoSelectionSkill)
-        .filter(
-            PhotoSelectionSkill.user_id != user.id,
-            PhotoSelectionSkill.is_active.is_(True),
-            PhotoSelectionSkill.is_shared.is_(True),
-        )
-        .order_by(
-            PhotoSelectionSkill.share_usage_count.desc(),
-            PhotoSelectionSkill.name,
-        )
-        .limit(shared_limit)
-        .all()
-    )
-    options = [dict(skill) for skill in BUILTIN_SKILLS]
-    options.extend(_custom_skill_payload(row, shared=False) for row in own_rows)
-    options.extend(_custom_skill_payload(row, shared=True) for row in shared_rows)
-    return options
+    """Kembalikan satu skill seleksi foto bersama untuk semua pengguna."""
+    row = shared_photo_skill(db)
+    if row is None:
+        return []
+    payload = _custom_skill_payload(row, shared=True)
+    payload["key"] = f"shared:{row.id}"
+    payload["custom"] = False
+    return [payload]
 
 
 def resolve_skill(db, user: User, key: str) -> dict[str, Any]:
-    key = (key or "").strip() or "jurnalistik"
+    key = (key or "").strip()
+    if key in {"", "jurnalistik", SHARED_PHOTO_SKILL_KEY, "bersama"}:
+        row = shared_photo_skill(db)
+        if row is None:
+            raise SelectionError("Skill seleksi tidak tersedia.")
+        payload = _custom_skill_payload(row, shared=True)
+        payload["key"] = f"shared:{row.id}"
+        payload["custom"] = False
+        return payload
     if key.startswith(("custom:", "shared:")):
         prefix, raw_id = key.split(":", 1)
         try:
@@ -254,18 +325,23 @@ def resolve_skill(db, user: User, key: str) -> dict[str, Any]:
         if prefix == "custom":
             query = query.filter(PhotoSelectionSkill.user_id == user.id)
         else:
-            query = query.filter(
-                PhotoSelectionSkill.user_id != user.id,
-                PhotoSelectionSkill.is_shared.is_(True),
-            )
+            query = query.filter(PhotoSelectionSkill.is_shared.is_(True))
         row = query.first()
         if not row:
             raise SelectionError("Skill seleksi tidak ditemukan atau sudah tidak dibagikan.")
-        return _custom_skill_payload(row, shared=prefix == "shared")
+        payload = _custom_skill_payload(row, shared=prefix == "shared")
+        payload["key"] = f"{prefix}:{row.id}"
+        return payload
     skill = builtin_skill(key)
-    if not skill:
-        raise SelectionError("Skill seleksi tidak dikenal.")
-    return skill
+    if skill:
+        row = shared_photo_skill(db)
+        if row is not None:
+            payload = _custom_skill_payload(row, shared=True)
+            payload["key"] = f"shared:{row.id}"
+            payload["custom"] = False
+            return payload
+        return skill
+    raise SelectionError("Skill seleksi tidak dikenal.")
 
 
 def get_settings_row(db, user_id: int, *, create: bool = False) -> AiPhotoSettings | None:
@@ -434,7 +510,7 @@ def _preference_text(positive: list[str], negative: list[str]) -> str:
 
 
 def _collect_signals(
-    db, user_id: int, skill_key: str | None = None, *, limit_runs: int = 20
+    db, user_id: int | None, skill_key: str | None = None, *, limit_runs: int = 20
 ) -> dict[str, Any]:
     """Kumpulkan sinyal preferensi dari koreksi manual dan foto yang diterapkan.
 
@@ -443,9 +519,10 @@ def _collect_signals(
     dianggap preferensi agar model tidak belajar dari tebakan sebelumnya.
     """
     query = db.query(PhotoSelectionRun).filter(
-        PhotoSelectionRun.user_id == user_id,
         PhotoSelectionRun.status == SELECTION_DONE,
     )
+    if user_id is not None:
+        query = query.filter(PhotoSelectionRun.user_id == user_id)
     if skill_key:
         query = query.filter(PhotoSelectionRun.skill_key == skill_key)
     runs = (
@@ -473,10 +550,18 @@ def _collect_signals(
                     term = _signal_term(raw)
                     if term:
                         positive_terms[term] += 1
+                if is_manual and getattr(item, "manual_reason", ""):
+                    term = _signal_term(item.manual_reason)
+                    if term:
+                        positive_terms[term] += 1
             elif is_manual and item.verdict == SELECTION_REJECTED:
                 manual_negative_scores.append(int(item.score or 0))
                 for raw in list(item.tags or []) + list(item.weaknesses or []):
                     term = _signal_term(raw)
+                    if term:
+                        negative_terms[term] += 1
+                if getattr(item, "manual_reason", ""):
+                    term = _signal_term(item.manual_reason)
                     if term:
                         negative_terms[term] += 1
     return {
@@ -543,9 +628,10 @@ def learn_from_run(db, run: PhotoSelectionRun) -> dict[str, Any]:
             row.learned_updated_at = utcnow()
             changed = {"updated": True, "skills": changed["skills"], "global": True}
 
-    skill_row = _custom_skill_row(db, run.user_id, run.skill_key)
+    skill_row = _skill_row(db, run.user_id, run.skill_key)
     if skill_row and skill_row.auto_update:
-        signals = _collect_signals(db, run.user_id, run.skill_key)
+        aggregate_user = None if skill_row.is_shared else run.user_id
+        signals = _collect_signals(db, aggregate_user, run.skill_key)
         text = _preference_text(signals["positive"], signals["negative"])
         touched = False
         if text and text != skill_row.learned_preferences:
@@ -607,6 +693,22 @@ def refresh_learning(db, user: User) -> dict[str, Any]:
             touched = True
         if touched:
             skill.auto_updated_at = utcnow()
+            updated += 1
+    shared = shared_photo_skill(db)
+    if shared is not None and shared.auto_update:
+        key = f"shared:{shared.id}"
+        signals = _collect_signals(db, None, key)
+        text_value = _preference_text(signals["positive"], signals["negative"])
+        touched = False
+        if text_value and text_value != shared.learned_preferences:
+            shared.learned_preferences = text_value
+            touched = True
+        tuned = _tuned_score(int(shared.min_score or 62), signals)
+        if tuned != shared.min_score:
+            shared.min_score = tuned
+            touched = True
+        if touched:
+            shared.auto_updated_at = utcnow()
             updated += 1
     db.commit()
     return {"updated": updated}

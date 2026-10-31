@@ -93,6 +93,25 @@ def init_db() -> None:
     except Exception:
         logger.exception("Gagal menyiapkan skema sinkronisasi lokal")
 
+    # Migrasi kolom baru yang tidak ditangani create_all pada tabel lama.
+    if engine.dialect.name == "postgresql":
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE photo_selection_items "
+                        "ADD COLUMN IF NOT EXISTS manual_reason TEXT"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "UPDATE photo_selection_items SET manual_reason = '' "
+                        "WHERE manual_reason IS NULL"
+                    )
+                )
+        except Exception:
+            logger.exception("Gagal menambahkan kolom manual_reason")
+
 
 def db_health() -> bool:
     try:

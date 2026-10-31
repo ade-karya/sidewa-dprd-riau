@@ -294,6 +294,20 @@ def init_supabase_schema() -> None:
     Base.metadata.create_all(bind=engine)
 
     with engine.begin() as conn:
+        conn.execute(
+            text(
+                'ALTER TABLE public."photo_selection_items" '
+                "ADD COLUMN IF NOT EXISTS manual_reason TEXT"
+            )
+        )
+        conn.execute(
+            text(
+                'UPDATE public."photo_selection_items" '
+                "SET manual_reason = '' WHERE manual_reason IS NULL"
+            )
+        )
+
+    with engine.begin() as conn:
         roles = _supabase_roles(conn)
         for table in TABLE_ORDER:
             conn.execute(text(f'ALTER TABLE public."{table}" ENABLE ROW LEVEL SECURITY'))

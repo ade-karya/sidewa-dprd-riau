@@ -205,6 +205,11 @@
                     {{ icon('x') }} Tolak
                   </label>
                 </div>
+                <div class="ps-verdict-reason">
+                  <input class="input input-sm" type="text" name="reason_{{ item.id }}"
+                         value="{{ item.manual_reason or '' }}" maxlength="200"
+                         placeholder="Alasan (opsional) untuk menolak/menjadikan cadangan…">
+                </div>
               </div>
             </article>
             {% endfor %}
