@@ -291,9 +291,19 @@
       const response = await fetch(url);
       const blob = await response.blob();
       const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: caption });
-        return;
+      let canShareSingle = false;
+      try {
+        canShareSingle = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+      } catch (error) {
+        canShareSingle = false;
+      }
+      if (canShareSingle) {
+        try {
+          await navigator.share({ files: [file], title: caption });
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+        }
       }
     } catch (error) {
       console.warn("Gagal membagikan berkas:", error);
@@ -340,7 +350,13 @@
         toast("Gagal menyiapkan foto untuk dibagikan.");
         return;
       }
-      if (navigator.canShare && navigator.canShare({ files })) {
+      let canShare = false;
+      try {
+        canShare = !!(navigator.canShare && navigator.canShare({ files }));
+      } catch (error) {
+        canShare = false;
+      }
+      if (canShare) {
         try {
           await navigator.share({ files, title: "Foto terpilih" });
           return;

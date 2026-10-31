@@ -1058,12 +1058,6 @@ def download_selection(
         flash(request, "Belum ada foto terpilih untuk diunduh.", "warning")
         return RedirectResponse(f"/seleksi-foto/sesi/{run.id}", status_code=303)
     buffer = io.BytesIO()
-    manifest = [
-        f"Seleksi foto #{run.id} — {run.skill_name}",
-        f"Dibuat: {utcnow().isoformat()} UTC",
-        f"Total terpilih: {len(selected)}",
-        "",
-    ]
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for index, item in enumerate(selected, start=1):
             if not item.file_path:
@@ -1076,10 +1070,7 @@ def download_selection(
                 path,
                 arcname=f"{index:02d}_foto{suffix}",
             )
-            manifest.append(
-                f"{index:02d}. {item.original_name} — skor {item.score} — {item.reason}"
-            )
-        archive.writestr("daftar-pilihan.txt", "\n".join(manifest))
+
     audit(
         db,
         request,
