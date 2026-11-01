@@ -24,7 +24,9 @@
     <span class="hero-eyebrow">{{ icon('sparkles') }} Kurasi foto cerdas</span>
     <h2>Pilih foto terbaik tanpa menghabiskan kuota.</h2>
     <p>
-      Agen menilai ketajaman, pencahayaan, komposisi, ekspresi, dan relevansi peristiwa.
+      Agen menilai <b>Teknis 30</b>, <b>Komposisi 25</b>, <b>Momen &amp; ekspresi 25</b>,
+      dan <b>Nilai informasi 20</b>. Foto yang gagal gerbang tidak boleh menjadi pilihan,
+      sedangkan hal sensitif ditandai <b>Perlu dicek</b> untuk keputusan staf Humas.
       Duplikat dideteksi lebih dulu di server, lalu setiap foto dinilai dengan
       <b>Gemini {{ selection.model }}</b> sesuai skill dan preferensi Anda.
     </p>
@@ -96,11 +98,18 @@
             data-rpm="{{ selection.rpm }}" data-rpd="{{ selection.rpd }}"
             data-tpm="{{ selection.tpm }}"
             data-rpd-remaining="{{ usage.rpd_remaining }}"
-            data-max-mb="{{ settings.max_upload_mb }}">
+            data-max-mb="{{ settings.max_upload_mb }}"
+            data-target-percent="{{ rubric.target_percent_default }}"
+            data-target-min="{{ rubric.target_min }}"
+            data-target-max="{{ rubric.target_max }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
         <div class="form-section-title">1. Pilih skill seleksi</div>
-        <p class="muted-small mb-2">Skill menentukan selera kurasi. Pilih preset atau buat sendiri sesuai kebutuhan tim Anda.</p>
+        <p class="muted-small mb-2">
+          Skill baku <b>{{ rubric.name }}</b> memakai rubrik tetap: PILIHAN ≥ {{ rubric.select_score }},
+          CADANGAN {{ rubric.backup_score }}–{{ rubric.select_score - 1 }}, TOLAK &lt; {{ rubric.backup_score }}
+          atau gagal gerbang. Skill pribadi dan skill komunitas tetap dapat dipakai bila tersedia.
+        </p>
         <div class="ps-skill-grid">
           {% for skill in skills %}
           <label class="ps-skill-card {{ 'custom' if skill.custom }} {{ 'shared' if skill.shared }}"
@@ -112,8 +121,9 @@
               <strong>{{ skill.name }}</strong>
               <span>{{ skill.description }}</span>
               <small>
-                {% if skill.target_count %}{{ skill.target_count }} foto target{% else %}Semua yang layak{% endif %}
+                {% if skill.auto_target %}Target otomatis {{ rubric.target_percent_min|int }}–{{ rubric.target_percent_max|int }}% (min {{ rubric.target_min }}, maks {{ rubric.target_max }}){% elif skill.target_count %}{{ skill.target_count }} foto target{% else %}Semua yang layak{% endif %}
                 · skor ≥ {{ skill.min_score }}
+                {% if skill.rubric %}· rubrik 30/25/25/20{% endif %}
                 {% if skill.shared %}· dibagikan {{ skill.owner_name }} · {{ skill.share_usage_count }}× dipakai
                 {% elif skill.custom %}· skill saya{% endif %}
                 {% if skill.auto_update %}· adaptif{% endif %}
@@ -122,6 +132,22 @@
             <span class="ps-skill-check">{{ icon('check') }}</span>
           </label>
           {% endfor %}
+        </div>
+
+        <div class="ps-rubric-summary mt-2">
+          <div class="ps-rubric-summary-head">
+            <span class="ps-rubric-title">{{ icon('target') }} Rubrik {{ rubric.name }} v{{ rubric.version }}</span>
+            <span class="badge badge-purple">Total 100</span>
+          </div>
+          <div class="ps-rubric-grid">
+            {% for dim in rubric.dimensions %}
+            <div class="ps-rubric-item"><b>{{ dim.max }}</b><span>{{ dim.label }}</span></div>
+            {% endfor %}
+          </div>
+          <p class="form-hint">
+            Gerbang keras: {{ rubric.gates|selectattr('hard')|map(attribute='code')|join(', ') }}.
+            Sensitif, protokol, atau keraguan serupa → <b>Perlu dicek</b>, bukan diputuskan AI.
+          </p>
         </div>
 
         <div class="ps-step mt-3">
@@ -149,12 +175,18 @@
             <div class="form-group">
               <label class="form-label" for="ps-target">Target foto terbaik</label>
               <input class="input" id="ps-target" name="target_count" type="number" min="0" max="{{ max_photos }}" value="0">
-              <span class="form-hint">Isi 0 untuk memilih semua foto yang layak.</span>
+              <span class="form-hint" data-ps-target-hint>
+                Isi 0 untuk target otomatis {{ rubric.target_percent_min|int }}–{{ rubric.target_percent_max|int }}%
+                dari total (min {{ rubric.target_min }}, maks {{ rubric.target_max }}). Angka lain dipakai apa adanya.
+              </span>
             </div>
             <div class="form-group">
-              <label class="form-label" for="ps-score">Ambang skor minimum</label>
-              <input class="input" id="ps-score" name="min_score" type="number" min="0" max="100" value="62" data-ps-score>
-              <span class="form-hint">Skor 0–100. Rekomendasi: 60–70 untuk dokumentasi.</span>
+              <label class="form-label" for="ps-score">Ambang skor PILIHAN</label>
+              <input class="input" id="ps-score" name="min_score" type="number" min="0" max="100" value="{{ rubric.select_score }}" data-ps-score>
+              <span class="form-hint">
+                Bawaan {{ rubric.select_score }}. CADANGAN {{ rubric.backup_score }}–{{ rubric.select_score - 1 }};
+                TOLAK &lt; {{ rubric.backup_score }} atau gagal gerbang.
+              </span>
             </div>
             <div class="form-group full">
               <label class="form-label" for="ps-activity">Konteks kegiatan (opsional)</label>
@@ -199,9 +231,42 @@
         <span class="badge badge-gray">{{ skills|selectattr('custom')|list|length }} skill saya · {{ skills|selectattr('shared')|list|length }} komunitas</span>
       </div>
       <p class="muted-small mb-2">
-        Skill adalah instruksi kurasi yang dapat Anda pakai berulang. Preset bawaan tidak dapat dihapus;
-        skill buatan sendiri dapat disunting kapan saja.
+        Skill baku <b>{{ rubric.name }} v{{ rubric.version }}</b> memakai rubrik dan gerbang tetap.
+        Skill buatan sendiri dapat disunting kapan saja; skill komunitas dapat dipakai langsung atau disalin.
       </p>
+
+      <div class="ps-rubric-summary">
+        <div class="ps-rubric-summary-head">
+          <span class="ps-rubric-title">{{ icon('camera') }} Parameter {{ rubric.name }}</span>
+          <span class="badge badge-purple">Total {{ rubric.dimensions|map(attribute='max')|sum }}</span>
+        </div>
+        <div class="ps-rubric-grid">
+          {% for dim in rubric.dimensions %}
+          <div class="ps-rubric-item"><b>{{ dim.max }}</b><span>{{ dim.label }}</span></div>
+          {% endfor %}
+        </div>
+        <div class="ps-rubric-thresholds">
+          <span class="badge badge-green">PILIHAN ≥ {{ rubric.select_score }}</span>
+          <span class="badge badge-gold">CADANGAN {{ rubric.backup_score }}–{{ rubric.select_score - 1 }}</span>
+          <span class="badge badge-red">TOLAK &lt; {{ rubric.backup_score }}</span>
+          <span class="badge badge-blue">PERLU_CEK: sensitif/protokol</span>
+        </div>
+        <details class="ps-rubric-details">
+          <summary class="link-btn">Lihat gerbang dan kode alasan</summary>
+          <div class="ps-code-list">
+            {% for gate in rubric.gates %}
+            <span class="ps-code {{ 'hard' if gate.hard else 'review' }}" title="{{ gate.label }}">
+              <b>{{ gate.code }}</b>{% if gate.hard %} · keras{% else %} · manusia{% endif %}
+            </span>
+            {% endfor %}
+          </div>
+          <p class="form-hint mt-1">
+            Target otomatis {{ rubric.target_percent_min|int }}–{{ rubric.target_percent_max|int }}% dari total,
+            minimal {{ rubric.target_min }}, maksimal {{ rubric.target_max }} per kegiatan. Duplikat disaring
+            dengan dHash (jarak {{ rubric.duplicate.hash_distance }}, jendela {{ rubric.duplicate.window_seconds }} detik).
+          </p>
+        </details>
+      </div>
 
       {% set custom_skills = skills|selectattr('custom')|list %}
       {% if custom_skills %}
@@ -353,7 +418,7 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="new-skill-score">Ambang skor</label>
-              <input class="input" id="new-skill-score" name="min_score" type="number" min="0" max="100" value="62">
+              <input class="input" id="new-skill-score" name="min_score" type="number" min="0" max="100" value="{{ rubric.select_score }}">
             </div>
             <div class="form-group full">
               <label class="form-label" for="new-skill-inst">Instruksi untuk AI</label>
@@ -535,7 +600,7 @@
       <h2>{{ icon('sparkles') }} Rekomendasi kerja</h2>
       <div class="ps-tips">
         <div class="ps-tip"><span>1</span><p><b>Seleksi sebelum unggah.</b> Kurasi 20–40 foto menjadi 6–10 foto terbaik, lalu terapkan ke kegiatan.</p></div>
-        <div class="ps-tip"><span>2</span><p><b>Mulai dari target 0.</b> Biarkan AI memilih semua yang layak, lalu turunkan target bila ingin lebih ketat.</p></div>
+        <div class="ps-tip"><span>2</span><p><b>Mulai dari target otomatis.</b> Biarkan agen memakai 10–15% dari total (min 8, maks 30), lalu sesuaikan bila ingin lebih ketat.</p></div>
         <div class="ps-tip"><span>3</span><p><b>Gunakan konteks kegiatan.</b> Relevansi dan caption akan jauh lebih tepat.</p></div>
         <div class="ps-tip"><span>4</span><p><b>Tinjau manual.</b> Klik kartu foto untuk mengubah pilihan sebelum diterapkan.</p></div>
       </div>

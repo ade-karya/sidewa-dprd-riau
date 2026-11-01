@@ -24,6 +24,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .constants import (
     PHOTO_PENDING,
     ROLE_STAF,
+    SELECTION_REVIEW,
     STATUS_DRAFT,
 )
 from .database import Base
@@ -295,7 +296,7 @@ class AiPhotoSettings(Base, TimestampMixin):
     tpm: Mapped[int] = mapped_column(Integer, default=250000, nullable=False)
     preferred_notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
     default_skill_key: Mapped[str] = mapped_column(
-        String(60), default="jurnalistik", nullable=False
+        String(60), default="seleksi-foto-humas", nullable=False
     )
     auto_learn: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     learned_preferences: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -345,7 +346,7 @@ class PhotoSelectionRun(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    skill_key: Mapped[str] = mapped_column(String(60), default="jurnalistik", nullable=False)
+    skill_key: Mapped[str] = mapped_column(String(60), default="seleksi-foto-humas", nullable=False)
     skill_name: Mapped[str] = mapped_column(String(80), default="", nullable=False)
     skill_instructions: Mapped[str] = mapped_column(Text, default="", nullable=False)
     skill_learned_preferences: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -392,6 +393,15 @@ class PhotoSelectionRun(Base):
         cascade="all, delete-orphan",
         order_by="PhotoSelectionItem.position",
     )
+
+    @property
+    def review_count(self) -> int:
+        """Jumlah foto yang menunggu keputusan manusia (PERLU_CEK).
+
+        Tidak disimpan sebagai kolom agar tidak memerlukan migrasi; nilainya
+        dihitung dari item yang sudah dimuat pada sesi database.
+        """
+        return sum(1 for item in self.items if item.verdict == SELECTION_REVIEW)
 
 
 class PhotoSelectionItem(Base):

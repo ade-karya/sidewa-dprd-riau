@@ -27,6 +27,40 @@
     const cards = startForm.querySelectorAll("[data-ps-skill]");
     let userTouchedScore = false;
 
+    /* ── Petunjuk target otomatis ───────────────────────────────────────── */
+    const targetHint = startForm.querySelector("[data-ps-target-hint]");
+    const targetPercent = Math.max(1, Number(startForm.dataset.targetPercent || 12));
+    const targetMin = Math.max(1, Number(startForm.dataset.targetMin || 8));
+    const targetMax = Math.max(targetMin, Number(startForm.dataset.targetMax || 30));
+    const targetDefaultText =
+      `Isi 0 untuk target otomatis ${targetPercent}% dari total ` +
+      `(min ${targetMin}, maks ${targetMax}). Angka lain dipakai apa adanya.`;
+
+    const updateTargetHint = () => {
+      if (!targetHint) return;
+      const count = Array.from(
+        startForm.querySelector("[data-ps-photos]")?.files || []
+      ).length;
+      const requested = Math.max(0, Number(target?.value || 0));
+      if (requested > 0) {
+        targetHint.textContent = count
+          ? `Target manual ${requested} foto dari ${count} yang diunggah` +
+            `${requested > count ? " (dibatasi jumlah foto)" : ""}. Isi 0 untuk target otomatis.`
+          : `Target manual ${requested} foto. Isi 0 untuk target otomatis.`;
+        return;
+      }
+      if (!count) {
+        targetHint.textContent = targetDefaultText;
+        return;
+      }
+      const raw = Math.ceil((count * targetPercent) / 100);
+      const automatic = Math.min(count, Math.max(targetMin, Math.min(targetMax, raw)));
+      targetHint.textContent =
+        `Target otomatis: ± ${automatic} foto dari ${count} ` +
+        `(${targetPercent}% · min ${targetMin}, maks ${targetMax}). ` +
+        "Isi angka lain untuk target manual.";
+    };
+
     const applySkill = (card) => {
       if (!card) return;
       const cardTarget = card.dataset.target;
@@ -41,6 +75,7 @@
           ? `Preferensi tambahan untuk skill “${label.textContent.trim()}”…`
           : "Tulis preferensi tambahan untuk sesi ini…";
       }
+      updateTargetHint();
     };
 
     cards.forEach((card) => {
@@ -61,6 +96,7 @@
         userTouchedScore = true;
       });
     }
+    target?.addEventListener("input", updateTargetHint);
 
     /* ── Estimasi unggahan ──────────────────────────────────────────────── */
     const fileInput = startForm.querySelector("[data-ps-photos]");
@@ -73,6 +109,7 @@
     const maxBytes = maxMb * 1024 * 1024;
 
     const updateEstimate = () => {
+      updateTargetHint();
       const files = Array.from(fileInput?.files || []);
       if (!files.length) {
         if (estimate) estimate.textContent = "Pilih foto untuk melihat estimasi waktu dan kuota.";
@@ -153,6 +190,7 @@
       if (progressText) progressText.textContent = `${data.processed}/${data.total}`;
       stat("selected", data.selected);
       stat("backup", data.backup);
+      stat("review", data.review);
       stat("rejected", data.rejected);
       stat("quota", data.quota_used);
       if (label && data.status_label) label.textContent = data.status_label;
@@ -195,14 +233,18 @@
 
   /* ── Filter hasil ─────────────────────────────────────────────────────── */
   const filterTabs = document.querySelectorAll("[data-ps-filter]");
+  let activeFilter = "all";
+  const applyFilter = () => {
+    document.querySelectorAll("[data-ps-card]").forEach((card) => {
+      card.hidden = activeFilter !== "all" && card.dataset.verdict !== activeFilter;
+    });
+  };
   if (filterTabs.length) {
     filterTabs.forEach((tab) => {
       tab.addEventListener("click", () => {
-        const filter = tab.dataset.psFilter;
+        activeFilter = tab.dataset.psFilter;
         filterTabs.forEach((item) => item.classList.toggle("active", item === tab));
-        document.querySelectorAll("[data-ps-card]").forEach((card) => {
-          card.hidden = filter !== "all" && card.dataset.verdict !== filter;
-        });
+        applyFilter();
       });
     });
   }
@@ -213,23 +255,24 @@
     const labels = {
       selected: "Dipilih",
       backup: "Cadangan",
+      review: "Perlu dicek",
       rejected: "Ditolak",
       failed: "Gagal",
       pending: "Menunggu",
     };
-    const tones = { selected: "green", backup: "gold", rejected: "red", failed: "red", pending: "gray" };
+    const tones = { selected: "green", backup: "gold", review: "blue", rejected: "red", failed: "red", pending: "gray" };
     let saveTimer = null;
 
     const updateCounts = (data) => {
-      const map = { selected: data.selected, backup: data.backup, rejected: data.rejected };
+      const map = { selected: data.selected, backup: data.backup, review: data.review, rejected: data.rejected };
       filterTabs.forEach((tab) => {
         const key = tab.dataset.psFilter;
         const target = tab.querySelector("span");
         if (target && key in map) target.textContent = map[key];
       });
       const allTab = document.querySelector('[data-ps-filter="all"] span');
-      if (allTab) {
-        allTab.textContent = Number(data.selected) + Number(data.backup) + Number(data.rejected);
+      if (allTab && data.total !== undefined) {
+        allTab.textContent = data.total;
       }
       document.querySelectorAll("[data-ps-selected-count]").forEach((el) => {
         el.textContent = data.selected;
@@ -277,6 +320,7 @@
           badge.className = `badge badge-${tones[verdict] || "gray"}`;
           badge.textContent = labels[verdict] || verdict;
         }
+        applyFilter();
         window.clearTimeout(saveTimer);
         saveTimer = window.setTimeout(save, 350);
       });

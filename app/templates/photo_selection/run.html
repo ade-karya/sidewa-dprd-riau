@@ -28,7 +28,10 @@
         {% if run.target_count %}
         <span class="chip chip-gold">{{ icon('target') }} Target {{ run.target_count }} foto</span>
         {% endif %}
-        <span class="chip chip-gray">Skor ≥ {{ run.min_score }}</span>
+        {% if run.review_count %}
+        <span class="chip chip-blue">{{ icon('alert') }} {{ run.review_count }} perlu dicek</span>
+        {% endif %}
+        <span class="chip chip-gray">PILIHAN ≥ {{ run.min_score }}</span>
       </div>
       <h2>
         {% if run.status == 'running' %}Agen sedang menilai foto…
@@ -51,6 +54,7 @@
       <div class="ps-run-stats">
         <div class="ps-run-stat"><span class="ps-run-stat-icon green">{{ icon('check') }}</span><div><b data-ps-stat="selected">{{ run.selected_count }}</b><span>Dipilih</span></div></div>
         <div class="ps-run-stat"><span class="ps-run-stat-icon gold">{{ icon('image') }}</span><div><b data-ps-stat="backup">{{ run.backup_count }}</b><span>Cadangan</span></div></div>
+        <div class="ps-run-stat"><span class="ps-run-stat-icon blue">{{ icon('shield') }}</span><div><b data-ps-stat="review">{{ run.review_count }}</b><span>Perlu dicek</span></div></div>
         <div class="ps-run-stat"><span class="ps-run-stat-icon red">{{ icon('x') }}</span><div><b data-ps-stat="rejected">{{ run.rejected_count }}</b><span>Ditolak</span></div></div>
         <div class="ps-run-stat"><span class="ps-run-stat-icon gray">{{ icon('sparkles') }}</span><div><b data-ps-stat="quota">{{ run.quota_used }}</b><span>Permintaan AI</span></div></div>
       </div>
@@ -136,6 +140,7 @@
           <button class="ps-filter-tab active" type="button" data-ps-filter="all">Semua <span>{{ items|length }}</span></button>
           <button class="ps-filter-tab" type="button" data-ps-filter="selected">Dipilih <span>{{ run.selected_count }}</span></button>
           <button class="ps-filter-tab" type="button" data-ps-filter="backup">Cadangan <span>{{ run.backup_count }}</span></button>
+          <button class="ps-filter-tab review" type="button" data-ps-filter="review">Perlu dicek <span>{{ run.review_count }}</span></button>
           <button class="ps-filter-tab" type="button" data-ps-filter="rejected">Ditolak <span>{{ run.rejected_count }}</span></button>
           {% if run.failed_count %}
           <button class="ps-filter-tab" type="button" data-ps-filter="failed">Gagal <span>{{ run.failed_count }}</span></button>
@@ -155,11 +160,12 @@
                 <div class="ps-photo-empty">{{ icon('image') }}</div>
                 {% endif %}
                 <span class="ps-score-ring" style="--ps-score: {{ item.score }}" data-ps-score>{{ item.score }}</span>
-                <span class="ps-verdict-badge badge badge-{{ verdict_tones.get(item.verdict, 'gray') }}" data-ps-verdict-badge data-label-selected="Dipilih" data-label-backup="Cadangan" data-label-rejected="Ditolak" data-label-failed="Gagal" data-label-pending="Menunggu">{{ verdict_labels.get(item.verdict, item.verdict) }}</span>
+                <span class="ps-verdict-badge badge badge-{{ verdict_tones.get(item.verdict, 'gray') }}" data-ps-verdict-badge data-label-selected="Dipilih" data-label-backup="Cadangan" data-label-review="Perlu dicek" data-label-rejected="Ditolak" data-label-failed="Gagal" data-label-pending="Menunggu">{{ verdict_labels.get(item.verdict, item.verdict) }}</span>
                 {% if item.duplicate_of_id %}<span class="ps-dupe-badge">{{ icon('layers') }} Duplikat</span>{% endif %}
                 {% if item.face_count %}<span class="ps-face-badge">{{ icon('users') }} {{ item.face_count }}</span>{% endif %}
               </div>
 
+              {% set tech = item.technical or {} %}
               <div class="ps-photo-body">
                 <div class="ps-photo-title">
                   <strong>{{ item.caption or item.original_name }}</strong>
@@ -178,33 +184,63 @@
                   </button>
                 </div>
                 <p class="ps-reason">{{ item.reason or item.error or 'Belum ada catatan dari agen.' }}</p>
+                {% if item.verdict == 'review' %}
+                <div class="ps-review-note">
+                  {{ icon('shield') }}
+                  <span><b>Perlu dicek staf Humas.</b> {{ tech.get('review_reason') or 'Ada informasi sensitif atau masalah protokol yang tidak boleh diputuskan AI.' }}</span>
+                </div>
+                {% endif %}
                 {% if item.tags %}
                 <div class="chip-row">
                   {% for tag in item.tags[:4] %}<span class="chip chip-gray">{{ tag }}</span>{% endfor %}
                 </div>
                 {% endif %}
-                {% if item.technicals is defined %}{% endif %}
+                {% if tech.get('rubric') %}
+                <div class="ps-rubric-metrics">
+                  {% for label, key, maximum in [('Teknis', 'technical_score', 30), ('Komposisi', 'composition_score', 25), ('Momen', 'moment_score', 25), ('Informasi', 'information_score', 20)] %}
+                  {% set value = tech.get(key, 0) or 0 %}
+                  <div class="ps-rubric-metric" title="{{ label }}: {{ value }}/{{ maximum }}">
+                    <span>{{ label }}</span>
+                    <b>{{ value }}<small>/{{ maximum }}</small></b>
+                    <i><em style="width: {{ (value / maximum * 100)|round|int }}%"></em></i>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% else %}
                 <div class="ps-mini-metrics">
-                  {% set tech = item.technical or {} %}
                   {% for label, key in [('Tajam', 'sharpness'), ('Cahaya', 'exposure'), ('Komposisi', 'composition'), ('Relevansi', 'relevance')] %}
                   {% set value = tech.get(key, 0) %}
                   <span title="{{ label }}: {{ value }}/100"><i style="width: {{ value }}%"></i><small>{{ label }}</small></span>
                   {% endfor %}
                 </div>
+                {% endif %}
+                {% set codes = tech.get('reason_codes') or [] %}
+                {% if codes %}
+                <div class="ps-code-row">
+                  {% for code in codes %}
+                  <span class="ps-code-chip {{ 'hard' if code in rubric.hard_gate_codes else ('review' if code in rubric.review_codes else '') }}"
+                        title="{{ rubric.reason_labels.get(code, code) }}">{{ code }}</span>
+                  {% endfor %}
+                </div>
+                {% endif %}
                 {% if item.weaknesses %}
                 <p class="ps-weakness">{{ icon('alert') }} {{ item.weaknesses|join(' · ') }}</p>
                 {% endif %}
 
                 <div class="ps-verdict-picker">
-                  <label class="ps-verdict-option selected">
+                  <label class="ps-verdict-option {{ 'selected' if item.verdict == 'selected' }}">
                     <input type="radio" name="verdict_{{ item.id }}" value="selected" {{ 'checked' if item.verdict == 'selected' }}>
                     {{ icon('check') }} Pilih
                   </label>
-                  <label class="ps-verdict-option backup">
+                  <label class="ps-verdict-option backup {{ 'selected' if item.verdict == 'backup' }}">
                     <input type="radio" name="verdict_{{ item.id }}" value="backup" {{ 'checked' if item.verdict == 'backup' }}>
                     {{ icon('image') }} Cadangan
                   </label>
-                  <label class="ps-verdict-option rejected">
+                  <label class="ps-verdict-option review {{ 'selected' if item.verdict == 'review' }}">
+                    <input type="radio" name="verdict_{{ item.id }}" value="review" {{ 'checked' if item.verdict == 'review' }}>
+                    {{ icon('shield') }} Cek
+                  </label>
+                  <label class="ps-verdict-option rejected {{ 'selected' if item.verdict == 'rejected' }}">
                     <input type="radio" name="verdict_{{ item.id }}" value="rejected" {{ 'checked' if item.verdict == 'rejected' }}>
                     {{ icon('x') }} Tolak
                   </label>
@@ -212,7 +248,7 @@
                 <div class="ps-verdict-reason">
                   <input class="input input-sm" type="text" name="reason_{{ item.id }}"
                          value="{{ item.manual_reason or '' }}" maxlength="200"
-                         placeholder="Alasan (opsional) untuk menolak/menjadikan cadangan…">
+                         placeholder="Alasan (opsional) untuk menolak, mencadangkan, atau menandai perlu dicek…">
                 </div>
               </div>
             </article>
@@ -278,6 +314,12 @@
           <strong>{{ run.skill_name }}</strong>
           <p>{{ run.skill_instructions or 'Tidak ada instruksi tambahan.' }}</p>
         </div>
+        <div class="ps-skill-rubric">
+          <span class="badge badge-purple">Rubrik 30/25/25/20</span>
+          <span class="badge badge-green">PILIHAN ≥ {{ run.min_score }}</span>
+          <span class="badge badge-gold">CADANGAN ≥ {{ rubric.backup_score }}</span>
+          <span class="badge badge-blue">PERLU_CEK manusia</span>
+        </div>
         {% if run.skill_learned_preferences or run.learned_preferences %}
         <div class="ps-learned-note mt-1">
           {{ icon('sparkles') }}
@@ -322,9 +364,11 @@
       <section class="section-card">
         <h2 style="font-size: 16px;">{{ icon('info') }} Cara membaca hasil</h2>
         <div class="ps-legend">
-          <div><span class="badge badge-green">Dipilih</span><p>Layak tayang dan masuk target. Bisa langsung diterapkan.</p></div>
-          <div><span class="badge badge-gold">Cadangan</span><p>Masih berguna, tetapi kalah dari foto lain atau mirip foto lain.</p></div>
-          <div><span class="badge badge-red">Ditolak</span><p>Blur, gelap, tidak relevan, atau melanggar preferensi skill.</p></div>
+          {% set backup_top = (run.min_score - 1) if run.min_score > rubric.backup_score else rubric.backup_score %}
+          <div><span class="badge badge-green">Dipilih</span><p>Lolos semua gerbang, skor ≥ {{ run.min_score }}, dan masuk target. Bisa langsung diterapkan.</p></div>
+          <div><span class="badge badge-gold">Cadangan</span><p>Skor {{ rubric.backup_score }}–{{ backup_top }}, kalah dari foto lain, atau mirip foto lain. Masih bisa dipakai bila diperlukan.</p></div>
+          <div><span class="badge badge-blue">Perlu dicek</span><p>Dokumen/layar terbaca, anak atau warga rentan, atribut politik, atau gestur ambigu. Staf Humas yang memutuskan.</p></div>
+          <div><span class="badge badge-red">Ditolak</span><p>Skor &lt; {{ rubric.backup_score }} atau gagal gerbang: buram, mata terpejam, terpotong, ekspresi tidak pantas, atau gagal teknis parah.</p></div>
         </div>
         <div class="face-note mt-2">
           {{ icon('shield') }}

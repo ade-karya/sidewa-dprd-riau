@@ -261,6 +261,23 @@ class Settings:
     photo_selection_timeout: int = field(
         default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_TIMEOUT", 90)
     )
+    # Parameter skill "Seleksi Foto Humas" (rubrik 30/25/25/20).
+    # Target otomatis 10-15% dari total, min 8, maks 30 per kegiatan.
+    photo_selection_target_percent: float = field(
+        default_factory=lambda: _float("SIDEWA_PHOTO_SELECTION_TARGET_PERCENT", 12.0)
+    )
+    photo_selection_target_min: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_TARGET_MIN", 8)
+    )
+    photo_selection_target_max: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_TARGET_MAX", 30)
+    )
+    photo_selection_duplicate_hash: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_DUPLICATE_HASH", 12)
+    )
+    photo_selection_duplicate_window: int = field(
+        default_factory=lambda: _int("SIDEWA_PHOTO_SELECTION_DUPLICATE_WINDOW", 90)
+    )
 
     demo_mode: bool = field(default_factory=lambda: _bool("SIDEWA_DEMO_MODE", True))
     bootstrap_admin_username: str = field(

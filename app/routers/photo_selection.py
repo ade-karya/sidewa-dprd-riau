@@ -32,6 +32,7 @@ from ..constants import (
     SELECTION_PENDING,
     SELECTION_QUEUED,
     SELECTION_REJECTED,
+    SELECTION_REVIEW,
     SELECTION_RUNNING,
     SELECTION_SELECTED,
     SELECTION_STATUS_LABELS,
@@ -50,7 +51,7 @@ from ..models import (
     User,
     utcnow,
 )
-from ..services import jobs, photo_curator
+from ..services import jobs, photo_curator, photo_rubric
 from ..services.analytics import dashboard_stats
 from ..services.images import ImageValidationError, delete_paths, save_image
 from ..services.keyvault import KeyVaultError, encrypt_secret, key_hint
@@ -132,6 +133,7 @@ def _status_payload(run: PhotoSelectionRun) -> dict[str, Any]:
         "selected": run.selected_count,
         "backup": run.backup_count,
         "rejected": run.rejected_count,
+        "review": run.review_count,
         "failed": run.failed_count,
         "quota_used": run.quota_used,
         "tokens_used": run.tokens_used,
@@ -147,6 +149,7 @@ def _status_payload(run: PhotoSelectionRun) -> dict[str, Any]:
                 ),
                 "score": item.score,
                 "reason": item.reason,
+                "review_reason": (item.technical or {}).get("review_reason") or "",
                 "error": item.error,
             }
             for item in run.items
@@ -196,6 +199,7 @@ def _selection_page(
         total_selected=total_selected,
         total_quota=total_quota,
         default_model=settings.photo_selection_model,
+        rubric=photo_rubric.parameter_summary(),
         stats=dashboard_stats(db, user),
         view=view,
     )
@@ -255,7 +259,7 @@ def save_settings(
     rpd: int = Form(500),
     tpm: int = Form(250000),
     preferred_notes: str = Form(""),
-    default_skill_key: str = Form("jurnalistik"),
+    default_skill_key: str = Form(photo_rubric.SKILL_KEY),
     auto_learn: str = Form(""),
     learned_preferences: str = Form(""),
     user: User = Depends(ACCESS),
@@ -285,7 +289,7 @@ def save_settings(
     try:
         skill = photo_curator.resolve_skill(db, user, default_skill_key)
     except photo_curator.SelectionError:
-        skill = photo_curator.builtin_skill("jurnalistik")
+        skill = photo_curator.builtin_skill(photo_rubric.SKILL_KEY)
     row.default_skill_key = skill["key"]
     row.is_active = True
     audit(
@@ -384,7 +388,7 @@ def save_skill(
     description: str = Form(""),
     instructions: str = Form(""),
     target_count: str = Form("0"),
-    min_score: str = Form("60"),
+    min_score: str = Form(str(photo_rubric.SELECT_SCORE)),
     auto_update: str = Form(""),
     is_shared: str = Form(""),
     user: User = Depends(ACCESS),
@@ -396,7 +400,7 @@ def save_skill(
         return RedirectResponse("/seleksi-foto/skill", status_code=303)
     try:
         target = max(0, min(100, int(target_count or 0)))
-        threshold = max(0, min(100, int(min_score or 60)))
+        threshold = max(0, min(100, int(min_score or photo_rubric.SELECT_SCORE)))
     except ValueError:
         flash(request, "Target dan ambang skor harus berupa angka.", "danger")
         return RedirectResponse("/seleksi-foto/skill", status_code=303)
@@ -534,7 +538,7 @@ def delete_skill(
         return RedirectResponse("/seleksi-foto/skill", status_code=303)
     settings_row = photo_curator.get_settings_row(db, user.id)
     if settings_row and settings_row.default_skill_key == f"custom:{row.id}":
-        settings_row.default_skill_key = "jurnalistik"
+        settings_row.default_skill_key = photo_rubric.SKILL_KEY
     audit(
         db,
         request,
@@ -607,7 +611,7 @@ def sync_learning(
 async def start_selection(
     request: Request,
     photos: list[UploadFile] = File(default=[]),
-    skill_key: str = Form("jurnalistik"),
+    skill_key: str = Form(photo_rubric.SKILL_KEY),
     target_count: str = Form("0"),
     min_score: str = Form(""),
     notes: str = Form(""),
@@ -647,12 +651,20 @@ async def start_selection(
         return RedirectResponse("/seleksi-foto/mulai", status_code=303)
 
     try:
-        target = max(0, min(len(files), int(target_count or 0)))
-        threshold = (
-            max(0, min(100, int(min_score)))
-            if str(min_score).strip()
-            else int(skill.get("min_score") or 60)
+        requested_target = max(0, int(target_count or 0))
+        target = photo_rubric.default_target_count(
+            len(files),
+            requested_target,
+            percent=settings.photo_selection_target_percent,
+            minimum=settings.photo_selection_target_min,
+            maximum=settings.photo_selection_target_max,
         )
+        if str(min_score).strip():
+            threshold = max(0, min(100, int(min_score)))
+        elif skill.get("rubric"):
+            threshold = photo_rubric.SELECT_SCORE
+        else:
+            threshold = int(skill.get("min_score") or photo_rubric.SELECT_SCORE)
     except ValueError:
         flash(request, "Target dan ambang skor harus berupa angka.", "danger")
         return RedirectResponse("/seleksi-foto/mulai", status_code=303)
@@ -777,6 +789,7 @@ def selection_detail(
         can_resume=run.status in {SELECTION_PAUSED, SELECTION_FAILED}
         and pending > 0,
         can_cancel=run.status in {SELECTION_QUEUED, SELECTION_RUNNING, SELECTION_PAUSED},
+        rubric=photo_rubric.parameter_summary(),
         stats=dashboard_stats(db, user),
     )
 
@@ -800,7 +813,12 @@ async def update_verdicts(
 ):
     run = _own_run_or_404(db, run_id, user)
     form = await request.form()
-    valid = {SELECTION_SELECTED, SELECTION_BACKUP, SELECTION_REJECTED}
+    valid = {
+        SELECTION_SELECTED,
+        SELECTION_BACKUP,
+        SELECTION_REJECTED,
+        SELECTION_REVIEW,
+    }
     items = {
         item.id: item
         for item in db.query(PhotoSelectionItem)
@@ -854,6 +872,7 @@ async def update_verdicts(
                 "selected": run.selected_count,
                 "backup": run.backup_count,
                 "rejected": run.rejected_count,
+                "review": run.review_count,
                 "learned": bool(learned.get("updated")),
             }
         )

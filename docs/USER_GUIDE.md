@@ -69,6 +69,35 @@ disunting, atau dihapus, panduannya dihitung ulang dari rilis yang sedang terbit
 saat itu. Skill dipakai Gemini ketika menyusun draf dari rekaman audio agar gaya
 judul, ringkasan, isi, dan tag konsisten dengan publikasi terbaru Humas.
 
+## Seleksi foto Humas
+1. Buka **Seleksi Foto** (`/seleksi-foto`), lalu isi kunci API Gemini dari
+   Google AI Studio pada halaman **Pengaturan**. Kunci disimpan terenkripsi dan
+   hanya dipakai untuk fitur ini.
+2. Pilih skill bawaan **Seleksi Foto Humas** atau skill pribadi/komunitas yang
+   tersedia. Skill bawaan memakai rubrik tetap; skill pribadi dapat disesuaikan.
+3. Unggah foto, isi target (biarkan `0` untuk target otomatis 10–15% dari total,
+   minimal 8, maksimal 30), dan tambahkan konteks kegiatan bila perlu.
+4. Jalankan agen. Foto kembar disaring lebih dulu tanpa kuota, lalu foto unik
+   dinilai dengan Gemini 3.5 Flash Lite sesuai kuota RPM/TPM/RPD kunci Anda.
+5. Tinjau hasil pada tab **Dipilih**, **Cadangan**, **Perlu dicek**, dan
+   **Ditolak**. Anda dapat mengubah verdict kapan saja; perubahan manual tidak
+   akan ditimpa agen.
+6. Terapkan foto **Dipilih** ke kegiatan, kirim lewat lembar berbagi perangkat,
+   atau unduh foto aslinya.
+
+**Arti verdict.** Rubrik menilai Teknis 30 + Komposisi 25 + Momen & ekspresi 25 +
+Nilai informasi 20. **Dipilih** berarti skor ≥ 75 dan lolos semua gerbang.
+**Cadangan** berarti skor 60–74, kalah dari foto lain, atau kembar. **Ditolak**
+berarti skor < 60 atau gagal gerbang (buram, mata terpejam, tokoh terpotong,
+ekspresi tidak pantas, gagal teknis parah). **Perlu dicek** berarti ada dokumen
+atau layar terbaca, anak/warga rentan, atribut politik, atau gestur ambigu; staf
+Humas yang memutuskan, bukan AI.
+
+Agen tidak mengenali identitas orang dari wajah. Identitas hanya diambil dari
+keterangan pengguna, papan nama, posisi, dan konteks. Foto asli tidak diubah;
+hasil seleksi berupa salinan. Rincian parameter ada di
+[`docs/SELEKSI_FOTO_HUMAS.md`](SELEKSI_FOTO_HUMAS.md).
+
 ## Drive Humas
 Setiap staf Humas memiliki **Drive pribadi** berkuota **100 GB** di menu
 **Drive** (`/drive`). Berkas disimpan di HF S3, terpisah dari dokumentasi

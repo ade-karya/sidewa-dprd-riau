@@ -163,15 +163,20 @@ Alur kerja:
    <https://aistudio.google.com/apikey>, lalu mengisi batas **RPM/TPM/RPD**
    kunci tersebut. Default mengikuti kuota Gemini 3.5 Flash Lite untuk model
    teks: **15 RPM · 250K TPM · 500 RPD**.
-2. Pilih **skill** kurasi bawaan atau buat skill sendiri sesuai preferensi tim.
+2. Pilih skill bawaan **Seleksi Foto Humas** yang memakai rubrik tetap, atau
+   buat skill sendiri sesuai preferensi tim. Skill lama (`jurnalistik`,
+   `protokol`, `rapat`, `media-sosial`, `arsip`) tetap dikenali sebagai alias
+   skill bawaan.
 3. Unggah hingga `SIDEWA_PHOTO_SELECTION_MAX_PHOTOS` foto (maks.
    `SIDEWA_MAX_UPLOAD_MB` per berkas), atur target dan ambang skor, lalu
-   jalankan agen. Berkas disimpan di penyimpanan objek HF S3; batas MB hanya
-   validasi berkas, bukan batas jumlah foto yang boleh diunggah.
-4. Foto duplikat disaring lebih dulu dengan perceptual hash lokal—tanpa memakai
-   kuota. Foto unik dinilai satu per satu dengan model
-   `SIDEWA_PHOTO_SELECTION_MODEL` (default `gemini-3.5-flash-lite`). Jumlah foto
-   yang diproses dibatasi kuota API, bukan kapasitas unggah.
+   jalankan agen. Target `0` berarti otomatis **10–15% dari total, minimal 8,
+   maksimal 30** foto per kegiatan. Berkas disimpan di penyimpanan objek HF S3;
+   batas MB hanya validasi berkas, bukan batas jumlah foto yang boleh diunggah.
+4. Foto kembar disaring lebih dulu dengan perceptual hash lokal (dHash, jarak
+   maksimal 12, jendela waktu 90 detik)—tanpa memakai kuota. Foto unik dinilai
+   satu per satu dengan model `SIDEWA_PHOTO_SELECTION_MODEL` (default
+   `gemini-3.5-flash-lite`). Jumlah foto yang diproses dibatasi kuota API, bukan
+   kapasitas unggah.
 5. Tinjau hasil, ubah pilihan bila perlu, lalu terapkan ke kegiatan, kirim,
    atau unduh foto aslinya (bukan tautan/teks/ZIP). Di Android dan iPhone,
    tombol **Kirim** membuka lembar berbagi sistem dengan berkas gambar; bila
@@ -183,12 +188,29 @@ Sesi dapat dilanjutkan setelah kuota direset. Kunci disimpan terenkripsi dengan
 `SIDEWA_SECRET_KEY`, tidak pernah ditampilkan kembali, dan hanya dipakai untuk
 fitur ini.
 
+**Rubrik Seleksi Foto Humas.** Setiap foto dinilai dengan total 100: **Teknis
+30 + Komposisi 25 + Momen & ekspresi 25 + Nilai informasi 20**. Keputusan akhir:
+
+- **PILIHAN** bila skor ≥ 75 dan lolos semua gerbang keras;
+- **CADANGAN** bila skor 60–74, kalah dari foto lain, atau kembar;
+- **TOLAK** bila skor < 60 atau gagal gerbang keras (buram, mata terpejam,
+  tokoh terpotong, ekspresi tidak pantas, gagal teknis parah);
+- **PERLU_CEK** bila ada dokumen/layar terbaca, anak atau warga rentan,
+  atribut politik, atau gestur ambigu. AI tidak memutuskan sendiri; staf Humas
+  meninjau dan memilih verdict akhir.
+
+Satu momen satu foto. Foto yang gagal gerbang tidak pernah dipromosikan menjadi
+PILIHAN meskipun skornya tinggi. Rincian rubrik, gerbang, kode alasan, dan ambang
+teknis ada di [`docs/SELEKSI_FOTO_HUMAS.md`](docs/SELEKSI_FOTO_HUMAS.md).
+
 **Skill adaptif.** Saat opsi *Perbarui skill otomatis* aktif, agen belajar dari
-foto yang benar-benar Anda terapkan dan koreksi pilihan manual. Ia menyesuaikan
-ringkasan preferensi, ambang skor, dan target skill tanpa memanggil Gemini
-sehingga tidak memakai kuota. Preferensi hasil belajar dapat disunting atau
-dikosongkan dari halaman pengaturan, dan tombol **Selaraskan sekarang** menghitung
-ulang dari riwayat koreksi.
+foto yang benar-benar Anda terapkan dan koreksi pilihan manual. Untuk skill
+buatan sendiri, ia menyesuaikan ringkasan preferensi, ambang skor, dan target
+tanpa memanggil Gemini sehingga tidak memakai kuota. Skill bawaan **Seleksi Foto
+Humas** hanya belajar preferensi teks; ambang 75/60 dan target 10–15% tetap
+mengikuti rubrik. Preferensi hasil belajar dapat disunting atau dikosongkan dari
+halaman pengaturan, dan tombol **Selaraskan sekarang** menghitung ulang dari
+riwayat koreksi.
 
 **Berbagi skill.** Skill milik anggota Humas lain dapat dipakai langsung atau
 disalin ke daftar skill pribadi. Aktifkan *Bagikan ke anggota Humas lain* pada
@@ -202,7 +224,10 @@ Variabel terkait: `SIDEWA_PHOTO_SELECTION_ENABLED`,
 `SIDEWA_PHOTO_SELECTION_MODEL`, `SIDEWA_PHOTO_SELECTION_RPM`,
 `SIDEWA_PHOTO_SELECTION_TPM`, `SIDEWA_PHOTO_SELECTION_RPD`,
 `SIDEWA_PHOTO_SELECTION_MAX_PHOTOS`, `SIDEWA_PHOTO_SELECTION_WORKERS`,
-`SIDEWA_PHOTO_SELECTION_TIMEOUT`, dan
+`SIDEWA_PHOTO_SELECTION_TIMEOUT`, `SIDEWA_PHOTO_SELECTION_TARGET_PERCENT`,
+`SIDEWA_PHOTO_SELECTION_TARGET_MIN`, `SIDEWA_PHOTO_SELECTION_TARGET_MAX`,
+`SIDEWA_PHOTO_SELECTION_DUPLICATE_HASH`,
+`SIDEWA_PHOTO_SELECTION_DUPLICATE_WINDOW`, dan
 `SIDEWA_PHOTO_SELECTION_SYNC` (khusus pengujian).
 
 ## Konfigurasi
