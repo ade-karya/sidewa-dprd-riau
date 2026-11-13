@@ -438,10 +438,16 @@ def _adopt_existing_schema() -> bool:
     Dipakai worker non-leader agar tidak mengulang ``create_all``/RLS yang
     mahal, sekaligus membuat ``/readyz`` akurat di semua worker.
     """
-    global _schema_ready
+    global _schema_ready, _schema_failures, _schema_error, _next_schema_attempt
     if _schema_ready:
         return True
     if not enabled():
+        return False
+    # Hormati backoff yang sama dengan _ensure_schema_ready. Tanpa ini worker
+    # non-leader akan mencoba konek ke Supabase setiap sync_interval (5 dtk)
+    # ketika proyek sedang tidak tersedia.
+    now = time.monotonic()
+    if now < _next_schema_attempt:
         return False
     values = ", ".join(f"('{name}')" for name in TABLE_ORDER)
     try:
@@ -452,10 +458,19 @@ def _adopt_existing_schema() -> bool:
                     "WHERE to_regclass('public.' || t.name) IS NULL"
                 )
             ).scalar()
-    except Exception:
+    except Exception as exc:
+        _schema_failures += 1
+        _schema_error = _short_error(exc)
+        delay = min(
+            SCHEMA_RETRY_MAX, SCHEMA_RETRY_MIN * (2 ** (_schema_failures - 1))
+        )
+        _next_schema_attempt = now + delay
         return False
     if int(missing or 0) == 0:
         _schema_ready = True
+        _schema_failures = 0
+        _schema_error = None
+        _next_schema_attempt = 0.0
         logger.info("Skema Supabase terdeteksi siap (diadopsi tanpa DDL).")
         return True
     return False
