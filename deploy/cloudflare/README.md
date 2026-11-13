@@ -50,6 +50,33 @@ Yang **tidak** bisa:
 npx -y wrangler@4 login
 ```
 
+Untuk CI/Colab tanpa login interaktif, buat API Token di
+**My Profile → API Tokens → Create Token**, gunakan template
+*Edit Cloudflare Workers*, lalu tambahkan izin **Cloudflare Pages: Edit**.
+Simpan sebagai environment variable:
+
+```bash
+export CLOUDFLARE_API_TOKEN=...
+export CLOUDFLARE_ACCOUNT_ID=...   # opsional bila akun hanya satu
+```
+
+## Satu perintah (Worker + Pages)
+
+```bash
+npx -y wrangler@4 login          # sekali saja, atau set CLOUDFLARE_API_TOKEN
+cd deploy/cloudflare
+./deploy.sh                      # Worker + Pages
+./deploy.sh worker               # Worker saja
+./deploy.sh pages                # Pages saja
+ORIGIN=https://origin.dprd.riau.ai ./deploy.sh
+```
+
+Atau lewat Makefile:
+
+```bash
+make cloudflare-deploy
+```
+
 ## Opsi A — Cloudflare Worker (disarankan untuk domain sendiri)
 
 ```bash

@@ -47,6 +47,10 @@ if [[ "$TARGET" == "all" || "$TARGET" == "pages" ]]; then
   echo "==> Deploy Pages sidewa-pages"
   (
     cd "$SCRIPT_DIR/pages"
+    if ! "${WRANGLER[@]}" pages project list 2>/dev/null | grep -q "sidewa-pages"; then
+      echo "    Membuat proyek Pages sidewa-pages…"
+      "${WRANGLER[@]}" pages project create sidewa-pages --production-branch main
+    fi
     "${WRANGLER[@]}" pages deploy
   )
   if [[ "$ORIGIN" != "https://dprd.riau.ai" ]]; then
