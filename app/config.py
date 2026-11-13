@@ -304,6 +304,11 @@ class Settings:
     supabase_admin_database_url: str = field(
         default_factory=lambda: os.getenv("SIDEWA_SUPABASE_ADMIN_DATABASE_URL", "")
     )
+    # Batas waktu koneksi ke Supabase. Dibuat pendek agar startup aplikasi
+    # tidak tertahan lama ketika proyek Supabase sedang tidak tersedia.
+    supabase_connect_timeout: int = field(
+        default_factory=lambda: _int("SIDEWA_SUPABASE_CONNECT_TIMEOUT", 5)
+    )
 
     # ── Sinkronisasi lokal → Supabase ───────────────────────────────────────
     sync_enabled: bool = field(default_factory=lambda: _bool("SIDEWA_SYNC_ENABLED", False))

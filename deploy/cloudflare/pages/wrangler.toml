@@ -1,0 +1,19 @@
+# Cloudflare Pages — proxy penuh ke origin FastAPI SIDEWA
+#
+# Deploy:
+#   cd deploy/cloudflare/pages
+#   npx wrangler pages project create sidewa-pages --production-branch main
+#   npx wrangler pages deploy
+#
+# Atur variabel ORIGIN di dashboard Pages → Settings → Environment variables,
+# atau biarkan default https://dprd.riau.ai.
+#
+# Catatan: yang berjalan di Pages Functions adalah JavaScript (Workers
+# runtime), bukan Python. Aplikasi FastAPI tetap berjalan di origin.
+
+name = "sidewa-pages"
+compatibility_date = "2026-11-01"
+pages_build_output_dir = "public"
+
+[vars]
+ORIGIN = "https://dprd.riau.ai"

@@ -78,7 +78,23 @@ _worker: SyncWorker | None = None
 _worker_lock = threading.Lock()
 _schema_ready = False
 _last_schema_attempt = 0.0
+_next_schema_attempt = 0.0
+_schema_failures = 0
+_schema_error: str | None = None
 _last_sync_at: str | None = None
+
+# Jeda percobaan ulang saat Supabase tidak dapat dijangkau. Backoff menghindari
+# log/percobaan koneksi berulang setiap interval saat proyek Supabase sedang
+# dijeda, dihapus, atau kredensialnya salah.
+SCHEMA_RETRY_MIN = 60.0
+SCHEMA_RETRY_MAX = 900.0
+
+
+def _short_error(exc: BaseException) -> str:
+    """Ringkas error multi-baris (mis. kegagalan koneksi psycopg) jadi satu baris."""
+    text_value = str(exc).strip()
+    first = text_value.splitlines()[0] if text_value else exc.__class__.__name__
+    return first[:500]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -99,7 +115,9 @@ def _build_engine(url: str) -> Engine:
     kwargs: dict[str, Any] = {"pool_pre_ping": True, "future": True}
     if url.startswith("postgresql"):
         kwargs.update(pool_size=1, max_overflow=1, pool_recycle=300)
-        connect_args: dict[str, Any] = {"connect_timeout": 15}
+        connect_args: dict[str, Any] = {
+            "connect_timeout": max(2, settings.supabase_connect_timeout)
+        }
         try:
             if make_url(url).port == 6543:
                 # PgBouncer transaction mode tidak mendukung prepared statements.
@@ -333,12 +351,17 @@ def _ensure_schema_ready(*, force: bool = False, wait: bool = False) -> bool:
     Lock memakai ``pg_advisory_xact_lock`` sehingga otomatis dilepas saat
     transaksi selesai (commit/rollback). Ini mencegah lock "nyangkut" di
     connection pool seperti pada lock level-sesi.
+
+    Bila Supabase tidak dapat dijangkau, percobaan berikutnya ditunda dengan
+    backoff (60 dtk → maksimal 15 mnt) supaya log dan startup tidak dibanjiri
+    error saat proyek Supabase sedang tidak tersedia.
     """
-    global _schema_ready, _last_schema_attempt
+    global _schema_ready, _last_schema_attempt, _next_schema_attempt
+    global _schema_failures, _schema_error
     if _schema_ready and not force:
         return True
     now = time.monotonic()
-    if not force and now - _last_schema_attempt < 60:
+    if not force and now < _next_schema_attempt:
         return False
     try:
         with local_engine.begin() as conn:
@@ -357,10 +380,56 @@ def _ensure_schema_ready(*, force: bool = False, wait: bool = False) -> bool:
                     return False
             _last_schema_attempt = time.monotonic()
             init_supabase_schema()
+        _schema_failures = 0
+        _schema_error = None
+        _next_schema_attempt = 0.0
         return True
     except Exception as exc:
-        logger.warning("Supabase belum dapat diakses: %s", exc)
+        _last_schema_attempt = time.monotonic()
+        _schema_failures += 1
+        _schema_error = _short_error(exc)
+        delay = min(SCHEMA_RETRY_MAX, SCHEMA_RETRY_MIN * (2 ** (_schema_failures - 1)))
+        _next_schema_attempt = _last_schema_attempt + delay
+        logger.warning(
+            "Supabase belum dapat diakses (%s); sinkronisasi lokal tetap berjalan, "
+            "percobaan ulang dalam %.0f dtk.",
+            _schema_error,
+            delay,
+        )
+        logger.debug("Detail kegagalan Supabase", exc_info=True)
         return False
+
+
+def probe(
+    url: str | None = None, *, timeout: float | None = None
+) -> tuple[bool, str | None]:
+    """Cek cepat koneksi ke Supabase tanpa mengubah skema.
+
+    Dipakai oleh notebook/CLI untuk memutuskan apakah sinkronisasi aman
+    diaktifkan. Tidak pernah melempar exception.
+    """
+    if not url and not settings.supabase_configured:
+        return False, "URL Supabase belum dikonfigurasi."
+    target = url or settings.supabase_admin_database_url or settings.supabase_database_url
+    if not target:
+        return False, "URL Supabase kosong."
+    timeout_seconds = max(2, int(timeout or settings.supabase_connect_timeout))
+    engine = None
+    try:
+        engine = create_engine(
+            target,
+            pool_pre_ping=True,
+            future=True,
+            connect_args={"connect_timeout": timeout_seconds},
+        )
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True, None
+    except Exception as exc:
+        return False, _short_error(exc)
+    finally:
+        if engine is not None:
+            engine.dispose()
 
 
 def _adopt_existing_schema() -> bool:
@@ -614,7 +683,22 @@ def hydrate_from_supabase(*, force: bool = False) -> dict[str, int]:
         return {"skipped": 1}
 
     if not _ensure_schema_ready(force=True, wait=True):
-        raise RuntimeError("Skema Supabase belum siap; hydrate dibatalkan.")
+        raise RuntimeError(
+            "Skema Supabase belum siap; hydrate dibatalkan."
+            + (f" Penyebab: {_schema_error}" if _schema_error else "")
+        )
+
+    # Baca seluruh data remote lebih dulu. Jangan pernah mengosongkan cache
+    # lokal sebelum data pengganti dipastikan terbaca — bila koneksi Supabase
+    # terputus di tengah proses, data lokal lama tetap utuh.
+    remote_rows: dict[str, list[dict[str, Any]]] = {}
+    with admin_engine().connect() as remote:
+        for entity in TABLE_ORDER:
+            table = Base.metadata.tables[entity]
+            remote_rows[entity] = [
+                dict(row) for row in remote.execute(select(table)).mappings()
+            ]
+
     counts: dict[str, int] = {}
 
     with local_engine.begin() as local:
@@ -622,13 +706,12 @@ def hydrate_from_supabase(*, force: bool = False) -> dict[str, int]:
         tables = ", ".join(f'public."{name}"' for name in TABLE_ORDER)
         local.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
 
-        with admin_engine().connect() as remote:
-            for entity in TABLE_ORDER:
-                table = Base.metadata.tables[entity]
-                rows = [dict(row) for row in remote.execute(select(table)).mappings()]
-                counts[entity] = len(rows)
-                for chunk in _chunks(rows):
-                    local.execute(table.insert(), chunk)
+        for entity in TABLE_ORDER:
+            table = Base.metadata.tables[entity]
+            rows = remote_rows[entity]
+            counts[entity] = len(rows)
+            for chunk in _chunks(rows):
+                local.execute(table.insert(), chunk)
 
     clear_outbox()
     _ensure_sequences(local_engine)
@@ -771,7 +854,10 @@ def flush_and_shutdown() -> None:
     """Hentikan worker, kirim outbox terakhir, lalu tutup koneksi."""
     _stop_worker()
     try:
-        if enabled():
+        # Jangan menunggu koneksi Supabase saat shutdown bila skemanya memang
+        # belum siap (mis. proyek sedang tidak tersedia); outbox tetap tersimpan
+        # di database lokal dan dikirim pada start berikutnya.
+        if enabled() and _schema_ready:
             process_outbox()
     except Exception:
         logger.exception("Gagal mengirim outbox terakhir saat shutdown")
@@ -815,8 +901,10 @@ def status() -> dict[str, Any]:
     if not enabled():
         return {
             "enabled": False,
+            "configured": bool(settings.supabase_configured),
             "media_sync": bool(settings.media_sync_enabled and settings.hf_s3_configured),
         }
+    retry_in = max(0, int(_next_schema_attempt - time.monotonic())) if _next_schema_attempt else 0
     try:
         with local_engine.connect() as conn:
             pending = int(conn.execute(text("SELECT COUNT(*) FROM sync_outbox")).scalar() or 0)
@@ -835,7 +923,10 @@ def status() -> dict[str, Any]:
             ).scalar()
         return {
             "enabled": True,
+            "configured": True,
             "schema_ready": _schema_ready,
+            "schema_error": _schema_error,
+            "retry_in": retry_in,
             "pending": pending,
             "errors": errors,
             "oldest_pending": oldest.isoformat() if oldest else None,
@@ -844,4 +935,11 @@ def status() -> dict[str, Any]:
             "media_sync": bool(settings.media_sync_enabled and settings.hf_s3_configured),
         }
     except Exception as exc:
-        return {"enabled": True, "error": str(exc)}
+        return {
+            "enabled": True,
+            "configured": True,
+            "schema_ready": _schema_ready,
+            "schema_error": _schema_error or _short_error(exc),
+            "retry_in": retry_in,
+            "error": _short_error(exc),
+        }

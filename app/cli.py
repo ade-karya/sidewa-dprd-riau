@@ -29,7 +29,7 @@ from .constants import (
     ROLE_STAF,
     ROLES,
 )
-from .database import SessionLocal, init_db
+from .database import SessionLocal, db_health, init_db
 from .models import (
     Activity,
     ActivityPhoto,
@@ -384,6 +384,44 @@ def cmd_sync_status(_args) -> int:
     return 0
 
 
+def cmd_doctor(_args) -> int:
+    """Diagnosa cepat: database lokal, Supabase (opsional), dan media HF S3."""
+    init_db()
+    from .services import media_sync, supabase_sync
+
+    db_ok = db_health()
+    configured = supabase_sync.enabled()
+    sync_ok, sync_error = (None, None)
+    if configured:
+        sync_ok, sync_error = supabase_sync.probe()
+    media_report = media_sync.check() if settings.hf_s3_configured else None
+    payload = {
+        "database": {
+            "ok": db_ok,
+            "url": settings.database_url.split("://", 1)[0],
+        },
+        "supabase": {
+            "configured": configured,
+            "reachable": sync_ok,
+            "error": sync_error,
+        },
+        "media": media_report,
+        "status": supabase_sync.status(),
+    }
+    print(json.dumps(payload, indent=2, default=str))
+    if not db_ok:
+        return 1
+    if configured and sync_ok is False:
+        print(
+            "Supabase tidak dapat dijangkau. Aplikasi tetap berjalan dengan DB lokal; "
+            "perbaiki SIDEWA_SUPABASE_* atau set SIDEWA_SYNC_ENABLED=false.",
+            file=sys.stderr,
+        )
+    if media_report is not None and not media_report.get("ok"):
+        return 1
+    return 0
+
+
 def cmd_media_check(_args) -> int:
     """Diagnosa koneksi langsung ke HF S3 (tanpa menyentuh database)."""
     from .services import media_sync
@@ -548,6 +586,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("sync-status", help="Tampilkan status sinkronisasi database & media")
     p.set_defaults(func=cmd_sync_status)
+
+    p = sub.add_parser("doctor", help="Diagnosa database, Supabase, dan media HF S3")
+    p.set_defaults(func=cmd_doctor)
 
     p = sub.add_parser("media-check", help="Uji koneksi langsung ke HF S3")
     p.set_defaults(func=cmd_media_check)

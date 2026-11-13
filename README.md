@@ -316,6 +316,17 @@ make lint          # ruff
 
 Lihat `docs/DEPLOYMENT.md` (Docker Compose + PostgreSQL + Nginx) dan `deploy/Dockerfile`.
 
+Untuk Cloudflare:
+
+```bash
+make edge-deploy     # Cloudflare Worker (edge gateway)
+make pages-deploy    # Cloudflare Pages (proxy penuh)
+```
+
+Panduan lengkap ada di `deploy/cloudflare/README.md`. Workers/Pages hanya
+meneruskan request ke origin FastAPI; keduanya tidak menjalankan Python atau
+pengenalan wajah.
+
 ## Dokumentasi
 
 - `docs/API.md` — endpoint REST v1 dan autentikasi.

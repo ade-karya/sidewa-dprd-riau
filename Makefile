@@ -5,7 +5,7 @@ HOST ?= 127.0.0.1
 PORT ?= 8000
 PYTEST ?= $(PYTHON) -m pytest
 
-.PHONY: help install install-dev init seed seed-staff run run-prod test lint fmt cov docker-build docker-up docker-down clean
+.PHONY: help install install-dev init seed seed-staff run run-prod test lint fmt cov docker-build docker-up docker-down clean edge-dev edge-deploy pages-deploy cloudflare-deploy
 
 help: ## Tampilkan daftar perintah
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -54,6 +54,18 @@ docker-up: ## Jalankan stack Docker
 
 docker-down: ## Hentikan stack Docker
 	docker compose down
+
+edge-dev: ## Jalankan Cloudflare Worker secara lokal
+	cd deploy/cloudflare/worker && npx -y wrangler@4 dev
+
+edge-deploy: ## Deploy Cloudflare Worker (edge gateway)
+	cd deploy/cloudflare/worker && npx -y wrangler@4 deploy
+
+pages-deploy: ## Deploy Cloudflare Pages (proxy penuh)
+	cd deploy/cloudflare/pages && npx -y wrangler@4 pages deploy
+
+cloudflare-deploy: ## Deploy Worker + Pages sekaligus (ORIGIN=... opsional)
+	./deploy/cloudflare/deploy.sh all
 
 clean: ## Bersihkan cache pengembangan
 	rm -rf .pytest_cache .ruff_cache htmlcov .coverage

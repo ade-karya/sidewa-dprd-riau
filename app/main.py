@@ -182,6 +182,11 @@ def _bootstrap_admin() -> None:
 async def lifespan(app: FastAPI):
     init_db()
     settings.ensure_dirs()
+    # Pulihkan cache dari Supabase lebih dulu (bila kosong), baru buat akun
+    # bootstrap. Urutan lama membuat akun bootstrap lebih dulu sehingga
+    # ``local_is_empty()`` selalu False dan hydrate otomatis tidak pernah jalan
+    # pada instalasi baru.
+    supabase_sync.bootstrap()
     _bootstrap_admin()
     if not face_engine.engine.available:
         logger.warning("Mesin wajah tidak tersedia: %s", face_engine.engine.error)
@@ -191,7 +196,6 @@ async def lifespan(app: FastAPI):
     curator_runs = photo_curator.requeue_runs()
     if curator_runs:
         logger.info("%s sesi seleksi foto dimasukkan kembali ke antrean.", curator_runs)
-    supabase_sync.bootstrap()
     media_sync.start_worker()
     logger.info(
         "SIDEWA %s siap — env=%s database=%s",

@@ -190,6 +190,25 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-he
 Gunakan supervisor/systemd untuk menjaga proses. Letakkan Nginx di depan untuk
 TLS dan rate limit.
 
+## Cloudflare Workers & Pages (edge gateway)
+
+SIDEWA dapat dipasang di Cloudflare Workers dan/atau Pages sebagai edge gateway
+ke origin FastAPI. Workers/Pages **tidak menjalankan Python**; keduanya
+meneruskan request ke origin (mis. `https://dprd.riau.ai`), menambahkan header
+keamanan, dan meng-cache `/static/*`.
+
+Panduan lengkap, arsitektur, batas kuota, dan troubleshooting ada di
+[`deploy/cloudflare/README.md`](../deploy/cloudflare/README.md).
+
+```bash
+make edge-deploy     # Worker: deploy/cloudflare/worker
+make pages-deploy    # Pages: deploy/cloudflare/pages
+```
+
+Set `ORIGIN` ke hostname origin. Bila Worker dipasang pada hostname yang sama
+dengan origin, pindahkan tunnel ke hostname lain (mis.
+`origin.dprd.riau.ai`) terlebih dahulu agar tidak terjadi proxy loop.
+
 ## Backup (stack mandiri)
 
 - Database: `pg_dump` (PostgreSQL) atau salin file SQLite saat aplikasi berhenti.

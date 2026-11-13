@@ -1,0 +1,32 @@
+# Cloudflare Worker — edge gateway SIDEWA
+#
+# Worker ini TIDAK menjalankan aplikasi Python. Ia meneruskan request ke
+# origin FastAPI (default: https://dprd.riau.ai, yaitu Cloudflare Tunnel Colab).
+#
+# Deploy pertama (tanpa custom domain):
+#   cd deploy/cloudflare/worker
+#   npm install
+#   npx wrangler deploy
+#
+# Setelah itu buka dashboard Cloudflare → Workers & Pages → sidewa-edge →
+# Settings → Domains & Routes untuk menambahkan custom domain/route.
+#
+# PENTING: jangan memakai hostname yang sama dengan ORIGIN. Bila Worker
+# dipasang di dprd.riau.ai, ubah ORIGIN ke hostname tunnel lain, mis.
+# https://origin.dprd.riau.ai, agar tidak terjadi proxy loop.
+
+name = "sidewa-edge"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Origin backend FastAPI. Bisa dioverride lewat dashboard (Variables).
+ORIGIN = "https://dprd.riau.ai"
+
+# Contoh route custom domain (buka komentar bila zona riau.ai ada di akun ini):
+# routes = [
+#   { pattern = "sidewa.riau.ai/*", zone_name = "riau.ai" }
+# ]
+
+[observability]
+enabled = true
