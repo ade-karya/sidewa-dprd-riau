@@ -4,10 +4,10 @@ package id.ade.sidewa.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatButton;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
@@ -21,13 +21,13 @@ public final class FragmentMembersBinding implements ViewBinding {
   private final LinearLayout rootView;
 
   @NonNull
-  public final AppCompatButton faceLoginButton;
+  public final Button faceLoginButton;
 
   @NonNull
   public final RecyclerView memberList;
 
-  private FragmentMembersBinding(@NonNull LinearLayout rootView,
-      @NonNull AppCompatButton faceLoginButton, @NonNull RecyclerView memberList) {
+  private FragmentMembersBinding(@NonNull LinearLayout rootView, @NonNull Button faceLoginButton,
+      @NonNull RecyclerView memberList) {
     this.rootView = rootView;
     this.faceLoginButton = faceLoginButton;
     this.memberList = memberList;
@@ -61,7 +61,7 @@ public final class FragmentMembersBinding implements ViewBinding {
     int id;
     missingId: {
       id = R.id.faceLoginButton;
-      AppCompatButton faceLoginButton = ViewBindings.findChildViewById(rootView, id);
+      Button faceLoginButton = ViewBindings.findChildViewById(rootView, id);
       if (faceLoginButton == null) {
         break missingId;
       }

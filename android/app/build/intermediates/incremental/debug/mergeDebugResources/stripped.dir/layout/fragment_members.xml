@@ -2,8 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:orientation="vertical">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/memberList"
@@ -15,12 +14,6 @@
         android:id="@+id/faceLoginButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Ambil Foto Wajah"
-        android:minWidth="160dp" />
-
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="8dp" />
+        android:layout_margin="16dp"
+        android:text="Masuk dengan Face ID" />
 </LinearLayout>
