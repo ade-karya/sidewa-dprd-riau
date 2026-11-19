@@ -1,5 +1,5 @@
 /**
- * Cloudflare Pages Function — proxy penuh SIDEWA.
+ * Cloudflare Pages Function — proxy penuh DewanKu.
  *
  * Semua request (kecuali aset statis yang ada di folder public/) diteruskan
  * ke origin FastAPI. Dengan cara ini aplikasi bisa dibuka dari
@@ -10,7 +10,7 @@
  *
  * Batas praktis Cloudflare Pages Functions:
  *   - tidak menjalankan Python/FastAPI/dlib (hanya JavaScript/Workers runtime);
- *   - request body maksimum 100 MB (unggah SIDEWA dibatasi 15 MB/foto);
+ *   - request body maksimum 100 MB (unggah DewanKu dibatasi 15 MB/foto);
  *   - kuota gratis 100.000 request/hari.
  */
 
@@ -44,7 +44,7 @@ function json(body, status = 200) {
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
-      "x-sidewa-edge": "cloudflare-pages",
+      "x-dewanku-edge": "cloudflare-pages",
     },
   });
 }
@@ -62,7 +62,7 @@ function forwardHeaders(request, origin, edgeHost) {
   }
   headers.set("X-Forwarded-Host", edgeHost);
   headers.set("X-Forwarded-Proto", "https");
-  headers.set("X-SIDEWA-Edge", "cloudflare-pages");
+  headers.set("X-DewanKu-Edge", "cloudflare-pages");
 
   if (origin.username) {
     const credentials = `${decodeURIComponent(origin.username)}:${decodeURIComponent(
@@ -113,7 +113,7 @@ export async function onRequest(context) {
     try {
       const response = await fetch(new URL("/readyz", origin), {
         headers: {
-          "user-agent": "Mozilla/5.0 (compatible; SIDEWA-Pages/1.0)",
+          "user-agent": "Mozilla/5.0 (compatible; DewanKu-Pages/1.0)",
           accept: "application/json",
         },
         redirect: "manual",
@@ -123,7 +123,7 @@ export async function onRequest(context) {
         headers: {
           "content-type": response.headers.get("content-type") || "application/json",
           "cache-control": "no-store",
-          "x-sidewa-edge": "cloudflare-pages",
+          "x-dewanku-edge": "cloudflare-pages",
         },
       });
     } catch (error) {
@@ -150,7 +150,7 @@ export async function onRequest(context) {
   } catch (error) {
     console.error("origin fetch gagal", target.toString(), error);
     return json(
-      { detail: "Origin SIDEWA tidak dapat dijangkau dari edge.", origin: origin.origin },
+      { detail: "Origin DewanKu tidak dapat dijangkau dari edge.", origin: origin.origin },
       502,
     );
   }
@@ -159,7 +159,7 @@ export async function onRequest(context) {
   for (const name of HOP_BY_HOP) {
     headers.delete(name);
   }
-  headers.set("X-SIDEWA-Edge", "cloudflare-pages");
+  headers.set("X-DewanKu-Edge", "cloudflare-pages");
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
 
   return rewriteRedirect(

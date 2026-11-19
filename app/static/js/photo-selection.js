@@ -2,8 +2,8 @@
   "use strict";
 
   const toast = (text) => {
-    if (window.SIDEWA && typeof window.SIDEWA.toast === "function") {
-      window.SIDEWA.toast(text);
+    if (window.DewanKu && typeof window.DewanKu.toast === "function") {
+      window.DewanKu.toast(text);
     }
   };
 

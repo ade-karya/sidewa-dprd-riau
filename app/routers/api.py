@@ -26,7 +26,7 @@ from ..services.search import (
 )
 from ..utils import to_local
 
-router = APIRouter(prefix="/api/v1", tags=["SIDEWA API"])
+router = APIRouter(prefix="/api/v1", tags=["DewanKu API"])
 
 
 def _iso(value):

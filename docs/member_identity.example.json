@@ -2,7 +2,7 @@
   "_catatan": [
     "Contoh berkas resolusi identitas anggota untuk menyaring pemberitaan.",
     "Salin ke data/member_identity.json lalu sesuaikan dengan data anggota.",
-    "Kunci objek 'members' adalah ID anggota di database SIDEWA.",
+    "Kunci objek 'members' adalah ID anggota di database DewanKu.",
     "Semua kolom opsional; nilai yang kosong akan memakai data dari database.",
     "Berkas ini TIDAK perlu di-commit bila berisi data pribadi."
   ],

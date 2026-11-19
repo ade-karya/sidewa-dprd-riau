@@ -1,4 +1,4 @@
-# SIDEWA — image produksi
+# DewanKu — image produksi
 # Build dari direktori dprd-riau:  docker build -f deploy/Dockerfile -t sidewa:1.2.0 .
 FROM python:3.12-slim AS base
 

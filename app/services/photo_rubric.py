@@ -3,7 +3,7 @@
 Modul ini adalah sumber kebenaran untuk rubrik, ambang, gerbang gagal, kode
 alasan, dan target kurasi. Isinya diadaptasi dari paket skill
 ``seleksi-foto-humas`` (standar fotografer/editor foto profesional dan
-protokoler Humas DPRD) agar dapat dipakai oleh mesin kurasi SIDEWA dengan model
+protokoler Humas DPRD) agar dapat dipakai oleh mesin kurasi DewanKu dengan model
 Gemini 3.5 Flash Lite.
 
 Prinsip utama:

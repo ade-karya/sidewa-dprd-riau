@@ -1,26 +1,26 @@
 {% from "macros/ui.html" import icon %}
-{# Floating guide: explains the purpose, problems, and features of SIDEWA. #}
-<button class="guide-fab" type="button" data-guide-open aria-haspopup="dialog" aria-controls="app-guide" aria-label="Buka panduan aplikasi SIDEWA">
+{# Floating guide: explains the purpose, problems, and features of DewanKu. #}
+<button class="guide-fab" type="button" data-guide-open aria-haspopup="dialog" aria-controls="app-guide" aria-label="Buka panduan aplikasi DewanKu">
   <span class="guide-fab-icon">{{ icon('book-open') }}</span>
   <span class="guide-fab-text">
-    <strong>Kenali SIDEWA</strong>
+    <strong>Kenali DewanKu</strong>
     <small>Panduan · tujuan, masalah, fitur</small>
   </span>
 </button>
 
-<div class="guide-root" id="app-guide" data-guide role="dialog" aria-modal="true" aria-label="Panduan aplikasi SIDEWA" hidden>
+<div class="guide-root" id="app-guide" data-guide role="dialog" aria-modal="true" aria-label="Panduan aplikasi DewanKu" hidden>
   <div class="guide-topbar">
     <div class="guide-brand">
       <img src="/static/img/logo.svg" alt="">
       <div>
-        <strong>SIDEWA</strong>
+        <strong>DewanKu</strong>
         <span>Panduan aplikasi · {{ organization }}</span>
       </div>
     </div>
     <span class="guide-counter" data-guide-counter>01 / 10</span>
     <div class="guide-tools">
       {% if user %}
-      <button class="guide-tool guide-tool-ai" type="button" data-guide-ai-toggle aria-expanded="false" aria-controls="guide-ai" aria-label="Buka asisten AI SIDEWA" title="Tanya AI (A)">
+      <button class="guide-tool guide-tool-ai" type="button" data-guide-ai-toggle aria-expanded="false" aria-controls="guide-ai" aria-label="Buka asisten AI DewanKu" title="Tanya AI (A)">
         {{ icon('sparkles') }}<span class="guide-ai-chip-label">Tanya AI</span>
       </button>
       {% endif %}
@@ -42,7 +42,7 @@
           <div class="gs-cover">
             <div class="gs-cover-copy">
               <span class="gs-eyebrow">{{ icon('sparkles') }} Panduan aplikasi · {{ organization }}</span>
-              <h2>SIDEWA</h2>
+              <h2>DewanKu</h2>
               <p class="gs-cover-title">{{ app_long_name }}</p>
               <p class="gs-lead">
                 Satu pintu untuk mendokumentasikan, menemukan, dan memahami kegiatan dewan —
@@ -102,7 +102,7 @@
             <span class="gs-eyebrow">{{ icon('target') }} Tujuan aplikasi</span>
             <h2>Satu arsip, satu pencarian, satu sumber wawasan.</h2>
             <p class="gs-lead">
-              SIDEWA dirancang agar setiap momen kegiatan dewan tersimpan rapi, mudah ditemukan,
+              DewanKu dirancang agar setiap momen kegiatan dewan tersimpan rapi, mudah ditemukan,
               dan dapat dimanfaatkan untuk pengambilan keputusan.
             </p>
           </div>
@@ -174,16 +174,16 @@
           </div>
         </section>
 
-        <section class="guide-slide" data-guide-slide data-guide-title="Solusi SIDEWA" aria-label="Halaman 4: Solusi SIDEWA">
+        <section class="guide-slide" data-guide-slide data-guide-title="Solusi DewanKu" aria-label="Halaman 4: Solusi DewanKu">
           <div class="gs-head">
-            <span class="gs-eyebrow">{{ icon('check') }} Solusi SIDEWA</span>
+            <span class="gs-eyebrow">{{ icon('check') }} Solusi DewanKu</span>
             <h2>Dari pencarian manual menjadi layanan dokumentasi digital.</h2>
             <p class="gs-lead">Setiap masalah operasional dijawab dengan satu alur kerja yang terintegrasi.</p>
           </div>
           <div class="gs-compare">
             <div class="gs-compare-head" aria-hidden="true">
               <span>Sebelum</span>
-              <span>Sesudah bersama SIDEWA</span>
+              <span>Sesudah bersama DewanKu</span>
             </div>
             <div class="gs-compare-row">
               <div class="gs-compare-cell before"><span class="gs-mark bad">{{ icon('x') }}</span><span><b class="gs-compare-label">Sebelum · </b>Foto berserakan di banyak perangkat dan folder.</span></div>
@@ -298,7 +298,7 @@
           <div class="gs-head">
             <span class="gs-eyebrow">{{ icon('chart') }} Fitur inti · 03</span>
             <h2>Wawasan pribadi dan pantauan isu publik.</h2>
-            <p class="gs-lead">Bukan hanya arsip foto — SIDEWA juga membantu membaca kegiatan dan opini publik.</p>
+            <p class="gs-lead">Bukan hanya arsip foto — DewanKu juga membantu membaca kegiatan dan opini publik.</p>
           </div>
           <div class="gs-grid gs-grid-2">
             <article class="gs-panel">
@@ -433,7 +433,7 @@
             <span class="gs-eyebrow">{{ icon('sparkles') }} Siap digunakan</span>
             <h2>Dokumentasi rapi.<br>Pelayanan lebih cepat.</h2>
             <p class="gs-lead">
-              SIDEWA menyatukan arsip, pencarian, dan wawasan kegiatan dewan
+              DewanKu menyatukan arsip, pencarian, dan wawasan kegiatan dewan
               dalam satu aplikasi yang mudah digunakan.
             </p>
             <div class="gs-recap">
@@ -479,12 +479,12 @@
   <p class="sr-only" aria-live="polite" data-guide-live></p>
 
   {% if user %}
-  <aside class="guide-ai" id="guide-ai" data-guide-ai hidden aria-label="Asisten AI SIDEWA">
+  <aside class="guide-ai" id="guide-ai" data-guide-ai hidden aria-label="Asisten AI DewanKu">
     <header class="guide-ai-head">
       <div class="guide-ai-id">
         <span class="guide-ai-orb">{{ icon('sparkles') }}</span>
         <div>
-          <strong>Asisten SIDEWA</strong>
+          <strong>Asisten DewanKu</strong>
           <small class="guide-ai-status" data-guide-ai-status><i></i><span>Menghubungkan…</span></small>
         </div>
       </div>
@@ -492,7 +492,7 @@
         <button class="guide-tool" type="button" data-guide-ai-mute aria-label="Matikan suara asisten" title="Matikan suara" aria-pressed="false">
           {{ icon('volume') }}
         </button>
-        <button class="guide-tool" type="button" data-guide-ai-minimize aria-label="Ciutkan asisten AI SIDEWA" title="Ciutkan asisten" aria-expanded="true">
+        <button class="guide-tool" type="button" data-guide-ai-minimize aria-label="Ciutkan asisten AI DewanKu" title="Ciutkan asisten" aria-expanded="true">
           {{ icon('chevron-down') }}
         </button>
         <button class="guide-tool" type="button" data-guide-ai-close aria-label="Tutup asisten AI" title="Tutup asisten">
@@ -515,15 +515,15 @@
       <div class="guide-ai-msg is-assistant">
         <span class="guide-ai-mini-avatar">{{ icon('sparkles') }}</span>
         <div class="guide-ai-bubble">
-          <p>Halo! Saya asisten presentasi SIDEWA. Saya bisa menjelaskan tujuan, masalah, fitur, atau manfaat aplikasi — lewat suara maupun tulisan.</p>
+          <p>Halo! Saya asisten presentasi DewanKu. Saya bisa menjelaskan tujuan, masalah, fitur, atau manfaat aplikasi — lewat suara maupun tulisan.</p>
         </div>
       </div>
       <div class="guide-ai-suggestions" data-guide-ai-suggestions>
-        <button type="button" data-guide-ask="Jelaskan tujuan utama SIDEWA dalam 2 kalimat.">Tujuan SIDEWA</button>
-        <button type="button" data-guide-ask="Masalah apa saja yang diselesaikan SIDEWA?">Masalah yang diselesaikan</button>
+        <button type="button" data-guide-ask="Jelaskan tujuan utama DewanKu dalam 2 kalimat.">Tujuan DewanKu</button>
+        <button type="button" data-guide-ask="Masalah apa saja yang diselesaikan DewanKu?">Masalah yang diselesaikan</button>
         <button type="button" data-guide-ask="Bagaimana cara kerja pencarian wajah?">Cara pencarian wajah</button>
-        <button type="button" data-guide-ask="Apa manfaat SIDEWA bagi anggota dewan?">Manfaat untuk anggota</button>
-        <button type="button" data-guide-ask="Jelaskan teknologi dan arsitektur yang dipakai SIDEWA.">Teknologi &amp; arsitektur</button>
+        <button type="button" data-guide-ask="Apa manfaat DewanKu bagi anggota dewan?">Manfaat untuk anggota</button>
+        <button type="button" data-guide-ask="Jelaskan teknologi dan arsitektur yang dipakai DewanKu.">Teknologi &amp; arsitektur</button>
       </div>
     </div>
 
@@ -531,7 +531,7 @@
       <button class="guide-ai-mic" type="button" data-guide-ai-mic aria-label="Mulai bicara ke asisten" title="Bicara" aria-pressed="false">
         {{ icon('mic') }}
       </button>
-      <input class="guide-ai-input" data-guide-ai-input type="text" maxlength="500" autocomplete="off" placeholder="Tanya apa saja tentang SIDEWA…" aria-label="Pertanyaan untuk asisten AI">
+      <input class="guide-ai-input" data-guide-ai-input type="text" maxlength="500" autocomplete="off" placeholder="Tanya apa saja tentang DewanKu…" aria-label="Pertanyaan untuk asisten AI">
       <button class="guide-ai-send" type="submit" data-guide-ai-send aria-label="Kirim pertanyaan">
         {{ icon('send') }}
       </button>

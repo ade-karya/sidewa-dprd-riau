@@ -1,4 +1,4 @@
-"""Entry point aplikasi SIDEWA."""
+"""Entry point aplikasi DewanKu."""
 
 from __future__ import annotations
 
@@ -198,7 +198,7 @@ async def lifespan(app: FastAPI):
         logger.info("%s sesi seleksi foto dimasukkan kembali ke antrean.", curator_runs)
     media_sync.start_worker()
     logger.info(
-        "SIDEWA %s siap — env=%s database=%s",
+        "DewanKu %s siap — env=%s database=%s",
         __version__,
         settings.app_env,
         settings.database_url.split("://", 1)[0],
@@ -212,7 +212,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     application = FastAPI(
-        title="SIDEWA API",
+        title="DewanKu API",
         description=(
             "API dokumentasi kegiatan DPRD Provinsi Riau dengan pencarian wajah. "
             "Autentikasi menggunakan sesi (cookie) atau Bearer token API."

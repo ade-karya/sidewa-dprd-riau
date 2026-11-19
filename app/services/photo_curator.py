@@ -2081,7 +2081,7 @@ def verify_api_key(api_key: str, model: str) -> tuple[bool, str]:
         headers={
             "Accept": "application/json",
             "x-goog-api-key": api_key,
-            "User-Agent": "SIDEWA-DPRD-Riau/1.0",
+            "User-Agent": "DewanKu-DPRD-Riau/1.0",
         },
         method="GET",
     )

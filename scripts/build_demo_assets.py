@@ -228,7 +228,7 @@ def compose(activity: dict, variant: int) -> Image.Image:
     )
     draw.text(
         (64, 936),
-        "SIDEWA · Dokumentasi DPRD Provinsi Riau",
+        "DewanKu · Dokumentasi DPRD Provinsi Riau",
         font=font(FONT_REG, 15),
         fill=(255, 255, 255, 120),
     )

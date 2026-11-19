@@ -1,4 +1,4 @@
-"""Data demo SIDEWA untuk DPRD Provinsi Riau.
+"""Data demo DewanKu untuk DPRD Provinsi Riau.
 
 Susunan komisi dan daftar anggota mengikuti DPRD Provinsi Riau masa jabatan
 2024--2029 (sumber: laman resmi DPRD Provinsi Riau dan pemberitaan terkait).
@@ -949,7 +949,7 @@ ACTIVITIES = [
 ]
 
 USERS = [
-    ("superadmin", "Riau#Admin2026", "Administrator SIDEWA", ROLE_SUPERADMIN, None),
+    ("superadmin", "Riau#Admin2026", "Administrator DewanKu", ROLE_SUPERADMIN, None),
     ("admin", "Admin#Riau2026", "Sekretariat DPRD Riau", ROLE_ADMIN, None),
     ("humas", "Humas#Riau2026", "Tim Humas DPRD Riau", ROLE_HUMAS, None),
     ("komisi1", "Komisi1#Riau2026", "Staf Komisi I", ROLE_STAF, "I"),
@@ -1237,7 +1237,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
             f"Kegiatan ini berlangsung di {activity.location_name} dan menjadi bagian "
             "dari tugas pengawasan, pembentukan peraturan daerah, serta penyerapan "
             "aspirasi masyarakat oleh DPRD Provinsi Riau.\n\n"
-            "Dokumentasi lengkap kegiatan dapat diakses melalui kanal SIDEWA Sekretariat "
+            "Dokumentasi lengkap kegiatan dapat diakses melalui kanal DewanKu Sekretariat "
             "DPRD Provinsi Riau."
         )
         release = PressRelease(
@@ -1331,7 +1331,7 @@ def seed_demo(db: Session, *, force: bool = False) -> dict:
             actor_name=users["superadmin"].full_name,
             action="USER_CREATE",
             entity_type="system",
-            summary="Inisialisasi data demo SIDEWA DPRD Provinsi Riau",
+            summary="Inisialisasi data demo DewanKu DPRD Provinsi Riau",
             detail={"activities": created_activities, "releases": created_releases, "members": len(members)},
         )
     )

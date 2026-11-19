@@ -1,4 +1,4 @@
-# Deploy SIDEWA
+# Deploy DewanKu
 
 Dokumen ini menjelaskan dua jalur deploy:
 
@@ -192,7 +192,7 @@ TLS dan rate limit.
 
 ## Cloudflare Workers & Pages (edge gateway)
 
-SIDEWA dapat dipasang di Cloudflare Workers dan/atau Pages sebagai edge gateway
+DewanKu dapat dipasang di Cloudflare Workers dan/atau Pages sebagai edge gateway
 ke origin FastAPI. Workers/Pages **tidak menjalankan Python**; keduanya
 meneruskan request ke origin (mis. `https://dprd.riau.ai`), menambahkan header
 keamanan, dan meng-cache `/static/*`.

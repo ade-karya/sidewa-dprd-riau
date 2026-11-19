@@ -1,4 +1,4 @@
-"""Asisten presentasi SIDEWA berbasis Gemini Live API.
+"""Asisten presentasi DewanKu berbasis Gemini Live API.
 
 Browser tidak pernah menerima API key. Halaman panduan membuka WebSocket ke
 ``/panduan/live``; router ini menjadi jembatan audio/tulisan dua arah ke Gemini
@@ -276,7 +276,7 @@ def is_technical_question(text: str) -> bool:
 
 APP_KNOWLEDGE = """
 ### PROFIL APLIKASI
-- Nama: SIDEWA — Sistem Dokumentasi Kegiatan Dewan.
+- Nama: DewanKu — Sistem Dokumentasi Kegiatan Dewan.
 - Organisasi: DPRD Provinsi Riau.
 - Tujuan: menyatukan arsip dokumentasi kegiatan dewan, mempercepat penemuan
   dokumentasi lewat wajah/nama/jabatan/komisi/lokasi/tanggal, serta menyajikan
@@ -390,8 +390,8 @@ APP_KNOWLEDGE = """
    - `/healthz` (liveness), `/readyz` (database + sinkronisasi), `/metrics`
      (opsional dilindungi `SIDEWA_METRICS_TOKEN`).
 
-### ASISTEN SIDEWA (PANDUAN VISUAL)
-- Tombol mengambang **Asisten SIDEWA** tersedia di seluruh halaman setelah pengguna
+### ASISTEN DewanKu (PANDUAN VISUAL)
+- Tombol mengambang **Asisten DewanKu** tersedia di seluruh halaman setelah pengguna
   masuk, bukan hanya halaman Humas.
 - Setiap langkah menyorot satu elemen yang sedang dijelaskan: bilah atas, ikon
   pencarian/unggah/peran/profil, isi halaman (hero, statistik, filter, kartu,
@@ -465,7 +465,7 @@ APP_KNOWLEDGE = """
   ikon menu.
 - Untuk pertanyaan teknis, ikuti panduan mode teknis di bawah: jawaban boleh lebih
   panjang, terstruktur, dan rinci, tetapi tetap jelaskan dampaknya bagi pengguna.
-- Jangan membahas topik di luar SIDEWA dan tugas DPRD; arahkan kembali dengan halus.
+- Jangan membahas topik di luar DewanKu dan tugas DPRD; arahkan kembali dengan halus.
 - Jangan pernah membocorkan API key, kata sandi, token, atau data pribadi mentah.
 """.strip()
 
@@ -483,7 +483,7 @@ Pengguna mengajukan pertanyaan teknis. Jawab dengan kedalaman yang memadai:
 
 def _system_instruction(kind: str, snapshot: str) -> str:
     base = (
-        "Anda adalah \"Asisten SIDEWA\", pemandu presentasi resmi aplikasi SIDEWA "
+        "Anda adalah \"Asisten DewanKu\", pemandu presentasi resmi aplikasi DewanKu "
         "milik DPRD Provinsi Riau.\n\n"
         f"{APP_KNOWLEDGE}\n\n{snapshot}"
     )

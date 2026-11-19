@@ -106,7 +106,7 @@ def search_news(
         headers={
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "SIDEWA-DPRD-Riau/1.0",
+            "User-Agent": "DewanKu-DPRD-Riau/1.0",
         },
         method="POST",
     )

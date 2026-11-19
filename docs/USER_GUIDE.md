@@ -1,9 +1,9 @@
-# Panduan Pengguna SIDEWA
+# Panduan Pengguna DewanKu
 
 ## Panduan visual
-- Halaman login menyediakan tombol **Kenali SIDEWA** untuk presentasi lengkap
+- Halaman login menyediakan tombol **Kenali DewanKu** untuk presentasi lengkap
   tentang tujuan, masalah, fitur, dan manfaat aplikasi.
-- Setelah masuk, tombol **Asisten SIDEWA** tersedia di seluruh halaman. Tur
+- Setelah masuk, tombol **Asisten DewanKu** tersedia di seluruh halaman. Tur
   menjelaskan dan menyorot bilah atas, ikon fitur (pencarian, unggah, peran,
   profil), isi halaman yang sedang dibuka (hero, statistik, filter, kartu, tabel,
   formulir, galeri, panel samping), lalu ringkasan sidebar dan setiap menunya.

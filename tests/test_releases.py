@@ -126,7 +126,7 @@ def test_staff_workspace_shows_release_summary(seeded_client):
             summary="Ringkasan rilis untuk pengujian ruang kerja.",
             body=(
                 "PEKANBARU — Rilis ini dipakai untuk memastikan ringkasan rilis "
-                "tampil pada ruang kerja staf Humas di SIDEWA."
+                "tampil pada ruang kerja staf Humas di DewanKu."
             ),
             status=STATUS_PUBLISHED,
             release_date=date.today(),
@@ -165,7 +165,7 @@ def test_release_visibility_and_rbac(seeded_client):
             summary="Rilis terbit.",
             body=(
                 "PEKANBARU — Rilis terbit ini dapat dibaca oleh seluruh pengguna "
-                "yang telah masuk ke aplikasi SIDEWA."
+                "yang telah masuk ke aplikasi DewanKu."
             ),
             status=STATUS_PUBLISHED,
             release_date=date.today(),
@@ -178,7 +178,7 @@ def test_release_visibility_and_rbac(seeded_client):
             summary="Draf rilis.",
             body=(
                 "PEKANBARU — Draf ini hanya boleh dibaca oleh pengelola konten "
-                "dan administrator SIDEWA."
+                "dan administrator DewanKu."
             ),
             status=STATUS_DRAFT,
             release_date=date.today(),

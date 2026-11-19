@@ -59,7 +59,7 @@ def test_seeded_staff_directory_and_dashboard(seeded_client):
     assert "Ruang kerja saya" in response.text
     assert "Face ID login" in response.text
     assert "Tugas &amp; fungsi Humas" in response.text
-    assert "Asisten SIDEWA" in response.text
+    assert "Asisten DewanKu" in response.text
     assert "humas-assistant.js" in response.text
 
 

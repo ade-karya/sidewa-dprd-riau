@@ -627,5 +627,5 @@
   }
 
   /* Expose tiny helper for templates */
-  window.SIDEWA = { toast };
+  window.DewanKu = { toast };
 })();

@@ -1,4 +1,4 @@
-"""Model data SIDEWA."""
+"""Model data DewanKu."""
 
 from __future__ import annotations
 

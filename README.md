@@ -1,4 +1,4 @@
-# SIDEWA — Sistem Dokumentasi Kegiatan Dewan
+# DewanKu — Sistem Dokumentasi Kegiatan Dewan
 
 Aplikasi web untuk mendokumentasikan kegiatan DPRD Provinsi Riau yang diunggah oleh tim
 Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupun **lokasi**.
@@ -21,7 +21,7 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 - Direktori anggota + data wajah biometrik (encoding, bukan foto mentah) dengan persetujuan.
 - Dashboard statistik, log audit, ekspor CSV, health/metrics, API v1 + token Bearer.
 - Antarmuka bergaya fotoyu.com: sidebar ramping, aksen lavender, pill button, kartu rounded, tipografi Roboto/Quicksand.
-- **Panduan visual**: tombol **Kenali SIDEWA** di halaman login untuk presentasi aplikasi, serta **Asisten SIDEWA** yang tersedia di seluruh halaman setelah masuk. Asisten menyorot bilah atas, ikon fitur, isi halaman, dan sidebar sambil menjelaskan setiap bagian; di ponsel panel panduan tampil sebagai bottom sheet. Tombol dan panel asisten dapat disembunyikan (tombol × atau gestur geser) lalu dimunculkan kembali lewat tab **Asisten** atau tombol **Lanjutkan panduan**.
+- **Panduan visual**: tombol **Kenali DewanKu** di halaman login untuk presentasi aplikasi, serta **Asisten DewanKu** yang tersedia di seluruh halaman setelah masuk. Asisten menyorot bilah atas, ikon fitur, isi halaman, dan sidebar sambil menjelaskan setiap bagian; di ponsel panel panduan tampil sebagai bottom sheet. Tombol dan panel asisten dapat disembunyikan (tombol × atau gestur geser) lalu dimunculkan kembali lewat tab **Asisten** atau tombol **Lanjutkan panduan**.
 
 ## Tumpukan teknologi
 
@@ -32,7 +32,7 @@ Humas dan dicari oleh staf komisi berdasarkan **wajah**, **nama/jabatan**, maupu
 
 ## Arsitektur produksi: Supabase + HF S3 langsung
 
-Pada mode produksi, SIDEWA memakai dua layanan terkelola:
+Pada mode produksi, DewanKu memakai dua layanan terkelola:
 
 | Lapisan | Peran | Teknologi |
 |---|---|---|
@@ -263,7 +263,7 @@ Seluruh konfigurasi dibaca dari environment variable (lihat `.env.example`). Var
   waktu tunggu, dan folder Drive untuk rekaman rilis. Batas praktis mengikuti
   kuota Drive dan batas Gemini Files API (2 GB per berkas); rekaman besar
   diunggah lewat Files API, bukan `inlineData`.
-- `SIDEWA_GEMINI_LIVE_ENABLED` — aktifkan Asisten SIDEWA berbasis Gemini Live.
+- `SIDEWA_GEMINI_LIVE_ENABLED` — aktifkan Asisten DewanKu berbasis Gemini Live.
 - `SIDEWA_GEMINI_LIVE_MODEL` (default `gemini-3.8-live`) — model Live untuk
   percakapan panduan umum.
 - `SIDEWA_GEMINI_LIVE_TECHNICAL_MODEL` (default

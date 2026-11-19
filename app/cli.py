@@ -1,4 +1,4 @@
-"""Perintah baris perintah SIDEWA.
+"""Perintah baris perintah DewanKu.
 
 Contoh:
     python -m app.cli init-db
@@ -529,7 +529,7 @@ def cmd_upgrade_portraits(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python -m app.cli", description="Utilitas SIDEWA")
+    parser = argparse.ArgumentParser(prog="python -m app.cli", description="Utilitas DewanKu")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("init-db", help="Buat tabel database dan direktori media")

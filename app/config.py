@@ -56,7 +56,7 @@ def _list(name: str, default: str = "") -> list[str]:
 
 @dataclass
 class Settings:
-    app_name: str = "SIDEWA"
+    app_name: str = "DewanKu"
     app_long_name: str = "Sistem Dokumentasi Kegiatan Dewan"
     organization: str = "DPRD Provinsi Riau"
     app_env: str = field(default_factory=lambda: os.getenv("SIDEWA_ENV", "development"))
@@ -287,7 +287,7 @@ class Settings:
         default_factory=lambda: os.getenv("SIDEWA_BOOTSTRAP_ADMIN_PASSWORD", "")
     )
     bootstrap_admin_name: str = field(
-        default_factory=lambda: os.getenv("SIDEWA_BOOTSTRAP_ADMIN_NAME", "Administrator SIDEWA")
+        default_factory=lambda: os.getenv("SIDEWA_BOOTSTRAP_ADMIN_NAME", "Administrator DewanKu")
     )
 
     trusted_hosts: list[str] = field(default_factory=lambda: _list("SIDEWA_TRUSTED_HOSTS"))

@@ -197,10 +197,10 @@
         ? `Tersimpan di Drive: ${data.drive.path}. `
         : "";
       setStatus(`${driveText}Draf terisi. Periksa kembali sebelum menyimpan.`, "success");
-      window.SIDEWA?.toast?.("Draf rilis berhasil diisi dari rekaman audio.");
+      window.DewanKu?.toast?.("Draf rilis berhasil diisi dari rekaman audio.");
     } catch (error) {
       setStatus(error.message || "Draf rilis gagal disusun.", "danger");
-      window.SIDEWA?.toast?.(error.message || "Draf rilis gagal disusun.");
+      window.DewanKu?.toast?.(error.message || "Draf rilis gagal disusun.");
     } finally {
       setBusy(false);
     }

@@ -749,7 +749,7 @@
       aiMinimize.setAttribute("aria-expanded", minimized ? "false" : "true");
       aiMinimize.setAttribute(
         "aria-label",
-        minimized ? "Perluas asisten AI SIDEWA" : "Ciutkan asisten AI SIDEWA"
+        minimized ? "Perluas asisten AI DewanKu" : "Ciutkan asisten AI DewanKu"
       );
       aiMinimize.title = minimized ? "Perluas asisten" : "Ciutkan asisten";
     }
@@ -774,7 +774,7 @@
     aiPanel.hidden = false;
     if (aiToggle) {
       aiToggle.setAttribute("aria-expanded", "true");
-      aiToggle.setAttribute("aria-label", "Tutup asisten AI SIDEWA");
+      aiToggle.setAttribute("aria-label", "Tutup asisten AI DewanKu");
     }
     updateAiContext();
     ensureAudioContext();
@@ -790,7 +790,7 @@
     aiPanel.hidden = true;
     if (aiToggle) {
       aiToggle.setAttribute("aria-expanded", "false");
-      aiToggle.setAttribute("aria-label", "Buka asisten AI SIDEWA");
+      aiToggle.setAttribute("aria-label", "Buka asisten AI DewanKu");
     }
     stopMic(false);
     stopPlayback();
@@ -992,7 +992,7 @@
   }
 
   /* Read-only preview from the console when presenting. */
-  window.SIDEWA = Object.assign(window.SIDEWA || {}, {
+  window.DewanKu = Object.assign(window.DewanKu || {}, {
     openGuide,
     closeGuide,
     goToGuideSlide: show,

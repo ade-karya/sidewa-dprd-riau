@@ -1,12 +1,12 @@
-# Deploy SIDEWA di Cloudflare Workers & Pages
+# Deploy DewanKu di Cloudflare Workers & Pages
 
-Dokumen ini menjelaskan cara menaruh SIDEWA di depan Cloudflare **Workers** dan
+Dokumen ini menjelaskan cara menaruh DewanKu di depan Cloudflare **Workers** dan
 **Pages** sebagai *edge gateway*.
 
 > **Penting:** Cloudflare Workers/Pages hanya menjalankan JavaScript/TypeScript
 > (Workers runtime). Keduanya **tidak dapat** menjalankan aplikasi Python
 > FastAPI, `face_recognition`/`dlib`, Pillow, atau koneksi PostgreSQL langsung.
-> Karena itu backend SIDEWA tetap berjalan di origin (Colab + Cloudflare Tunnel,
+> Karena itu backend DewanKu tetap berjalan di origin (Colab + Cloudflare Tunnel,
 > Docker, VPS, atau platform container lain). Workers/Pages meneruskan request
 > ke origin tersebut.
 
@@ -41,7 +41,7 @@ Yang **tidak** bisa:
 
 ## Prasyarat
 
-1. Origin SIDEWA sudah hidup dan bisa diakses, mis.
+1. Origin DewanKu sudah hidup dan bisa diakses, mis.
    `curl https://dprd.riau.ai/healthz` → `200`.
 2. Akun Cloudflare dengan zona domain (mis. `riau.ai`) bila ingin custom domain.
 3. Node.js 20+ dan `npx` untuk Wrangler.
@@ -125,7 +125,7 @@ npx wrangler pages project create sidewa-pages --production-branch main
 npx wrangler pages deploy
 ```
 
-Hasil: `https://sidewa-pages.pages.dev` menampilkan aplikasi SIDEWA
+Hasil: `https://sidewa-pages.pages.dev` menampilkan aplikasi DewanKu
 (seluruh request diproksikan ke origin).
 
 Uji:
@@ -157,10 +157,10 @@ browser menyimpannya untuk domain edge yang sedang dibuka. Pastikan
 
 | Batas | Nilai |
 | --- | --- |
-| Body request Workers/Pages | 100 MB (SIDEWA membatasi 15 MB/foto) |
+| Body request Workers/Pages | 100 MB (DewanKu membatasi 15 MB/foto) |
 | Request gratis | 100.000/hari per produk |
 | CPU gratis | 10 ms/request (proxy didominasi I/O, bukan CPU) |
-| WebSocket | Tidak dipakai SIDEWA |
+| WebSocket | Tidak dipakai DewanKu |
 
 Bila traffic melebihi kuota gratis, gunakan paket berbayar atau arahkan DNS
 langsung ke tunnel tanpa Worker/Pages.

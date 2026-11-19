@@ -1,4 +1,4 @@
-# Keamanan SIDEWA
+# Keamanan DewanKu
 
 - Kata sandi di-hash dengan Argon2id; kebijakan minimal 10 karakter, kombinasi huruf, angka, dan simbol.
 - Sesi cookie HttpOnly, SameSite=lax, masa berlaku dapat diatur; `Secure` otomatis di produksi.

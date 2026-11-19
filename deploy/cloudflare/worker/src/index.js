@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker — edge gateway SIDEWA.
+ * Cloudflare Worker — edge gateway DewanKu.
  *
  * Tugasnya hanya meneruskan request ke origin FastAPI, bukan menjalankan
  * Python. Worker berguna untuk:
@@ -67,7 +67,7 @@ function forwardHeaders(request, origin, edgeHost) {
   }
   headers.set("X-Forwarded-Host", edgeHost);
   headers.set("X-Forwarded-Proto", "https");
-  headers.set("X-SIDEWA-Edge", "cloudflare-worker");
+  headers.set("X-DewanKu-Edge", "cloudflare-worker");
 
   // Origin yang dilindungi Basic Auth (opsional).
   if (origin.username) {
@@ -120,11 +120,11 @@ async function fetchOrigin(request, env, edgeHost) {
     console.error("origin fetch gagal", target.toString(), error);
     return json(
       {
-        detail: "Origin SIDEWA tidak dapat dijangkau dari edge.",
+        detail: "Origin DewanKu tidak dapat dijangkau dari edge.",
         origin: origin.origin,
       },
       502,
-      { "x-sidewa-edge": "cloudflare-worker" },
+      { "x-dewanku-edge": "cloudflare-worker" },
     );
   }
 
@@ -132,7 +132,7 @@ async function fetchOrigin(request, env, edgeHost) {
   for (const name of HOP_BY_HOP) {
     headers.delete(name);
   }
-  headers.set("X-SIDEWA-Edge", "cloudflare-worker");
+  headers.set("X-DewanKu-Edge", "cloudflare-worker");
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
 
   return rewriteRedirect(
@@ -194,7 +194,7 @@ async function handleEdgeEndpoint(url, env) {
     try {
       const response = await fetch(new URL("/readyz", origin), {
         headers: {
-          "user-agent": "Mozilla/5.0 (compatible; SIDEWA-Edge/1.0)",
+          "user-agent": "Mozilla/5.0 (compatible; DewanKu-Edge/1.0)",
           accept: "application/json",
         },
         redirect: "manual",
@@ -205,7 +205,7 @@ async function handleEdgeEndpoint(url, env) {
         headers: {
           "content-type": response.headers.get("content-type") || "application/json",
           "cache-control": "no-store",
-          "x-sidewa-edge": "cloudflare-worker",
+          "x-dewanku-edge": "cloudflare-worker",
         },
       });
     } catch (error) {

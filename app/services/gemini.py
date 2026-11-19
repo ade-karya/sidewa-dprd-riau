@@ -165,7 +165,7 @@ def _generate_content(
             "Content-Type": "application/json",
             "Accept": "application/json",
             "x-goog-api-key": api_key,
-            "User-Agent": "SIDEWA-DPRD-Riau/1.0",
+            "User-Agent": "DewanKu-DPRD-Riau/1.0",
         },
         method="POST",
     )
@@ -353,7 +353,7 @@ def _start_file_upload(size: int, mime_type: str, display_name: str) -> str:
             "X-Goog-Upload-Command": "start",
             "X-Goog-Upload-Header-Content-Length": str(size),
             "X-Goog-Upload-Header-Content-Type": mime_type,
-            "User-Agent": "SIDEWA-DPRD-Riau/1.0",
+            "User-Agent": "DewanKu-DPRD-Riau/1.0",
         },
         method="POST",
     )
@@ -395,7 +395,7 @@ def _stream_file_upload(
         connection.putheader("X-Goog-Upload-Offset", "0")
         connection.putheader("X-Goog-Upload-Command", "upload, finalize")
         connection.putheader("Content-Type", "application/octet-stream")
-        connection.putheader("User-Agent", "SIDEWA-DPRD-Riau/1.0")
+        connection.putheader("User-Agent", "DewanKu-DPRD-Riau/1.0")
         connection.endheaders()
         with source.open("rb") as handle:
             while True:
@@ -454,7 +454,7 @@ def get_file(name: str, *, timeout: int | None = None) -> GeminiFile:
         headers={
             "Accept": "application/json",
             "x-goog-api-key": settings.gemini_api_key,
-            "User-Agent": "SIDEWA-DPRD-Riau/1.0",
+            "User-Agent": "DewanKu-DPRD-Riau/1.0",
         },
         method="GET",
     )
@@ -527,7 +527,7 @@ def delete_file(name: str) -> None:
         _file_api_url(name),
         headers={
             "x-goog-api-key": settings.gemini_api_key,
-            "User-Agent": "SIDEWA-DPRD-Riau/1.0",
+            "User-Agent": "DewanKu-DPRD-Riau/1.0",
         },
         method="DELETE",
     )

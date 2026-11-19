@@ -1,1 +1,1 @@
-"""Router aplikasi SIDEWA."""
+"""Router aplikasi DewanKu."""

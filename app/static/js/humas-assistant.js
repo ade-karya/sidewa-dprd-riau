@@ -46,7 +46,7 @@
     "/": {
       title: "Beranda",
       body:
-        "Pusat ringkasan SIDEWA. Di sini terlihat statistik dokumentasi, kegiatan terbaru, tren bulanan, dan aktivitas terakhir.",
+        "Pusat ringkasan DewanKu. Di sini terlihat statistik dokumentasi, kegiatan terbaru, tren bulanan, dan aktivitas terakhir.",
       tips: [
         "Mulai dari kartu statistik untuk membaca kondisi arsip.",
         "Klik dokumentasi terbaru untuk membuka detail kegiatan.",
@@ -201,7 +201,7 @@
       {
         selector: '[data-tour="dash-hero"]',
         kicker: "Halaman ini · Ringkasan",
-        title: "Pusat ringkasan SIDEWA",
+        title: "Pusat ringkasan DewanKu",
         body:
           "Hero ini menjelaskan peran aplikasi dan menyediakan aksi tercepat: cari dokumentasi, unggah kegiatan, atau jelajahi arsip.",
         tips: [
@@ -1528,10 +1528,10 @@
 
   function buildSteps() {
     steps.push({
-      kicker: "Asisten SIDEWA",
-      title: "Mengenal SIDEWA",
+      kicker: "Asisten DewanKu",
+      title: "Mengenal DewanKu",
       body:
-        "Saya akan memandu Anda mengenali seluruh antarmuka SIDEWA: bilah atas, isi halaman, ikon fitur, dan sidebar. Setiap langkah menyorot elemen yang sedang dijelaskan.",
+        "Saya akan memandu Anda mengenali seluruh antarmuka DewanKu: bilah atas, isi halaman, ikon fitur, dan sidebar. Setiap langkah menyorot elemen yang sedang dijelaskan.",
       tips: [
         "Gunakan tombol Berikutnya atau tombol panah untuk berpindah langkah.",
         "Tekan Esc kapan saja untuk menutup panduan.",
@@ -1688,7 +1688,7 @@
       seen.add(href);
       const info = PAGE_INFO[href] || {
         title: navLabel(el),
-        body: "Halaman ini merupakan bagian dari alur kerja SIDEWA.",
+        body: "Halaman ini merupakan bagian dari alur kerja DewanKu.",
         tips: ["Buka halaman untuk melihat fitur yang tersedia."],
       };
       steps.push({
@@ -1705,9 +1705,9 @@
 
     steps.push({
       kicker: "Selesai",
-      title: "Siap bekerja dengan SIDEWA",
+      title: "Siap bekerja dengan DewanKu",
       body:
-        "Panduan ini menyorot bilah atas, isi halaman, ikon fitur, dan sidebar. Buka kapan saja lewat tombol Asisten SIDEWA di sudut kanan bawah.",
+        "Panduan ini menyorot bilah atas, isi halaman, ikon fitur, dan sidebar. Buka kapan saja lewat tombol Asisten DewanKu di sudut kanan bawah.",
       tips: [
         "Setiap halaman memiliki sorotan fitur yang berbeda.",
         "Gunakan pencarian dan filter untuk menemukan data lebih cepat.",
@@ -1831,7 +1831,7 @@
 
   function stepLabel() {
     const step = steps[index];
-    return step && step.nav ? "Peta halaman SIDEWA" : "Pemandu halaman SIDEWA";
+    return step && step.nav ? "Peta halaman DewanKu" : "Pemandu halaman DewanKu";
   }
 
   function updateStatus() {
@@ -2109,7 +2109,7 @@
     }
     if (titleEl) titleEl.textContent = step.title;
     if (headTitleEl) {
-      headTitleEl.textContent = isSmall() ? step.title : "Asisten SIDEWA";
+      headTitleEl.textContent = isSmall() ? step.title : "Asisten DewanKu";
       headTitleEl.title = step.title;
     }
     if (bodyEl) bodyEl.textContent = step.body || "";
@@ -2798,7 +2798,7 @@
   }
   applyLauncherState(storedLauncherHidden);
 
-  window.SIDEWA = Object.assign(window.SIDEWA || {}, {
+  window.DewanKu = Object.assign(window.DewanKu || {}, {
     openHumasAssistant: openTour,
     closeHumasAssistant: closeTour,
     goToHumasAssistantStep: show,

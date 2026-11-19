@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy SIDEWA edge gateway ke Cloudflare Workers dan/atau Pages.
+# Deploy DewanKu edge gateway ke Cloudflare Workers dan/atau Pages.
 #
 # Pemakaian:
 #   ./deploy.sh                 # Worker + Pages

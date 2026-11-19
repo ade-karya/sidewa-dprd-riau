@@ -1,4 +1,4 @@
-"""Konfigurasi pengujian SIDEWA."""
+"""Konfigurasi pengujian DewanKu."""
 
 from __future__ import annotations
 

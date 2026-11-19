@@ -1,4 +1,4 @@
-# API SIDEWA v1
+# API DewanKu v1
 
 Basis URL: `/api/v1`. Semua endpoint memerlukan autentikasi.
 
