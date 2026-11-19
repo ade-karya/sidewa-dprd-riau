@@ -13,7 +13,7 @@ data/
 *.db
 *.sqlite
 *.sqlite3
-media/
+/media/
 uploads/
 
 # Alat
