@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/menu_beranda"
+        android:title="Beranda"
+        android:icon="@drawable/ic_nav_home"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_kegiatan"
+        android:title="Kegiatan"
+        android:icon="@drawable/ic_nav_activities"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_anggota"
+        android:title="Anggota"
+        android:icon="@drawable/ic_nav_members"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_rilis"
+        android:title="Rilis"
+        android:icon="@drawable/ic_nav_press"
+        app:showAsAction="ifRoom" />
+</menu>

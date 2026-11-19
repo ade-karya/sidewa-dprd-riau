@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "id.ade.sidewa.app-mergeDebugResources-2:/values-v18/values-v18.xml",
+            "map": [
+                {
+                    "source": "/root/.gradle/caches/8.10.2/transforms/dbb64cb50f1ed2f4020fe37cbff1bd32/transformed/appcompat-1.7.1/res/values-v18/values-v18.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "48",
+                        "endOffsets": "99"
+                    }
+                }
+            ]
+        }
+    ]
+}

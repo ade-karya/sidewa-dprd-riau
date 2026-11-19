@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorAccent">#C8A24A</color>
+    <color name="colorBackground">#FAF6FC</color>
+    <color name="colorPrimary">#7E4890</color>
+    <color name="colorPrimaryDark">#63366F</color>
+    <dimen name="dummy">0dp</dimen>
+    <string name="app_name">DewanKu</string>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+</resources>
