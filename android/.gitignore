@@ -1,6 +1,5 @@
-android/local.properties
-android/app/build/
-android/build/
-android/.gradle/
+app/build/
+build/
+.gradle/
+local.properties
 *.apk
-android/tools/.logs
